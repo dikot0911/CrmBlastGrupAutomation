@@ -438,6 +438,12 @@ def init_check():
             print(f"👑 Admin Created: {adm}")
     except: pass
 
+# --- KEEP ALIVE ROUTE ---
+@app.route('/ping')
+def ping():
+    """Endpoint ringan buat dipancing UptimeRobot biar server gak tidur"""
+    return jsonify({"status": "alive", "time": datetime.utcnow().isoformat()}), 200
+
 if __name__ == '__main__':
     init_check()
     app.run(debug=True, port=5000, use_reloader=False)
