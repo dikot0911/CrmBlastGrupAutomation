@@ -3,4 +3,5 @@ flask_sqlalchemy
 telethon
 werkzeug
 gunicorn
+supabase
 psycopg2-binary
