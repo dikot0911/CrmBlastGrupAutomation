@@ -1,0 +1,6 @@
+flask
+flask_sqlalchemy
+telethon
+werkzeug
+gunicorn
+psycopg2-binary
