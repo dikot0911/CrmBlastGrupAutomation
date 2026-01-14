@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - UMKM Blast</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <span class="text-xl font-bold text-indigo-600">UMKM Blast Pro</span>
+            <div class="flex items-center gap-4">
+                <span class="text-gray-600 text-sm">Halo, {{ user.email }}</span>
+                <a href="/logout" class="text-red-500 hover:text-red-700 font-bold text-sm">Keluar</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-6 py-8">
+        
+        <!-- Connection Status -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fab fa-telegram text-blue-500 mr-2"></i> Koneksi Telegram
+            </h2>
+
+            {% if user.telegram_account and user.telegram_account.is_active %}
+                <!-- STATE: CONNECTED -->
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 mr-4">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-green-800">Terhubung Aktif</h3>
+                            <p class="text-sm text-green-600">Nomor: {{ user.telegram_account.phone_number }}</p>
+                        </div>
+                    </div>
+                    <button class="text-sm bg-white border border-gray-300 px-3 py-1 rounded text-gray-500" disabled>Disconnect (Hubungi Admin)</button>
+                </div>
+                
+                <!-- Menu Lain Jika Connected -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    <button class="p-4 bg-indigo-50 rounded-lg border border-indigo-100 text-indigo-700 font-bold hover:bg-indigo-100 text-left">
+                        <i class="fas fa-bullseye mr-2"></i> Atur Target Grup
+                    </button>
+                    <button class="p-4 bg-indigo-50 rounded-lg border border-indigo-100 text-indigo-700 font-bold hover:bg-indigo-100 text-left">
+                        <i class="fas fa-clock mr-2"></i> Jadwal Blast
+                    </button>
+                    <button class="p-4 bg-indigo-50 rounded-lg border border-indigo-100 text-indigo-700 font-bold hover:bg-indigo-100 text-left">
+                        <i class="fas fa-file-alt mr-2"></i> Log Aktivitas
+                    </button>
+                </div>
+
+            {% else %}
+                <!-- STATE: DISCONNECTED (Login Form) -->
+                <div class="max-w-md mx-auto">
+                    <div id="step-1">
+                        <label class="block text-gray-700 font-bold mb-2">Masukkan Nomor HP Telegram</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="phone" placeholder="+628123456789" class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <button onclick="sendCode()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700">
+                                <i class="fas fa-paper-plane mr-1"></i> Kirim OTP
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">*Pastikan nomor diawali kode negara (+62).</p>
+                    </div>
+
+                    <div id="step-2" class="hidden mt-4">
+                        <label class="block text-gray-700 font-bold mb-2">Masukkan Kode OTP</label>
+                        <input type="text" id="otp" placeholder="12345" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 mb-2">
+                        
+                        <label class="block text-gray-700 font-bold mb-2 text-sm">Password 2FA (Jika ada)</label>
+                        <input type="password" id="2fa" placeholder="Kosongkan jika tidak ada" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 mb-4">
+                        
+                        <button onclick="verifyCode()" class="w-full bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700">
+                            <i class="fas fa-key mr-1"></i> Verifikasi & Login
+                        </button>
+                    </div>
+                    
+                    <div id="loading" class="hidden mt-4 text-center text-gray-500">
+                        <i class="fas fa-spinner fa-spin mr-2"></i> Memproses...
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <script>
+        async function sendCode() {
+            const phone = document.getElementById('phone').value;
+            if(!phone) return alert("Nomor HP wajib diisi!");
+            
+            document.getElementById('loading').classList.remove('hidden');
+            
+            try {
+                const res = await fetch('/api/connect/send_code', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({phone: phone})
+                });
+                const data = await res.json();
+                
+                document.getElementById('loading').classList.add('hidden');
+                
+                if(data.status === 'success') {
+                    document.getElementById('step-1').classList.add('opacity-50', 'pointer-events-none');
+                    document.getElementById('step-2').classList.remove('hidden');
+                    alert(data.message);
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch(e) {
+                alert("Gagal koneksi ke server.");
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        async function verifyCode() {
+            const otp = document.getElementById('otp').value;
+            const password = document.getElementById('2fa').value;
+            
+            document.getElementById('loading').classList.remove('hidden');
+            
+            try {
+                const res = await fetch('/api/connect/verify_code', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({otp: otp, password: password})
+                });
+                const data = await res.json();
+                
+                if(data.status === 'success') {
+                    alert("Login Berhasil! Halaman akan dimuat ulang.");
+                    location.reload();
+                } else {
+                    document.getElementById('loading').classList.add('hidden');
+                    alert("Gagal Login: " + data.message);
+                }
+            } catch(e) {
+                alert("Gagal verifikasi.");
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
