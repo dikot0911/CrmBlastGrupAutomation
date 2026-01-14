@@ -1,11 +1,13 @@
 import os
 import asyncio
 import logging
+import threading
+import json
 from functools import wraps 
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-from telethon import TelegramClient, errors
+from telethon import TelegramClient, errors, functions
 from telethon.sessions import StringSession
 from supabase import create_client, Client
 
@@ -13,117 +15,109 @@ from supabase import create_client, Client
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'rahasia_negara_baba_parfume_saas')
 
-# --- SUPABASE CONNECTION (WAJIB ADA DI RENDER ENV) ---
+# --- SUPABASE CONNECTION ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    print("\n" + "="*50)
-    print("❌ CRITICAL ERROR: SUPABASE_URL atau SUPABASE_KEY belum diset!")
-    print("👉 Aplikasi tidak bisa jalan tanpa API Key ini.")
-    print("="*50 + "\n")
-    # Kita biarkan lanjut tapi nanti bakal error kalau dipake
-    supabase = None
-else:
-    try:
-        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✅ TERHUBUNG KE SUPABASE VIA API")
-    except Exception as e:
-        print(f"❌ Gagal inisialisasi Supabase: {e}")
-        supabase = None
+    raise RuntimeError("❌ SUPABASE_URL dan SUPABASE_KEY wajib diset di Environment!")
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --- GLOBAL VARS ---
 API_ID = int(os.getenv('API_ID', '0')) 
 API_HASH = os.getenv('API_HASH', '')
 login_states = {} 
 
-# --- HELPER FUNCTIONS (PENGGANTI DATABASE LOKAL) ---
+# --- HELPER FUNCTIONS ---
 
-def get_user_by_email(email):
-    """Ambil data user dari Supabase berdasarkan email"""
+def get_user_data(user_id):
+    """Ambil data user + telegram account secara aman"""
     try:
-        response = supabase.table('users').select("*").eq('email', email).execute()
-        if response.data and len(response.data) > 0:
-            return response.data[0]
-        return None
+        u_res = supabase.table('users').select("*").eq('id', user_id).execute()
+        if not u_res.data: return None
+        user = u_res.data[0]
+        
+        t_res = supabase.table('telegram_accounts').select("*").eq('user_id', user_id).execute()
+        tele = t_res.data[0] if t_res.data else None
+        
+        # Bungkus jadi object biar template HTML ga error akses properti
+        class Wrapper:
+            def __init__(self, d, t):
+                self.id = d['id']
+                self.email = d['email']
+                self.is_admin = d.get('is_admin', False)
+                self.is_banned = d.get('is_banned', False)
+                self.telegram_account = type('obj', (object,), t) if t else None
+        
+        return Wrapper(user, tele)
     except Exception as e:
-        print(f"Err Get User: {e}")
+        print(f"Err UserData: {e}")
         return None
 
-def get_user_by_id(user_id):
-    """Ambil data user dari Supabase berdasarkan ID"""
+async def get_user_client(user_id):
+    """Bikin Client Telethon on-the-fly pakai session user"""
     try:
-        response = supabase.table('users').select("*").eq('id', user_id).execute()
-        if response.data and len(response.data) > 0:
-            return response.data[0]
-        return None
-    except Exception as e:
-        print(f"Err Get ID: {e}")
-        return None
-
-def get_telegram_account(user_id):
-    """Ambil data telegram account milik user"""
-    try:
-        response = supabase.table('telegram_accounts').select("*").eq('user_id', user_id).execute()
-        if response.data and len(response.data) > 0:
-            return response.data[0]
-        return None
+        res = supabase.table('telegram_accounts').select("session_string").eq('user_id', user_id).execute()
+        if not res.data: return None
+        
+        session_str = res.data[0]['session_string']
+        client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
+        await client.connect()
+        if not await client.is_user_authorized():
+            await client.disconnect()
+            return None
+        return client
     except:
         return None
 
-# --- ERROR HANDLER ---
+# --- DECORATORS & ERROR HANDLERS ---
+
 @app.errorhandler(404)
 def page_not_found(e):
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('index'))
+    return redirect(url_for('dashboard')) if 'user_id' in session else redirect(url_for('login'))
 
-# --- ADMIN DECORATOR ---
-def admin_required(f):
+def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user_id' not in session: 
-            return redirect(url_for('login'))
-        
-        user = get_user_by_id(session['user_id'])
-        if not user or not user.get('is_admin'):
-            flash('⚠️ Akses Ditolak! Halaman ini area terlarang.', 'danger')
-            return redirect(url_for('dashboard'))
-        
+        if 'user_id' not in session: return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
-# --- ROUTES ---
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session: return redirect(url_for('login'))
+        user = get_user_data(session['user_id'])
+        if not user or not user.is_admin:
+            flash('Akses ditolak.', 'danger')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# --- AUTH ROUTES ---
 
 @app.route('/')
-def index():
-    return render_template('landing.html')
+def index(): return render_template('landing.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        
-        if not supabase:
-            flash("Koneksi Database Putus. Cek Server.", 'danger')
-            return render_template('auth.html', mode='login')
-
-        user = get_user_by_email(email)
-        
-        if user and check_password_hash(user['password'], password):
-            if user.get('is_banned'):
-                flash('⛔ Akun Anda telah disuspend oleh Admin.', 'danger')
-                return redirect(url_for('login'))
-                
-            session['user_id'] = user['id']
-            
-            if user.get('is_admin'):
-                return redirect(url_for('super_admin_dashboard'))
-            return redirect(url_for('dashboard'))
-            
-        flash('Email atau password salah!', 'danger')
-            
+        try:
+            res = supabase.table('users').select("*").eq('email', email).execute()
+            if res.data:
+                user = res.data[0]
+                if check_password_hash(user['password'], password):
+                    if user.get('is_banned'):
+                        flash('Akun disuspend.', 'danger')
+                        return redirect(url_for('login'))
+                    session['user_id'] = user['id']
+                    return redirect(url_for('super_admin_dashboard' if user.get('is_admin') else 'dashboard'))
+            flash('Email/Password salah.', 'danger')
+        except Exception as e:
+            flash(f'Error System: {e}', 'danger')
     return render_template('auth.html', mode='login')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -131,265 +125,319 @@ def register():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        
-        if not supabase:
-            flash("Server Error: No DB Connection", 'danger')
-            return redirect(url_for('register'))
-
-        # Cek email duplikat
-        existing = get_user_by_email(email)
-        if existing:
-            flash('Email sudah terdaftar!', 'warning')
-            return redirect(url_for('register'))
-            
-        # Simpan user baru via API
         try:
-            hashed_pw = generate_password_hash(password, method='sha256')
-            data = {
-                'email': email, 
-                'password': hashed_pw,
-                'created_at': datetime.utcnow().isoformat()
-            }
-            supabase.table('users').insert(data).execute()
+            # Cek exist
+            exist = supabase.table('users').select("id").eq('email', email).execute()
+            if exist.data:
+                flash('Email sudah terdaftar.', 'warning')
+                return redirect(url_for('register'))
             
-            flash('Registrasi berhasil! Silakan login.', 'success')
+            hashed = generate_password_hash(password)
+            supabase.table('users').insert({'email': email, 'password': hashed}).execute()
+            flash('Daftar berhasil, silakan login.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
-            print(f"Register API Error: {e}")
-            flash('Gagal mendaftar. Terjadi kesalahan sistem.', 'danger')
-            
+            flash(f'Gagal daftar: {e}', 'danger')
     return render_template('auth.html', mode='register')
-
-@app.route('/dashboard')
-def dashboard():
-    if 'user_id' not in session: return redirect(url_for('login'))
-    
-    user = get_user_by_id(session['user_id'])
-    if not user:
-        session.pop('user_id', None)
-        return redirect(url_for('login'))
-        
-    if user.get('is_banned'): 
-        session.pop('user_id', None)
-        flash('⛔ Akun Anda dibekukan.', 'danger')
-        return redirect(url_for('login'))
-    
-    # Inject data telegram account ke object user biar template dashboard.html gak error
-    # Di template biasanya akses user.telegram_account.phone_number
-    # Kita akali dengan Dictionary Access di template atau modif object di sini
-    
-    # Ambil data telegram terpisah
-    tele_account = get_telegram_account(user['id'])
-    
-    # Kita bungkus user dictionary ke object sederhana biar kompatibel sama template lama
-    # Atau kita kirim variable terpisah ke template
-    # NOTE: Pastikan di dashboard.html aksesnya kompatibel. 
-    # Kalau dashboard.html pake user.email (dot notation), code di bawah ini penting:
-    
-    class UserObj:
-        def __init__(self, data, tele):
-            self.id = data['id']
-            self.email = data['email']
-            self.is_admin = data.get('is_admin')
-            self.telegram_account = None
-            if tele:
-                self.telegram_account = type('obj', (object,), {
-                    'phone_number': tele['phone_number'],
-                    'is_active': tele['is_active']
-                })
-    
-    user_obj = UserObj(user, tele_account)
-    return render_template('dashboard.html', user=user_obj)
 
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
     return redirect(url_for('index'))
 
-# --- SUPER ADMIN ROUTES ---
+# --- DASHBOARD & FEATURES ROUTES ---
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    user = get_user_data(session['user_id'])
+    if not user: 
+        session.pop('user_id', None)
+        return redirect(url_for('login'))
+    
+    # Ambil Data Dashboard User dari Supabase
+    uid = user.id
+    
+    # 1. Logs
+    logs = supabase.table('blast_logs').select("*").eq('user_id', uid).order('created_at', desc=True).limit(50).execute().data
+    
+    # 2. Schedules
+    schedules = supabase.table('blast_schedules').select("*").eq('user_id', uid).execute().data
+    
+    # 3. Targets
+    targets = supabase.table('blast_targets').select("*").eq('user_id', uid).execute().data
+    
+    # 4. User Count (CRM)
+    crm_count = supabase.table('tele_users').select("id", count='exact').eq('owner_id', uid).execute().count
+    
+    return render_template('dashboard.html', user=user, logs=logs, schedules=schedules, targets=targets, user_count=crm_count or 0)
+
+# --- TELETHON FEATURES (API ENDPOINTS) ---
+
+@app.route('/scan_groups_api')
+@login_required
+async def scan_groups_api():
+    """Scan Grup user yang sedang login"""
+    user_id = session['user_id']
+    client = await get_user_client(user_id)
+    
+    if not client:
+        return jsonify({"status": "error", "message": "Telegram belum terkoneksi/expired."})
+    
+    try:
+        groups_data = []
+        async for dialog in client.iter_dialogs(limit=300):
+            if dialog.is_group:
+                entity = dialog.entity
+                is_forum = getattr(entity, 'forum', False)
+                # Ambil ID Asli
+                real_id = dialog.id 
+                
+                g_data = {'id': real_id, 'name': dialog.name, 'is_forum': is_forum, 'topics': []}
+                
+                if is_forum:
+                    try:
+                        topics = await client.get_forum_topics(entity, limit=20)
+                        if topics and topics.topics:
+                            for t in topics.topics:
+                                g_data['topics'].append({'id': t.id, 'title': t.title})
+                    except: pass
+                
+                groups_data.append(g_data)
+        
+        await client.disconnect()
+        return jsonify({"status": "success", "data": groups_data})
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/save_bulk_targets', methods=['POST'])
+@login_required
+def save_bulk_targets():
+    """Simpan target blast ke Supabase"""
+    user_id = session['user_id']
+    data = request.json
+    selected = data.get('targets', [])
+    
+    try:
+        for item in selected:
+            raw_topics = item.get('topic_ids', [])
+            topics_str = ", ".join(map(str, raw_topics)) if isinstance(raw_topics, list) else ""
+            
+            payload = {
+                "user_id": user_id,
+                "group_name": item['group_name'],
+                "group_id": int(item['group_id']),
+                "topic_ids": topics_str,
+                "is_active": True
+            }
+            # Cek duplikat target untuk user ini
+            exist = supabase.table('blast_targets').select('id').eq('user_id', user_id).eq('group_id', item['group_id']).execute()
+            
+            if exist.data:
+                supabase.table('blast_targets').update(payload).eq('id', exist.data[0]['id']).execute()
+            else:
+                supabase.table('blast_targets').insert(payload).execute()
+                
+        return jsonify({"status": "success", "message": f"{len(selected)} target disimpan!"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/import_crm_api', methods=['POST'])
+@login_required
+async def import_crm_api():
+    """Import chat history ke tabel tele_users"""
+    user_id = session['user_id']
+    client = await get_user_client(user_id)
+    if not client: return jsonify({"status": "error", "message": "Tele disconnected"})
+    
+    count = 0
+    try:
+        async for dialog in client.iter_dialogs(limit=500):
+            if dialog.is_user and not dialog.entity.bot:
+                u = dialog.entity
+                data = {
+                    "owner_id": user_id,
+                    "user_id": u.id,
+                    "username": u.username,
+                    "first_name": u.first_name,
+                    "last_interaction": datetime.utcnow().isoformat()
+                }
+                # Upsert manual (hapus dulu kalau ada biar update, atau ignore)
+                # Supabase upsert butuh unique constraint yang pas
+                try:
+                    supabase.table('tele_users').upsert(data, on_conflict="owner_id, user_id").execute()
+                    count += 1
+                except: pass
+                
+        await client.disconnect()
+        return jsonify({"status": "success", "message": f"Berhasil import {count} user."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/start_broadcast', methods=['POST'])
+@login_required
+async def start_broadcast():
+    """Kirim Broadcast (Sederhana via Request, idealnya via Worker)"""
+    user_id = session['user_id']
+    message = request.form.get('message')
+    
+    client = await get_user_client(user_id)
+    if not client: return jsonify({"status": "error", "message": "Tele disconnected"})
+    
+    # Ambil user CRM milik owner ini
+    crm_users = supabase.table('tele_users').select("*").eq('owner_id', user_id).execute().data
+    
+    # Run async background task (fire and forget simulation)
+    # Note: Di production Render free tier, process ini bisa kepotong kalau lama.
+    # Idealnya pakai Celery/Redis queue. Ini versi simple.
+    asyncio.create_task(background_broadcast(client, crm_users, message))
+    
+    return jsonify({"status": "success", "message": "Broadcast berjalan di background!"})
+
+async def background_broadcast(client, users, text):
+    try:
+        for u in users:
+            try:
+                final_msg = text.replace("{name}", u.get('first_name') or "Kak")
+                await client.send_message(int(u['user_id']), final_msg)
+                await asyncio.sleep(2)
+            except: pass
+    except: pass
+    finally:
+        await client.disconnect()
+
+# --- CRUD JADWAL & TARGET ---
+
+@app.route('/add_schedule', methods=['POST'])
+@login_required
+def add_schedule():
+    user_id = session['user_id']
+    h = request.form.get('hour')
+    m = request.form.get('minute')
+    supabase.table('blast_schedules').insert({
+        "user_id": user_id, "run_hour": int(h), "run_minute": int(m)
+    }).execute()
+    return redirect(url_for('dashboard'))
+
+@app.route('/delete_schedule/<int:id>')
+@login_required
+def delete_schedule(id):
+    # Pastikan hapus punya sendiri
+    user_id = session['user_id']
+    supabase.table('blast_schedules').delete().eq('id', id).eq('user_id', user_id).execute()
+    return redirect(url_for('dashboard'))
+
+@app.route('/delete_target/<int:id>')
+@login_required
+def delete_target(id):
+    user_id = session['user_id']
+    supabase.table('blast_targets').delete().eq('id', id).eq('user_id', user_id).execute()
+    return redirect(url_for('dashboard'))
+
+# --- SUPER ADMIN ---
 
 @app.route('/super-admin')
 @admin_required
 def super_admin_dashboard():
-    try:
-        # Ambil semua users
-        resp_users = supabase.table('users').select("*").order('created_at', desc=True).execute()
-        users_list = resp_users.data
+    # Ambil semua user untuk admin
+    users = supabase.table('users').select("*").order('created_at', desc=True).execute().data
+    
+    # Data enrichment manual
+    final_users = []
+    for u in users:
+        # Cek telegram
+        tele = supabase.table('telegram_accounts').select("*").eq('user_id', u['id']).execute().data
         
-        # Hitung statistik manual karena API count terbatas
-        total_users = len(users_list)
+        class UserWrapper:
+            def __init__(self, d, t):
+                self.id = d['id']
+                self.email = d['email']
+                self.is_admin = d.get('is_admin')
+                self.is_banned = d.get('is_banned')
+                self.created_at = datetime.fromisoformat(d['created_at'].replace('Z', '+00:00')) if d.get('created_at') else datetime.now()
+                self.telegram_account = type('obj', (object,), t[0]) if t else None
+                
+        final_users.append(UserWrapper(u, tele))
         
-        # Hitung active bot
-        resp_bots = supabase.table('telegram_accounts').select("id", count='exact').eq('is_active', True).execute()
-        active_bots = resp_bots.count if resp_bots.count else 0
-        
-        banned_users = sum(1 for u in users_list if u.get('is_banned'))
-        
-        stats = {
-            'total_users': total_users,
-            'active_bots': active_bots,
-            'banned_users': banned_users
-        }
-        
-        # Perbaiki struktur users list agar punya properti 'telegram_account' untuk template
-        # Ini agak berat kalau user ribuan, tapi untuk awal ok
-        final_users = []
-        for u in users_list:
-            tele = get_telegram_account(u['id'])
-            # Bikin dummy object biar template user.email bisa jalan
-            class UserWrapper:
-                def __init__(self, d, t):
-                    self.id = d['id']
-                    self.email = d['email']
-                    self.is_admin = d.get('is_admin')
-                    self.is_banned = d.get('is_banned')
-                    self.created_at = datetime.fromisoformat(d['created_at'].replace('Z', '+00:00')) if d.get('created_at') else datetime.now()
-                    self.telegram_account = None
-                    if t:
-                        self.telegram_account = type('obj', (object,), {
-                            'phone_number': t['phone_number'],
-                            'is_active': t['is_active']
-                        })
-            final_users.append(UserWrapper(u, tele))
-
-        return render_template('super_admin.html', users=final_users, stats=stats)
-    except Exception as e:
-        print(f"❌ ADMIN DASHBOARD ERROR: {e}")
-        return "Database Error di Admin Panel (API)"
+    stats = {
+        'total_users': len(users),
+        'active_bots': 0, # Hitung manual jika perlu
+        'banned_users': sum(1 for x in users if x.get('is_banned'))
+    }
+    return render_template('super_admin.html', users=final_users, stats=stats)
 
 @app.route('/super-admin/ban/<int:user_id>', methods=['POST'])
 @admin_required
 def ban_user(user_id):
+    # Logic ban user via API
     try:
-        target_user = get_user_by_id(user_id)
-        if target_user:
-            if target_user.get('is_admin'):
-                flash('Tidak bisa ban sesama Admin!', 'warning')
-            else:
-                new_status = not target_user.get('is_banned', False)
-                
-                # Update User
-                supabase.table('users').update({'is_banned': new_status}).eq('id', user_id).execute()
-                
-                # Update Bot Active Status
-                if new_status: # Jika di ban, matikan bot
-                    supabase.table('telegram_accounts').update({'is_active': False}).eq('user_id', user_id).execute()
-                
-                status_text = "Banned" if new_status else "Active"
-                flash(f'User {target_user["email"]} status changed to {status_text}.', 'success')
-    except Exception as e:
-        print(f"❌ BAN ACTION ERROR: {e}")
-        flash(f"Gagal update status: {e}", 'danger')
+        user = supabase.table('users').select("is_banned").eq('id', user_id).execute().data[0]
+        new_status = not user['is_banned']
+        supabase.table('users').update({'is_banned': new_status}).eq('id', user_id).execute()
         
+        if new_status: # Matikan bot
+            supabase.table('telegram_accounts').update({'is_active': False}).eq('user_id', user_id).execute()
+            
+        flash(f"Status user {user_id} diupdate.", 'success')
+    except Exception as e:
+        flash(f"Error: {e}", 'danger')
     return redirect(url_for('super_admin_dashboard'))
 
-# --- TELETHON AUTH FLOW (API VERSION) ---
-
+# --- AUTH TELEGRAM ---
 @app.route('/api/connect/send_code', methods=['POST'])
+@login_required
 async def send_code():
-    if 'user_id' not in session: return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
-    
-    user = get_user_by_id(session['user_id'])
-    if user.get('is_banned'): return jsonify({'status': 'error', 'message': 'Akun disuspend.'}), 403
-
     phone = request.json.get('phone')
     user_id = session['user_id']
-    
-    if API_ID == 0 or not API_HASH:
-        return jsonify({'status': 'error', 'message': 'Server Config Error: API_ID/HASH not set.'})
-
     try:
         client = TelegramClient(StringSession(), API_ID, API_HASH)
         await client.connect()
-        
         if not await client.is_user_authorized():
-            phone_code_hash = await client.send_code_request(phone)
-            login_states[user_id] = {
-                'client': client,
-                'phone': phone,
-                'phone_code_hash': phone_code_hash.phone_code_hash
-            }
-            return jsonify({'status': 'success', 'message': 'OTP terkirim ke Telegram/SMS anda.'})
-        else:
-            return jsonify({'status': 'error', 'message': 'Nomor ini sudah login.'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f"Telegram Error: {str(e)}"})
+            req = await client.send_code_request(phone)
+            login_states[user_id] = {'client': client, 'phone': phone, 'hash': req.phone_code_hash}
+            return jsonify({'status': 'success', 'message': 'OTP Sent!'})
+        return jsonify({'status': 'error', 'message': 'Logged in.'})
+    except Exception as e: return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/api/connect/verify_code', methods=['POST'])
+@login_required
 async def verify_code():
-    if 'user_id' not in session: return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
-    
     user_id = session['user_id']
-    otp = request.json.get('otp')
-    password = request.json.get('password')
     state = login_states.get(user_id)
+    if not state: return jsonify({'status': 'error', 'message': 'Expired'})
     
-    if not state: return jsonify({'status': 'error', 'message': 'Session expired.'})
-    
+    otp = request.json.get('otp')
+    pw = request.json.get('password')
     client = state['client']
-    phone = state['phone']
-    hash_code = state['phone_code_hash']
     
     try:
-        try:
-            await client.sign_in(phone, otp, phone_code_hash=hash_code)
-        except errors.SessionPasswordNeededError:
-            if not password:
-                return jsonify({'status': '2fa_required', 'message': 'Password 2FA diperlukan.'})
-            await client.sign_in(password=password)
-            
-        string_sess = client.session.save()
+        try: await client.sign_in(state['phone'], otp, phone_code_hash=state['hash'])
+        except errors.SessionPasswordNeededError: await client.sign_in(password=pw)
         
-        # Simpan Session String ke Supabase via API
-        # Cek ada akun lama gak
-        existing = get_telegram_account(user_id)
-        
-        data = {
-            'user_id': user_id,
-            'phone_number': phone,
-            'session_string': string_sess,
-            'is_active': True,
-            'created_at': datetime.utcnow().isoformat()
-        }
-        
-        if existing:
-            supabase.table('telegram_accounts').update(data).eq('user_id', user_id).execute()
-        else:
-            supabase.table('telegram_accounts').insert(data).execute()
+        sess = client.session.save()
+        # Upsert Tele Account
+        data = {'user_id': user_id, 'phone_number': state['phone'], 'session_string': sess, 'is_active': True}
+        supabase.table('telegram_accounts').upsert(data, on_conflict="user_id").execute()
         
         await client.disconnect()
-        del login_states[user_id]
-        return jsonify({'status': 'success', 'message': 'Telegram Berhasil Terhubung!'})
-        
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+        return jsonify({'status': 'success'})
+    except Exception as e: return jsonify({'status': 'error', 'message': str(e)})
 
-# --- HELPER: AUTO CREATE ADMIN ---
-# Dijalankan saat start, cek via API
-def init_admin_check():
-    if not supabase: return
-    
-    super_email = os.getenv('SUPER_ADMIN', 'admin@baba.com')
-    super_pass = os.getenv('PASS_ADMIN', 'admin123')
-    
+# --- STARTUP CHECK ---
+def init_check():
+    # Cek Admin
+    adm = os.getenv('SUPER_ADMIN', 'admin@baba.com')
+    pwd = os.getenv('PASS_ADMIN', 'admin123')
     try:
-        exist = get_user_by_email(super_email)
-        if not exist:
-            hashed = generate_password_hash(super_pass, method='sha256')
-            data = {
-                'email': super_email,
-                'password': hashed,
-                'is_admin': True,
-                'created_at': datetime.utcnow().isoformat()
-            }
-            supabase.table('users').insert(data).execute()
-            print(f"👑 Super Admin Created via API: {super_email}")
-        else:
-            print(f"✅ Admin exists: {super_email}")
-    except Exception as e:
-        print(f"⚠️ Init Admin Error: {e}")
+        res = supabase.table('users').select("*").eq('email', adm).execute()
+        if not res.data:
+            supabase.table('users').insert({
+                'email': adm, 'password': generate_password_hash(pwd), 'is_admin': True
+            }).execute()
+            print(f"👑 Admin Created: {adm}")
+    except: pass
 
 if __name__ == '__main__':
-    # Init admin
-    init_admin_check()
+    init_check()
     app.run(debug=True, port=5000, use_reloader=False)
