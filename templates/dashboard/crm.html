@@ -1,83 +1,79 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Database CRM{% endblock %}
+{% block title %}CRM User{% endblock %}
 
 {% block content %}
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-enter">
-    <div>
-        <h1 class="text-2xl font-bold text-gray-800">Customer Relationship Management</h1>
-        <p class="text-gray-500 text-sm mt-1">Database pelanggan yang dikumpulkan dari riwayat chat Anda.</p>
-    </div>
-    <div class="flex gap-3">
-        <button onclick="importCRM()" id="btn-import" class="bg-white border border-gray-200 text-gray-700 px-5 py-2.5 rounded-xl font-bold hover:bg-gray-50 hover:text-indigo-600 transition flex items-center gap-2 shadow-sm">
-            <i class="fa-solid fa-cloud-arrow-down"></i> Sync / Import
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Database Pelanggan</h1>
+    <div class="flex gap-2">
+        <button onclick="importCRM()" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-bold hover:bg-gray-50 text-sm">
+            <i class="fa-solid fa-rotate mr-2"></i> Sync
         </button>
-        <a href="/dashboard/broadcast" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition flex items-center gap-2">
-            <i class="fa-solid fa-paper-plane"></i> Broadcast
-        </a>
+        <button onclick="broadcastSelected()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 text-sm shadow-lg">
+            <i class="fa-solid fa-paper-plane mr-2"></i> Broadcast Terpilih (<span id="countSelected">0</span>)
+        </button>
     </div>
 </div>
 
-<!-- Stats CRM -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-enter" style="animation-delay: 0.1s;">
-    <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
-        <div class="relative z-10">
-            <p class="text-blue-100 text-xs font-bold uppercase mb-1">Total Pelanggan</p>
-            <h2 class="text-4xl font-bold">{{ user_count }}</h2>
-        </div>
-        <i class="fa-solid fa-users absolute -bottom-4 -right-4 text-8xl text-white opacity-20"></i>
-    </div>
-    
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-        <div class="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-xl">
-            <i class="fa-solid fa-user-check"></i>
-        </div>
-        <div>
-            <p class="text-gray-500 text-xs">Status Database</p>
-            <h4 class="font-bold text-gray-800">Aktif & Valid</h4>
-        </div>
-    </div>
-
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-        <div class="w-12 h-12 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center text-xl">
-            <i class="fa-solid fa-history"></i>
-        </div>
-        <div>
-            <p class="text-gray-500 text-xs">Terakhir Sync</p>
-            <h4 class="font-bold text-gray-800">Baru Saja</h4>
-        </div>
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-xs border-b">
+                <tr>
+                    <th class="px-6 py-4 w-10">
+                        <input type="checkbox" onchange="toggleAll(this)" class="w-4 h-4 text-indigo-600 rounded">
+                    </th>
+                    <th class="px-6 py-4">Nama</th>
+                    <th class="px-6 py-4">Username</th>
+                    <th class="px-6 py-4">ID</th>
+                    <th class="px-6 py-4">Last Interaction</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for u in crm_users %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <input type="checkbox" value="{{ u.user_id }}" class="user-check w-4 h-4 text-indigo-600 rounded" onchange="updateCount()">
+                    </td>
+                    <td class="px-6 py-4 font-bold text-gray-800">{{ u.first_name }}</td>
+                    <td class="px-6 py-4 text-blue-500">@{{ u.username or '-' }}</td>
+                    <td class="px-6 py-4 font-mono text-xs text-gray-400">{{ u.user_id }}</td>
+                    <td class="px-6 py-4 text-gray-500 text-xs">{{ u.last_interaction[:10] }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">Data kosong. Klik Sync untuk import.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
-
-<!-- Data Placeholder -->
-<div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center animate-enter" style="animation-delay: 0.2s;">
-    <img src="https://cdni.iconscout.com/illustration/premium/thumb/empty-state-2130362-1800926.png" alt="Empty Data" class="w-64 mx-auto opacity-50 mb-4 mix-blend-multiply">
-    <h3 class="text-xl font-bold text-gray-800 mb-2">Data Table Visualization</h3>
-    <p class="text-gray-500 max-w-md mx-auto mb-6">Tabel data detail pelanggan akan muncul di sini dalam update mendatang. Saat ini data tersimpan aman di database server.</p>
-    <button onclick="importCRM()" class="text-indigo-600 font-bold hover:underline">Lakukan Import Sekarang &rarr;</button>
-</div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-async function importCRM() {
-    if(!confirm("Mulai scanning riwayat chat untuk menambah database pelanggan?")) return;
-    
-    const btn = document.getElementById('btn-import');
-    const original = btn.innerHTML;
-    btn.innerHTML = '<span class="loader-spinner border-gray-400 border-t-transparent mr-2"></span> Processing...';
-    btn.disabled = true;
+    function toggleAll(source) {
+        document.querySelectorAll('.user-check').forEach(cb => cb.checked = source.checked);
+        updateCount();
+    }
 
-    try {
+    function updateCount() {
+        const count = document.querySelectorAll('.user-check:checked').length;
+        document.getElementById('countSelected').innerText = count;
+    }
+
+    function broadcastSelected() {
+        const selected = Array.from(document.querySelectorAll('.user-check:checked')).map(cb => cb.value);
+        if (selected.length === 0) return alert("Pilih minimal satu user!");
+        
+        // Redirect ke halaman broadcast dengan parameter ID
+        const ids = selected.join(',');
+        window.location.href = `/dashboard/broadcast?ids=${ids}`;
+    }
+
+    async function importCRM() {
+        if(!confirm("Scan kontak?")) return;
         const res = await apiRequest('/import_crm_api', 'POST');
         alert(res.message);
         if(res.status === 'success') location.reload();
-    } catch(e) {
-        alert("Gagal koneksi.");
-    } finally {
-        btn.innerHTML = original;
-        btn.disabled = false;
     }
-}
 </script>
 {% endblock %}
