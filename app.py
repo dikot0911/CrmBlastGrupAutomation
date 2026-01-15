@@ -380,23 +380,50 @@ def get_dashboard_context():
 @app.route('/dashboard')
 @login_required
 def dashboard_overview():
-    """Halaman Utama Dashboard: Ringkasan Statistik"""
+    """Halaman Utama Dashboard: Ringkasan Statistik dengan Pagination"""
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
     uid = user.id
-    # Default values
-    logs, schedules, targets, crm_count = [], [], [], 0
+    
+    # --- LOGIC PAGINATION ---
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+    # Hitung offset untuk database
+    start = (page - 1) * per_page
+    end = start + per_page - 1
+    
+    logs = []
+    total_logs = 0
+    total_pages = 0
+    
+    schedules = []
+    targets = []
+    crm_count = 0
     
     if supabase:
         try:
-            # Fetch essential data for overview
-            logs = supabase.table('blast_logs').select("*").eq('user_id', uid).order('created_at', desc=True).limit(20).execute().data
+            # 1. Ambil Total Count Logs (Untuk hitung halaman)
+            count_res = supabase.table('blast_logs').select("id", count='exact', head=True).eq('user_id', uid).execute()
+            total_logs = count_res.count if count_res.count else 0
+            
+            # Hitung total halaman
+            import math
+            total_pages = math.ceil(total_logs / per_page)
+
+            # 2. Ambil Data Logs Sesuai Halaman (Range)
+            logs = supabase.table('blast_logs').select("*").eq('user_id', uid)\
+                .order('created_at', desc=True)\
+                .range(start, end)\
+                .execute().data
+            
+            # 3. Data Lainnya
             schedules = supabase.table('blast_schedules').select("*").eq('user_id', uid).execute().data
             targets = supabase.table('blast_targets').select("*").eq('user_id', uid).execute().data
-            # Efficient counting
             crm_res = supabase.table('tele_users').select("id", count='exact', head=True).eq('owner_id', uid).execute()
             crm_count = crm_res.count if crm_res.count else 0
+            
         except Exception as e:
             logger.error(f"Dashboard Data Error: {e}")
     
@@ -405,7 +432,12 @@ def dashboard_overview():
                            logs=logs, 
                            schedules=schedules, 
                            targets=targets, 
-                           user_count=crm_count, 
+                           user_count=crm_count,
+                           # Kirim variabel pagination ke HTML
+                           current_page=page,
+                           total_pages=total_pages,
+                           per_page=per_page,
+                           total_logs=total_logs,
                            active_page='dashboard')
 
 @app.route('/dashboard/broadcast')
@@ -820,16 +852,6 @@ def start_broadcast():
     threading.Thread(target=_broadcast_worker, args=(user_id, message, image_path)).start()
     
     return jsonify({"status": "success", "message": "Broadcast sedang diproses di latar belakang!"})
-
-# ... Bagian bawah app.py tetap sama ...
-
-### 3. Update `templates/dashboard/index.html` (Perbaikan Paginasi Log)
-Update sedikit di `templates/dashboard/index.html` untuk memastikan tombol paginasi bekerja dan dropdown baris berfungsi.
-
-
-http://googleusercontent.com/immersive_entry_chip/1
-
-Update kedua file template ini dan logika `start_broadcast` di `app.py`. Sekarang login Telegram sudah ada halamannya lagi, dan broadcast akan mencoba mencari entitas pengguna lebih keras sebelum menyerah, mengurangi kemungkinan error "Could not find input entity".
 
 # ==============================================================================
 # SECTION 12: CRUD ROUTES (SCHEDULE & TARGETS)
