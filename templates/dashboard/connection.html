@@ -1,0 +1,101 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Koneksi Telegram{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="text-center mb-10">
+        <h1 class="text-3xl font-bold text-gray-800">Hubungkan Telegram</h1>
+        <p class="text-gray-500 mt-2">Agar bot bisa berjalan, Anda perlu menghubungkan akun Telegram Anda.</p>
+    </div>
+
+    {% if user.telegram_account and user.telegram_account.is_active %}
+    <!-- SUDAH LOGIN -->
+    <div class="bg-white rounded-3xl shadow-lg border border-green-100 p-8 text-center relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-2 bg-green-500"></div>
+        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 text-4xl">
+            <i class="fa-brands fa-telegram"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-green-700">Terhubung!</h2>
+        <p class="text-gray-600 mb-6">Akun <strong>{{ user.telegram_account.phone_number }}</strong> sedang aktif.</p>
+        <button class="text-red-500 text-sm font-bold hover:underline" onclick="alert('Hubungi admin untuk reset sesi.')">Putuskan Koneksi</button>
+    </div>
+
+    {% else %}
+    <!-- FORM LOGIN -->
+    <div class="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
+        
+        <!-- STEP 1: NOMOR HP -->
+        <div id="step1">
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Nomor HP Telegram</label>
+                <input type="text" id="phone" placeholder="+62812..." class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono">
+                <p class="text-xs text-gray-400 mt-2">*Gunakan kode negara (contoh: +62).</p>
+            </div>
+            <button onclick="sendOTP()" id="btnSend" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition shadow-lg">Kirim Kode OTP</button>
+        </div>
+
+        <!-- STEP 2: OTP -->
+        <div id="step2" class="hidden">
+            <div class="mb-4">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Kode OTP (Cek Telegram App)</label>
+                <input type="text" id="otp" placeholder="1 2 3 4 5" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-center text-xl tracking-widest">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Password 2FA (Jika ada)</label>
+                <input type="password" id="pw" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <button onclick="verifyOTP()" id="btnVerify" class="w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition shadow-lg">Masuk</button>
+            <div class="text-center mt-4">
+                <button onclick="location.reload()" class="text-sm text-gray-400 hover:text-indigo-600">Ulangi</button>
+            </div>
+        </div>
+        
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function sendOTP() {
+        const phone = document.getElementById('phone').value;
+        const btn = document.getElementById('btnSend');
+        
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+        btn.disabled = true;
+
+        const res = await apiRequest('/api/connect/send_code', 'POST', {phone});
+        
+        if (res.status === 'success') {
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+        } else if (res.status === 'cooldown') {
+            alert(res.message);
+        } else {
+            alert(res.message);
+            btn.innerHTML = 'Kirim Kode OTP';
+            btn.disabled = false;
+        }
+    }
+
+    async function verifyOTP() {
+        const otp = document.getElementById('otp').value;
+        const pw = document.getElementById('pw').value;
+        const btn = document.getElementById('btnVerify');
+
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifikasi...';
+        btn.disabled = true;
+
+        const res = await apiRequest('/api/connect/verify_code', 'POST', {otp, password: pw});
+
+        if (res.status === 'success') {
+            alert('Berhasil Login!');
+            location.reload();
+        } else {
+            alert(res.message);
+            btn.innerHTML = 'Masuk';
+            btn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}
