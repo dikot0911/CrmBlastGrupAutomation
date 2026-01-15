@@ -1,65 +1,55 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daftar - BlastPro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>body{font-family:'Plus Jakarta Sans',sans-serif;}</style>
-</head>
-<body class="bg-gray-50 h-screen flex items-center justify-center">
+{% extends "auth/base.html" %}
+{% block title %}Masuk{% endblock %}
 
-    <div class="flex w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden h-[600px]">
-        <!-- Kiri: Gambar -->
-        <div class="hidden lg:flex w-1/2 bg-gray-900 relative items-center justify-center p-12 text-white">
-            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20"></div>
-            <div class="relative z-10 text-center">
-                <i class="fa-solid fa-user-plus text-6xl mb-6 text-green-400"></i>
-                <h2 class="text-3xl font-bold mb-4">Mulai Sekarang</h2>
-                <p class="text-gray-400">Bergabung dengan ribuan UMKM lain yang telah mengotomatisasi bisnis mereka.</p>
-            </div>
-        </div>
-
-        <!-- Kanan: Form -->
-        <div class="w-full lg:w-1/2 p-8 md:p-12 flex flex-col justify-center relative overflow-y-auto">
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="mb-4 p-3 rounded-lg text-sm font-bold flex items-center gap-2 {{ 'bg-red-50 text-red-600' if category == 'danger' else 'bg-green-50 text-green-600' }}">
-                            <i class="fa-solid {{ 'fa-circle-exclamation' if category == 'danger' else 'fa-circle-check' }}"></i>
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-
-            <div class="mb-8">
-                <h3 class="text-2xl font-bold text-gray-800">Buat Akun Baru</h3>
-                <p class="text-sm text-gray-500">Isi data diri Anda untuk memulai.</p>
-            </div>
-
-            <form method="POST" class="space-y-5">
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Email Aktif</label>
-                    <input type="email" name="email" required placeholder="anda@bisnis.com" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition">
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Password</label>
-                    <input type="password" name="password" required placeholder="Minimal 6 karakter" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition">
-                </div>
-                <button type="submit" class="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold rounded-xl transition shadow-lg">
-                    Daftar Sekarang
-                </button>
-            </form>
-
-            <div class="mt-8 text-center text-sm text-gray-600">
-                Sudah punya akun? <a href="/login" class="font-bold text-indigo-600 hover:underline">Masuk Disini</a>
-            </div>
-        </div>
+{% block auth_content %}
+<!-- Wrapper dengan z-index tinggi biar bisa diklik -->
+<div class="relative z-50">
+    <div class="text-center mb-10">
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">Selamat Datang Kembali!</h2>
+        <p class="text-gray-500 text-sm">Masuk untuk mengelola bot dan kampanye Anda.</p>
     </div>
 
-</body>
-</html>
+    <!-- Form Login -->
+    <form method="POST" action="/login">
+        <div class="space-y-5">
+            <!-- Email Input -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Email Bisnis</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fa-regular fa-envelope"></i></span>
+                    <input type="email" name="email" required placeholder="nama@toko.com" 
+                        class="form-input w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-medium text-gray-700 placeholder-gray-400">
+                </div>
+            </div>
+
+            <!-- Password Input -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label class="block text-sm font-semibold text-gray-700">Password</label>
+                </div>
+                <div class="relative">
+                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fa-solid fa-lock"></i></span>
+                    <input type="password" name="password" id="password" required placeholder="••••••••" 
+                        class="form-input w-full pl-11 pr-11 py-3 bg-white border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-medium text-gray-700 placeholder-gray-400">
+                    <!-- Tombol intip password (z-index tinggi) -->
+                    <button type="button" onclick="togglePassword('password', 'eyeIcon')" class="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 focus:outline-none z-50 cursor-pointer">
+                        <i id="eyeIcon" class="fa-regular fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Submit Button (z-index tinggi) -->
+            <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 relative z-50 cursor-pointer">
+                Masuk ke Dashboard
+            </button>
+        </div>
+    </form>
+
+    <!-- Register Link -->
+    <div class="mt-8 text-center text-sm text-gray-600 relative z-50">
+        Belum punya akun? 
+        <!-- Link ini lari ke /register -->
+        <a href="/register" class="font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition cursor-pointer">Daftar Gratis Sekarang</a>
+    </div>
+</div>
+{% endblock %}
