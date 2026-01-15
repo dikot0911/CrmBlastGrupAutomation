@@ -15,8 +15,46 @@
 
 <!-- Stats Grid -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 animate-enter">
-    <!-- Stat Cards... (Sama seperti sebelumnya) -->
-    <!-- ... -->
+    <!-- Stat 1 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Log</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ total_logs if total_logs else logs|length }}</h3>
+            </div>
+            <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><i class="fa-solid fa-server"></i></div>
+        </div>
+    </div>
+    <!-- Stat 2 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Target Grup</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ targets|length }}</h3>
+            </div>
+            <div class="p-3 bg-purple-50 text-purple-600 rounded-xl"><i class="fa-solid fa-users-viewfinder"></i></div>
+        </div>
+    </div>
+    <!-- Stat 3 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">CRM User</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ user_count }}</h3>
+            </div>
+            <div class="p-3 bg-green-50 text-green-600 rounded-xl"><i class="fa-solid fa-address-book"></i></div>
+        </div>
+    </div>
+    <!-- Stat 4 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Jadwal</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ schedules|length }}</h3>
+            </div>
+            <div class="p-3 bg-orange-50 text-orange-600 rounded-xl"><i class="fa-solid fa-clock"></i></div>
+        </div>
+    </div>
 </div>
 
 <!-- Logs Table -->
@@ -27,16 +65,18 @@
             <p class="text-xs text-gray-500">Log pengiriman pesan otomatis.</p>
         </div>
         
-        <!-- Pagination Controls -->
         <div class="flex items-center gap-3">
-             <form action="{{ url_for('dashboard_overview') }}" method="get" class="flex items-center gap-2">
+             <!-- Rows Per Page Selector -->
+            <form action="{{ url_for('dashboard_overview') }}" method="get" class="flex items-center gap-2">
                 <label for="per_page" class="text-xs text-gray-500 font-medium">Baris:</label>
-                <select name="per_page" id="per_page" onchange="this.form.submit()" class="text-xs border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 pl-2 pr-6 bg-white shadow-sm">
+                <select name="per_page" id="per_page" onchange="this.form.submit()" class="text-xs border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 pl-2 pr-6 bg-white shadow-sm cursor-pointer">
                     <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
                     <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
                     <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
                 </select>
             </form>
+
             <button onclick="location.reload()" class="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-400 hover:text-indigo-600 flex items-center justify-center transition shadow-sm" title="Refresh Data">
                 <i class="fa-solid fa-sync-alt"></i>
             </button>
@@ -45,7 +85,6 @@
     
     <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
-            <!-- Table Header... (Sama) -->
             <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-xs tracking-wider">
                 <tr>
                     <th class="px-6 py-4">Waktu</th>
@@ -57,10 +96,9 @@
             <tbody class="divide-y divide-gray-100 bg-white">
                 {% for log in logs %}
                 <tr class="hover:bg-gray-50 transition group">
-                    <!-- Log Row Data... (Sama) -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded inline-block">
-                            {{ log.created_at[11:19] }}
+                            {{ log.created_at[11:19] }} <span class="text-gray-400 ml-1">{{ log.created_at[:10] }}</span>
                         </div>
                     </td>
                     <td class="px-6 py-4 font-medium text-gray-700 group-hover:text-indigo-600 transition">
@@ -102,13 +140,13 @@
         <div class="flex gap-2">
             {% if current_page > 1 %}
             <a href="{{ url_for('dashboard_overview', page=current_page-1, per_page=per_page) }}" class="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition shadow-sm">
-                Prev
+                <i class="fa-solid fa-chevron-left mr-1"></i> Prev
             </a>
             {% endif %}
             
             {% if current_page < total_pages %}
             <a href="{{ url_for('dashboard_overview', page=current_page+1, per_page=per_page) }}" class="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition shadow-sm">
-                Next
+                Next <i class="fa-solid fa-chevron-right ml-1"></i>
             </a>
             {% endif %}
         </div>
