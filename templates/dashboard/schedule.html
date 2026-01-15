@@ -47,6 +47,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {% for s in schedules %}
                 <div class="bg-white p-4 rounded-2xl border border-gray-100 hover:border-indigo-200 shadow-sm hover:shadow-md transition group relative flex flex-col items-center justify-center text-center h-32">
+                     <div class="text-indigo-200 text-3xl mb-2 opacity-50 group-hover:opacity-100 transition"><i class="fa-regular fa-clock"></i></div>
                     <div class="text-3xl font-mono font-bold text-gray-800 mb-1 group-hover:text-indigo-600 transition">
                         {{ '%02d' % s.run_hour }}:{{ '%02d' % s.run_minute }}
                     </div>
