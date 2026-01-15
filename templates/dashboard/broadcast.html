@@ -2,142 +2,131 @@
 {% block title %}Broadcast{% endblock %}
 
 {% block content %}
-<header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-enter">
-    <div>
-        <h1 class="text-2xl font-bold text-gray-800">Broadcast Pesan</h1>
-        <p class="text-gray-500 text-sm">Kirim pesan massal ke pelanggan Anda.</p>
-    </div>
+<div class="flex flex-col lg:flex-row gap-8 h-[calc(100vh-140px)] animate-enter">
     
-    <!-- Breadcrumb / Status -->
-    <div class="flex items-center gap-2 text-sm bg-white px-4 py-2 rounded-lg border border-gray-100 shadow-sm">
-        <span class="text-gray-400">Target:</span>
-        {% if selected_ids %}
-            <span class="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{{ count_selected }} Kontak Terpilih</span>
-            <a href="/dashboard/broadcast" class="text-xs text-red-400 hover:text-red-600 ml-2" title="Reset Pilihan"><i class="fa-solid fa-xmark"></i></a>
-        {% else %}
-            <span class="font-bold text-gray-700">Semua Database ({{ user.telegram_account.tele_users_count if user.telegram_account else 'All' }})</span>
-        {% endif %}
-    </div>
-</header>
-
-<div class="flex flex-col lg:flex-row gap-8 h-[calc(100vh-180px)] animate-enter" style="animation-delay: 0.1s;">
-    
-    <!-- Editor (Left) -->
+    <!-- Editor (Kiri) -->
     <div class="w-full lg:w-1/2 flex flex-col">
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex-1 flex flex-col h-full relative overflow-hidden">
-             <!-- Decor -->
-             <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-bl-full -mr-8 -mt-8 opacity-50 z-0"></div>
+        <div class="mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">Broadcast Editor</h1>
+            <p class="text-gray-500 text-sm">Kirim pesan personal ke pelanggan Anda.</p>
+        </div>
 
-            <h3 class="font-bold text-lg mb-4 text-gray-800 z-10 flex items-center gap-2">
-                <i class="fa-regular fa-pen-to-square text-indigo-500"></i> Editor Pesan
-            </h3>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex-1 flex flex-col h-full relative overflow-hidden">
+            <!-- Indikator Target -->
+            <div class="mb-4">
+                {% if selected_ids %}
+                    <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex justify-between items-center animate-pulse">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                                <i class="fa-solid fa-users"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-indigo-900 text-sm">Mode Target Spesifik</h4>
+                                <p class="text-xs text-indigo-600">Akan dikirim ke <strong>{{ count_selected }}</strong> kontak terpilih.</p>
+                            </div>
+                        </div>
+                        <a href="/dashboard/broadcast" class="text-xs font-bold text-gray-400 hover:text-red-500 transition px-2 py-1 hover:bg-white rounded">
+                            <i class="fa-solid fa-xmark mr-1"></i> Reset
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 flex items-center gap-3 opacity-70">
+                        <div class="w-8 h-8 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500">
+                            <i class="fa-solid fa-bullhorn"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-700 text-sm">Broadcast Global</h4>
+                            <p class="text-xs text-gray-500">Mengirim ke seluruh database CRM.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
             
-            <form id="broadcastForm" onsubmit="sendBroadcast(event)" class="h-full flex flex-col z-10" enctype="multipart/form-data">
-                <!-- Hidden Input untuk ID Terpilih -->
+            <form id="broadcastForm" onsubmit="sendBroadcast(event)" class="flex-1 flex flex-col z-10" enctype="multipart/form-data">
                 <input type="hidden" name="selected_ids" value="{{ selected_ids }}">
 
-                <div class="mb-4 flex-1 relative group">
+                <div class="mb-4 flex-1 relative">
                     <textarea id="messageInput" name="message" class="w-full h-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none font-sans text-sm transition bg-gray-50 focus:bg-white" 
-                    placeholder="Halo {name}, ada promo gila nih! **Diskon 50%** cuma hari ini..." 
+                    placeholder="Tulis pesan Anda disini...&#10;&#10;Tips: Gunakan {name} untuk menyapa nama pelanggan secara otomatis.&#10;&#10;Contoh: Halo {name}, apa kabar?" 
                     oninput="updatePreview()" required></textarea>
-                    
-                    <!-- Helper Text -->
-                    <div class="absolute bottom-4 right-4 text-[10px] text-gray-400 bg-white/80 px-2 py-1 rounded backdrop-blur-sm border border-gray-100 group-hover:opacity-100 transition-opacity">
-                        Markdown Support
-                    </div>
                 </div>
                 
-                <div class="mb-6">
-                     <label class="flex items-center gap-4 p-3 border border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-indigo-50/50 hover:border-indigo-300 transition group">
+                <div class="mb-4">
+                     <label class="flex items-center gap-4 p-3 border border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition group">
                         <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 group-hover:bg-indigo-100 group-hover:text-indigo-500 transition">
                             <i class="fa-solid fa-image"></i>
                         </div>
-                        <div class="flex-1">
-                            <span class="text-sm font-bold text-gray-700 block group-hover:text-indigo-700">Upload Gambar (Optional)</span>
-                            <span class="text-xs text-gray-400" id="fileName">Format JPG, PNG max 2MB</span>
+                        <div class="flex-1 overflow-hidden">
+                            <span class="text-sm font-bold text-gray-700 block truncate group-hover:text-indigo-700" id="fileLabel">Upload Gambar (Optional)</span>
+                            <span class="text-xs text-gray-400">Format JPG/PNG max 2MB</span>
                         </div>
                         <input type="file" name="image" class="hidden" accept="image/*" onchange="previewImage(event)">
                      </label>
                 </div>
 
                 <div class="flex justify-between items-center pt-4 border-t border-gray-100">
-                    <div class="flex items-center gap-2 text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                        <i class="fa-solid fa-text-width"></i> <span id="charCount">0 Char</span>
-                    </div>
-                    
-                    <div class="flex gap-3">
-                         {% if selected_ids %}
-                         <a href="/dashboard/broadcast" class="px-4 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-700 transition">Reset</a>
-                         {% endif %}
-                        <button type="submit" class="bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 text-sm">
-                            <i class="fa-solid fa-paper-plane mr-2"></i> Kirim Broadcast
-                        </button>
-                    </div>
+                    <span class="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-1 rounded" id="charCount">0 Chars</span>
+                    <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-paper-plane"></i> Kirim Pesan
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Preview (Right) -->
-    <div class="w-full lg:w-1/2 flex flex-col">
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex-1 flex flex-col items-center justify-center bg-gray-50/50 relative overflow-hidden">
-            <!-- Background Decoration -->
-            <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9IiNlN2U1ZTQiLz48L3N2Zz4=')] opacity-50"></div>
+    <!-- Preview (Kanan) -->
+    <div class="w-full lg:w-1/2 flex flex-col justify-center items-center">
+        <div class="mb-4 text-center">
+            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest bg-gray-200 px-3 py-1 rounded-full">Live Preview</span>
+        </div>
 
-            <div class="relative z-10 text-center mb-4">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Live Preview</span>
-            </div>
+        <!-- Phone Mockup -->
+        <div class="w-[320px] h-[600px] border-[12px] border-gray-800 rounded-[3rem] overflow-hidden relative shadow-2xl bg-white ring-4 ring-gray-200">
+            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-xl z-20"></div>
             
-            <!-- Mobile Mockup -->
-            <div class="w-[300px] h-[550px] border-[12px] border-gray-800 rounded-[3rem] overflow-hidden relative shadow-2xl bg-white ring-4 ring-gray-200">
-                <!-- Notch -->
-                <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-28 h-6 bg-gray-800 rounded-b-xl z-20"></div>
-                
-                <!-- Screen Content -->
-                <div class="w-full h-full flex flex-col relative preview-box bg-[#7289DA]" style="background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover;">
-                     <!-- Telegram Header -->
-                     <div class="bg-[#517DA2] text-white p-3 pt-10 flex items-center gap-3 shadow-md z-10">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        <div class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-xs font-bold border border-white/20">B</div>
-                        <div class="flex-1">
-                            <h4 class="font-bold text-sm leading-tight">BlastPro Bot</h4>
-                            <p class="text-[10px] opacity-80">bot</p>
-                        </div>
-                        <i class="fa-solid fa-ellipsis-vertical"></i>
+            <div class="w-full h-full flex flex-col relative preview-box bg-[#7289DA]" style="background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover;">
+                 <!-- Telegram Header -->
+                 <div class="bg-[#517DA2] text-white p-3 pt-10 flex items-center gap-3 shadow-md z-10">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <div class="w-9 h-9 bg-gradient-to-tr from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-sm font-bold border border-white/20">B</div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm leading-tight">Admin Toko</h4>
+                        <p class="text-[10px] opacity-80">bot</p>
                     </div>
-
-                     <!-- Chat Area -->
-                     <div class="flex-1 p-3 overflow-y-auto flex flex-col gap-2 pt-4 custom-scrollbar">
-                        <div class="text-center text-[10px] bg-black/20 text-white rounded-full px-2 py-0.5 mx-auto mb-2 w-fit">Today</div>
-                        
-                        <div class="self-start max-w-[85%] bg-white rounded-lg rounded-tl-none p-1.5 shadow-sm text-sm text-gray-800 break-words relative animate-enter">
-                            <!-- Image -->
-                            <img id="bubbleImage" class="hidden w-full max-h-40 object-cover rounded-lg mb-1">
-                            
-                            <!-- Text dengan Markdown Parsing -->
-                            <div id="bubbleText" class="whitespace-pre-wrap text-[13px] px-1 leading-snug">Halo...</div>
-                            
-                            <div class="text-[10px] text-gray-400 text-right mt-1 flex justify-end gap-1 items-center">
-                                <span>10:30 PM</span>
-                                <i class="fa-solid fa-check text-green-500"></i>
-                            </div>
-                        </div>
-                     </div>
-                     
-                     <!-- Input Bar Mockup -->
-                     <div class="bg-white p-2 flex items-center gap-2 border-t border-gray-200">
-                        <i class="fa-regular fa-face-smile text-gray-400 text-lg"></i>
-                        <div class="flex-1 bg-gray-100 rounded-full h-8 px-3 text-xs flex items-center text-gray-400">Pesan...</div>
-                        <i class="fa-solid fa-microphone text-gray-400 text-lg"></i>
-                     </div>
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
                 </div>
-            </div>
 
-            <div class="mt-6 flex gap-4 text-xs text-gray-400">
-                <div class="flex items-center gap-1"><span class="font-bold text-gray-800">**bold**</span></div>
-                <div class="flex items-center gap-1"><span class="italic text-gray-800">__italic__</span></div>
-                <div class="flex items-center gap-1"><span class="font-mono bg-gray-200 px-1 rounded text-red-500">`code`</span></div>
+                 <!-- Chat Area -->
+                 <div class="flex-1 p-3 overflow-y-auto flex flex-col gap-2 pt-4 custom-scrollbar">
+                    <div class="text-center text-[10px] bg-black/20 text-white rounded-full px-2 py-0.5 mx-auto mb-2 w-fit backdrop-blur-sm">Hari ini</div>
+                    
+                    <div class="self-start max-w-[85%] bg-white rounded-lg rounded-tl-none p-1.5 shadow-sm text-sm text-gray-800 break-words relative animate-enter">
+                        <!-- Image -->
+                        <img id="bubbleImage" class="hidden w-full max-h-48 object-cover rounded-lg mb-1">
+                        
+                        <!-- Text dengan Markdown Parsing -->
+                        <div id="bubbleText" class="whitespace-pre-wrap text-[13px] px-1 leading-snug">Halo {Nama}...</div>
+                        
+                        <div class="text-[10px] text-gray-400 text-right mt-1 flex justify-end gap-1 items-center">
+                            <span>10:30</span>
+                            <i class="fa-solid fa-check text-green-500"></i>
+                        </div>
+                    </div>
+                 </div>
+                 
+                 <!-- Input Bar Mockup -->
+                 <div class="bg-white p-2 flex items-center gap-2 border-t border-gray-200">
+                    <i class="fa-regular fa-face-smile text-gray-400 text-xl pl-1"></i>
+                    <div class="flex-1 bg-gray-100 rounded-full h-9 px-4 text-sm flex items-center text-gray-400">Tulis pesan...</div>
+                    <i class="fa-solid fa-microphone text-gray-400 text-xl pr-1"></i>
+                 </div>
             </div>
+        </div>
+        
+        <div class="mt-6 flex gap-4 text-xs text-gray-400">
+            <div class="flex items-center gap-1 bg-white px-2 py-1 rounded border"><span class="font-bold text-gray-800">**bold**</span></div>
+            <div class="flex items-center gap-1 bg-white px-2 py-1 rounded border"><span class="italic text-gray-800">__italic__</span></div>
+            <div class="flex items-center gap-1 bg-white px-2 py-1 rounded border"><span class="font-mono bg-gray-100 px-1 rounded text-red-500">`code`</span></div>
         </div>
     </div>
 </div>
@@ -150,7 +139,7 @@
         const count = document.getElementById('charCount');
         const preview = document.getElementById('bubbleText');
         
-        count.innerText = input.length + " Char";
+        count.innerText = input.length + " Chars";
         
         // Advanced Markdown Parsing
         let formatted = input
@@ -170,7 +159,7 @@
         const file = event.target.files[0];
         if(file) {
             // Update Filename text
-            document.getElementById('fileName').innerText = file.name;
+            document.getElementById('fileLabel').innerText = file.name;
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -206,7 +195,7 @@
                 form.reset();
                 updatePreview();
                 document.getElementById('bubbleImage').classList.add('hidden');
-                document.getElementById('fileName').innerText = 'Format JPG, PNG max 2MB';
+                document.getElementById('fileLabel').innerText = 'Upload Gambar (Optional)';
             } else {
                 alert('Gagal: ' + data.message);
             }
