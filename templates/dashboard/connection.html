@@ -2,7 +2,7 @@
 {% block title %}Koneksi Telegram{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
+<div class="max-w-2xl mx-auto animate-enter">
     <div class="text-center mb-10">
         <h1 class="text-3xl font-bold text-gray-800">Hubungkan Telegram</h1>
         <p class="text-gray-500 mt-2">Agar bot bisa berjalan, Anda perlu menghubungkan akun Telegram Anda.</p>
@@ -10,46 +10,110 @@
 
     {% if user.telegram_account and user.telegram_account.is_active %}
     <!-- SUDAH LOGIN -->
-    <div class="bg-white rounded-3xl shadow-lg border border-green-100 p-8 text-center relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-2 bg-green-500"></div>
-        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 text-4xl">
-            <i class="fa-brands fa-telegram"></i>
+    <div class="bg-white rounded-3xl shadow-xl border border-green-100 p-10 text-center relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-green-400 to-emerald-600"></div>
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-green-50 rounded-full opacity-50 blur-xl"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-emerald-50 rounded-full opacity-50 blur-xl"></div>
+
+        <div class="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 relative shadow-inner">
+            <div class="absolute w-full h-full rounded-full border-4 border-green-100 animate-ping opacity-20"></div>
+            <i class="fa-brands fa-telegram text-5xl text-green-500"></i>
+            <div class="absolute bottom-1 right-1 w-6 h-6 bg-green-500 border-4 border-white rounded-full shadow-sm" title="Online"></div>
         </div>
-        <h2 class="text-2xl font-bold text-green-700">Terhubung!</h2>
-        <p class="text-gray-600 mb-6">Akun <strong>{{ user.telegram_account.phone_number }}</strong> sedang aktif.</p>
-        <button class="text-red-500 text-sm font-bold hover:underline" onclick="alert('Hubungi admin untuk reset sesi.')">Putuskan Koneksi</button>
+        
+        <h2 class="text-2xl font-bold text-gray-800 mb-2">Terhubung Sempurna!</h2>
+        <p class="text-gray-500 mb-8 max-w-md mx-auto">Akun <strong>{{ user.telegram_account.phone_number }}</strong> sedang aktif.</p>
+        
+        <div class="bg-gray-50 rounded-2xl p-6 inline-flex flex-col gap-4 text-left border border-gray-100 min-w-[280px]">
+            <div class="flex justify-between items-center border-b border-gray-200 pb-3">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Nomor</span>
+                <span class="font-mono font-bold text-gray-800 text-lg">{{ user.telegram_account.phone_number }}</span>
+            </div>
+            <div class="flex justify-between items-center pt-1">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Status</span>
+                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full font-bold shadow-sm border border-green-200">ONLINE</span>
+            </div>
+        </div>
+        
+        <div class="mt-8">
+            <button onclick="if(confirm('Yakin ingin memutus koneksi?')) alert('Hubungi admin untuk reset sesi demi keamanan.')" class="text-red-500 hover:text-red-700 text-sm font-bold hover:underline transition flex items-center justify-center gap-2 mx-auto">
+                <i class="fa-solid fa-power-off"></i> Putuskan Koneksi
+            </button>
+        </div>
     </div>
 
     {% else %}
     <!-- FORM LOGIN -->
-    <div class="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
+    <div class="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full -mr-32 -mt-32 opacity-50 blur-2xl"></div>
         
         <!-- STEP 1: NOMOR HP -->
-        <div id="step1">
-            <div class="mb-4">
-                <label class="block text-sm font-bold text-gray-700 mb-2">Nomor HP Telegram</label>
-                <input type="text" id="phone" placeholder="+62812..." class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono">
-                <p class="text-xs text-gray-400 mt-2">*Gunakan kode negara (contoh: +62).</p>
+        <div id="step1" class="relative z-10">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 text-xl">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-gray-800">Langkah 1</h3>
+                    <p class="text-sm text-gray-500">Masukkan nomor Telegram Anda.</p>
+                </div>
             </div>
-            <button onclick="sendOTP()" id="btnSend" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition shadow-lg">Kirim Kode OTP</button>
+
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Nomor HP Telegram</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fa-solid fa-phone"></i></span>
+                    <input type="text" id="phone" placeholder="+628123456789" class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition font-mono text-gray-800 placeholder-gray-400">
+                </div>
+                <p class="text-xs text-gray-400 mt-2 flex items-center gap-1"><i class="fa-solid fa-circle-info text-indigo-400"></i> Gunakan kode negara (contoh: +62).</p>
+            </div>
+            <button onclick="sendOTP()" id="btnSend" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 transform hover:-translate-y-0.5 active:scale-95">
+                Kirim Kode OTP <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
         </div>
 
         <!-- STEP 2: OTP -->
-        <div id="step2" class="hidden">
-            <div class="mb-4">
+        <div id="step2" class="hidden relative z-10">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 text-xl">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-gray-800">Langkah 2</h3>
+                    <p class="text-sm text-gray-500">Verifikasi identitas Anda.</p>
+                </div>
+            </div>
+
+            <div class="mb-5">
                 <label class="block text-sm font-bold text-gray-700 mb-2">Kode OTP (Cek Telegram App)</label>
-                <input type="text" id="otp" placeholder="1 2 3 4 5" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-center text-xl tracking-widest">
+                <input type="text" id="otp" placeholder="1 2 3 4 5" class="w-full p-4 border-2 border-indigo-100 rounded-xl focus:ring-0 focus:border-indigo-500 outline-none font-mono text-center text-2xl tracking-[0.5em] text-indigo-600 font-bold bg-indigo-50/30">
             </div>
-            <div class="mb-6">
-                <label class="block text-sm font-bold text-gray-700 mb-2">Password 2FA (Jika ada)</label>
-                <input type="password" id="pw" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+            <div class="mb-8">
+                <label class="block text-sm font-bold text-gray-700 mb-2 flex justify-between">
+                    <span>Password 2FA</span>
+                    <span class="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Opsional</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fa-solid fa-lock"></i></span>
+                    <input type="password" id="pw" placeholder="Isi hanya jika akun pakai password" class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition text-sm">
+                </div>
             </div>
-            <button onclick="verifyOTP()" id="btnVerify" class="w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition shadow-lg">Masuk</button>
-            <div class="text-center mt-4">
-                <button onclick="location.reload()" class="text-sm text-gray-400 hover:text-indigo-600">Ulangi</button>
+            
+            <div class="flex gap-3">
+                <button onclick="location.reload()" class="px-6 py-3.5 border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition">
+                    Batal
+                </button>
+                <button onclick="verifyOTP()" id="btnVerify" class="flex-1 bg-green-600 text-white font-bold py-3.5 rounded-xl hover:bg-green-700 transition shadow-lg shadow-green-200 transform hover:-translate-y-0.5 active:scale-95">
+                    Masuk Sekarang <i class="fa-solid fa-check ml-2"></i>
+                </button>
             </div>
         </div>
         
+        <!-- Loading Overlay -->
+        <div id="auth-loading" class="hidden absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-20 rounded-3xl backdrop-blur-sm">
+            <div class="loader-spinner w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p class="text-indigo-900 font-bold">Memproses...</p>
+        </div>
     </div>
     {% endif %}
 </div>
@@ -61,20 +125,32 @@
         const phone = document.getElementById('phone').value;
         const btn = document.getElementById('btnSend');
         
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
-        btn.disabled = true;
+        if(!phone) return alert("Masukkan nomor HP!");
 
-        const res = await apiRequest('/api/connect/send_code', 'POST', {phone});
-        
-        if (res.status === 'success') {
-            document.getElementById('step1').classList.add('hidden');
-            document.getElementById('step2').classList.remove('hidden');
-        } else if (res.status === 'cooldown') {
-            alert(res.message);
-        } else {
-            alert(res.message);
-            btn.innerHTML = 'Kirim Kode OTP';
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Mengirim...';
+        btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+        try {
+            const res = await apiRequest('/api/connect/send_code', 'POST', {phone});
+            document.getElementById('auth-loading').classList.add('hidden');
+            
+            if (res.status === 'success') {
+                document.getElementById('step1').classList.add('hidden');
+                document.getElementById('step2').classList.remove('hidden');
+            } else if (res.status === 'cooldown') {
+                alert(res.message);
+            } else {
+                alert(res.message);
+            }
+        } catch(e) {
+            document.getElementById('auth-loading').classList.add('hidden');
+            alert("Gagal menghubungi server.");
+        } finally {
+            if(document.getElementById('step1').classList.contains('hidden')) return;
+            btn.innerHTML = 'Kirim Kode OTP <i class="fa-solid fa-arrow-right ml-2"></i>';
             btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
         }
     }
 
@@ -83,18 +159,32 @@
         const pw = document.getElementById('pw').value;
         const btn = document.getElementById('btnVerify');
 
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifikasi...';
+        if(!otp) return alert("Masukkan kode OTP!");
+
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Verifikasi...';
         btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
 
-        const res = await apiRequest('/api/connect/verify_code', 'POST', {otp, password: pw});
+        try {
+            const res = await apiRequest('/api/connect/verify_code', 'POST', {otp, password: pw});
 
-        if (res.status === 'success') {
-            alert('Berhasil Login!');
-            location.reload();
-        } else {
-            alert(res.message);
-            btn.innerHTML = 'Masuk';
+            if (res.status === 'success') {
+                // Show success visual
+                btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Berhasil!';
+                btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                btn.classList.add('bg-emerald-500');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                alert(res.message);
+                btn.innerHTML = 'Masuk Sekarang <i class="fa-solid fa-check ml-2"></i>';
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+        } catch(e) {
+            alert("Gagal verifikasi.");
+            btn.innerHTML = 'Masuk Sekarang <i class="fa-solid fa-check ml-2"></i>';
             btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
         }
     }
 </script>
