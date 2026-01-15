@@ -15,17 +15,15 @@
 
 <!-- Stats Grid -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 animate-enter">
-    <!-- Stat 1 -->
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
         <div class="flex justify-between items-start">
             <div>
                 <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Log</p>
-                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ total_logs if total_logs else logs|length }}</h3>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ total_logs }}</h3>
             </div>
             <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><i class="fa-solid fa-server"></i></div>
         </div>
     </div>
-    <!-- Stat 2 -->
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
         <div class="flex justify-between items-start">
             <div>
@@ -35,7 +33,6 @@
             <div class="p-3 bg-purple-50 text-purple-600 rounded-xl"><i class="fa-solid fa-users-viewfinder"></i></div>
         </div>
     </div>
-    <!-- Stat 3 -->
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
         <div class="flex justify-between items-start">
             <div>
@@ -45,7 +42,6 @@
             <div class="p-3 bg-green-50 text-green-600 rounded-xl"><i class="fa-solid fa-address-book"></i></div>
         </div>
     </div>
-    <!-- Stat 4 -->
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
         <div class="flex justify-between items-start">
             <div>
@@ -66,8 +62,7 @@
         </div>
         
         <div class="flex items-center gap-3">
-             <!-- Rows Per Page Selector -->
-            <form action="{{ url_for('dashboard_overview') }}" method="get" class="flex items-center gap-2">
+             <form action="{{ url_for('dashboard_overview') }}" method="get" class="flex items-center gap-2">
                 <label for="per_page" class="text-xs text-gray-500 font-medium">Baris:</label>
                 <select name="per_page" id="per_page" onchange="this.form.submit()" class="text-xs border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 py-1.5 pl-2 pr-6 bg-white shadow-sm cursor-pointer">
                     <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
