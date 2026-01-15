@@ -733,6 +733,8 @@ def import_crm_api():
 # SECTION 11: BROADCAST SYSTEM (TEXT + IMAGE)
 # ==============================================================================
 
+# ... Bagian atas app.py tetap sama ...
+
 @app.route('/start_broadcast', methods=['POST'])
 @login_required
 def start_broadcast():
@@ -769,9 +771,23 @@ def start_broadcast():
                 
                 for u in crm_users:
                     try:
+                        target_peer = None
+                        user_tele_id = int(u['user_id'])
+
+                        # CRITICAL FIX: Robust Entity Resolving
+                        # 1. Coba ambil dari cache
+                        try:
+                            target_peer = await client.get_input_entity(user_tele_id)
+                        except ValueError:
+                            # 2. Jika gagal, coba fetch paksa dari network (Slow but works)
+                            try:
+                                target_peer = await client.get_entity(user_tele_id)
+                            except Exception as e:
+                                logger.warning(f"Entity not found for {user_tele_id}: {e}")
+                                continue
+
                         # Personalize Message
                         final_msg = msg.replace("{name}", u.get('first_name') or "Kak")
-                        target_peer = int(u['user_id'])
                         
                         # Send with or without Image
                         if img_path:
@@ -804,6 +820,16 @@ def start_broadcast():
     threading.Thread(target=_broadcast_worker, args=(user_id, message, image_path)).start()
     
     return jsonify({"status": "success", "message": "Broadcast sedang diproses di latar belakang!"})
+
+# ... Bagian bawah app.py tetap sama ...
+
+### 3. Update `templates/dashboard/index.html` (Perbaikan Paginasi Log)
+Update sedikit di `templates/dashboard/index.html` untuk memastikan tombol paginasi bekerja dan dropdown baris berfungsi.
+
+
+http://googleusercontent.com/immersive_entry_chip/1
+
+Update kedua file template ini dan logika `start_broadcast` di `app.py`. Sekarang login Telegram sudah ada halamannya lagi, dan broadcast akan mencoba mencari entitas pengguna lebih keras sebelum menyerah, mengurangi kemungkinan error "Could not find input entity".
 
 # ==============================================================================
 # SECTION 12: CRUD ROUTES (SCHEDULE & TARGETS)
