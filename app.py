@@ -4,8 +4,8 @@ import logging
 import threading
 import json
 import time
-import httpx  # Library HTTP Client Async/Sync yang cepat
-from functools import wraps
+import httpx
+from functools import wraps 
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -16,31 +16,33 @@ from telethon import TelegramClient, errors, functions, utils
 from telethon.sessions import StringSession
 from supabase import create_client, Client
 
-# ==========================================
-# 1. SYSTEM CONFIGURATION & SETUP
-# ==========================================
+# ==============================================================================
+# SECTION 1: SYSTEM CONFIGURATION & ENVIRONMENT SETUP
+# ==============================================================================
 
-# Initialize Flask App
+# Initialize Flask Application
 app = Flask(__name__)
 
 # Security Configuration
-# Gunakan Secret Key yang sangat kuat untuk production
+# Gunakan Secret Key yang sangat kuat untuk production environment
 app.secret_key = os.getenv('SECRET_KEY', 'rahasia_negara_baba_parfume_saas_ultimate_key_v99_production_ready')
 
-# Session Configuration (Agar login awet)
+# Session Configuration (Agar login user awet dan aman)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-app.config['SESSION_COOKIE_SECURE'] = True  # Hanya kirim cookie via HTTPS
-app.config['SESSION_COOKIE_HTTPONLY'] = True # Mencegah akses JS ke cookie
+app.config['SESSION_COOKIE_SECURE'] = True  # Hanya kirim cookie via HTTPS (Wajib di Production)
+app.config['SESSION_COOKIE_HTTPONLY'] = True # Mencegah akses JavaScript ke cookie (Anti-XSS)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # Mencegah CSRF
 
-# Upload Configuration (Untuk Broadcast Gambar)
+# Upload Configuration (Untuk fitur Broadcast Gambar masa depan)
 UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Pastikan folder upload ada
+# Pastikan folder upload tersedia saat startup
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Logging System (Enterprise Grade)
+# Advanced Logging System (Enterprise Grade)
+# Mencatat setiap detil aktivitas sistem dengan timestamp presisi
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
@@ -48,9 +50,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("BabaSaaSCore")
 
-# ==========================================
-# 2. DATABASE CONNECTION (SUPABASE)
-# ==========================================
+# ==============================================================================
+# SECTION 2: DATABASE CONNECTION (SUPABASE)
+# ==============================================================================
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -58,6 +60,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 if not SUPABASE_URL or not SUPABASE_KEY:
     logger.critical("❌ CRITICAL ERROR: Environment Variables Missing (SUPABASE_URL / KEY).")
     logger.critical("   System cannot start properly without database connection.")
+    # Kita set None, tapi aplikasi akan tetap jalan (dengan fitur terbatas/error saat akses DB)
     supabase = None
 else:
     try:
@@ -67,28 +70,28 @@ else:
         logger.critical(f"❌ Supabase Connection Failed: {e}")
         supabase = None
 
-# ==========================================
-# 3. GLOBAL VARIABLES & STATE MANAGEMENT
-# ==========================================
+# ==============================================================================
+# SECTION 3: GLOBAL VARIABLES & STATE MANAGEMENT
+# ==============================================================================
 
 # Telegram API Credentials (Master App)
 # Wajib ada di Environment Variables Render
-API_ID = int(os.getenv('API_ID', '0'))
+API_ID = int(os.getenv('API_ID', '0')) 
 API_HASH = os.getenv('API_HASH', '')
 
 # In-Memory State Storage
 # Digunakan untuk rate limiting dan caching sementara objek client saat login.
-# Data kritis (Hash OTP) tetap disimpan di Database agar Stateless.
-login_states = {}
+# Data kritis (seperti Hash OTP) tetap disimpan di Database agar Stateless (aman saat restart).
+login_states = {} 
 
-# ==========================================
-# 4. BACKGROUND SYSTEMS (WORKERS)
-# ==========================================
+# ==============================================================================
+# SECTION 4: BACKGROUND SYSTEMS (WORKERS & UTILITIES)
+# ==============================================================================
 
 def start_self_ping():
     """
     Background Worker: Anti-Sleep Mechanism.
-    Ping endpoint /ping setiap 14 menit untuk mencegah Render Free Tier tertidur.
+    Ping endpoint /ping setiap 14 menit untuk mencegah Render Free Tier tertidur (Spin Down).
     """
     site_url = os.getenv('SITE_URL') or os.getenv('RENDER_EXTERNAL_URL')
     
@@ -96,7 +99,7 @@ def start_self_ping():
         logger.warning("⚠️ SITE_URL belum diset. Fitur Self-Ping mungkin tidak efektif.")
         return
 
-    # Normalisasi URL
+    # Normalisasi URL (Pastikan ada protocol)
     if not site_url.startswith('http'):
         site_url = f'https://{site_url}'
         
@@ -119,7 +122,7 @@ def start_self_ping():
                         
             except Exception as e:
                 logger.error(f"❌ [Heartbeat] Ping Failed: {e}")
-                # Tunggu sebentar jika error sebelum coba lagi
+                # Tunggu sebentar jika error sebelum coba lagi agar tidak spam log
                 time.sleep(60)
 
     # Jalankan sebagai Daemon Thread (Mati otomatis jika main app mati)
@@ -128,7 +131,7 @@ def start_self_ping():
 def run_async(coroutine):
     """
     Bridge Helper: Menjalankan Asyncio Coroutine di dalam Flask (Synchronous).
-    Membuat Event Loop terisolasi untuk setiap eksekusi guna mencegah blocking.
+    Membuat Event Loop terisolasi untuk setiap eksekusi guna mencegah blocking dan thread safety issue.
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -151,14 +154,14 @@ def allowed_file(filename):
     """Cek ekstensi file yang diizinkan untuk upload gambar"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# ==========================================
-# 5. DATA ACCESS LAYER (DAL)
-# ==========================================
+# ==============================================================================
+# SECTION 5: DATA ACCESS LAYER (DAL)
+# ==============================================================================
 
 def get_user_data(user_id):
     """
     Mengambil data User lengkap dengan status Telegram Account.
-    Menggunakan Wrapper Class agar kompatibel dengan template Jinja2.
+    Menggunakan Wrapper Class agar kompatibel dengan template Jinja2 (dot notation).
     """
     if not supabase: return None
     try:
@@ -198,11 +201,11 @@ def get_user_data(user_id):
 async def get_active_client(user_id):
     """
     Membangun koneksi Telethon Client aktif dari Database.
-    Memeriksa validitas sesi secara otomatis.
+    Memeriksa validitas sesi secara otomatis sebelum mengembalikan objek client.
     """
     if not supabase: return None
     try:
-        # Hanya ambil akun yang ditandai ACTIVE
+        # Hanya ambil akun yang ditandai ACTIVE di database
         res = supabase.table('telegram_accounts').select("session_string").eq('user_id', user_id).eq('is_active', True).execute()
         
         if not res.data:
@@ -211,16 +214,17 @@ async def get_active_client(user_id):
         
         session_str = res.data[0]['session_string']
         
-        # Initialize Client
+        # Initialize Client dengan Session String dari DB
         client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
         await client.connect()
         
         # Security Check: Apakah sesi masih valid di server Telegram?
+        # Jika user logout dari HP, session string ini akan invalid.
         if not await client.is_user_authorized():
             logger.warning(f"Client Init: Session EXPIRED/REVOKED for UserID {user_id}")
             await client.disconnect()
             
-            # Auto-update status di DB jadi Inactive
+            # Auto-update status di DB jadi Inactive agar UI dashboard update
             supabase.table('telegram_accounts').update({'is_active': False}).eq('user_id', user_id).execute()
             return None
             
@@ -229,45 +233,47 @@ async def get_active_client(user_id):
         logger.error(f"Client Init Error for UserID {user_id}: {e}")
         return None
 
-# ==========================================
-# 6. MIDDLEWARE & DECORATORS
-# ==========================================
+# ==============================================================================
+# SECTION 6: MIDDLEWARE & DECORATORS
+# ==============================================================================
 
 @app.errorhandler(404)
 def handle_404(e):
-    """Redirect cerdas jika user nyasar"""
+    """Redirect cerdas jika user nyasar ke link mati"""
     if 'user_id' in session:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('dashboard_overview'))
     return redirect(url_for('index'))
 
 def login_required(f):
+    """Decorator untuk memproteksi halaman yang butuh login"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             return redirect(url_for('login'))
-        # Extend session lifetime
+        # Extend session lifetime setiap user aktif
         session.permanent = True
         return f(*args, **kwargs)
     return decorated_function
 
 def admin_required(f):
+    """Decorator khusus halaman Super Admin"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session: 
             return redirect(url_for('login'))
         
-        # Cek hak akses admin
+        # Cek hak akses admin dari database
         user = get_user_data(session['user_id'])
         if not user or not user.is_admin:
             flash('⛔ Security Alert: Akses Ditolak. Area ini dipantau.', 'danger')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('dashboard_overview'))
             
         return f(*args, **kwargs)
     return decorated_function
 
-# ==========================================
-# 7. PUBLIC ROUTES (LANDING & AUTH)
-# ==========================================
+# ==============================================================================
+# SECTION 7: PUBLIC ROUTES (LANDING & AUTH)
+# ==============================================================================
 
 @app.route('/')
 def index():
@@ -289,7 +295,7 @@ def login():
                 user = res.data[0]
                 # Verifikasi Password Hash
                 if check_password_hash(user['password'], password):
-                    # Cek Banned
+                    # Cek Banned Status
                     if user.get('is_banned'):
                         flash('⛔ Akun Anda telah disuspend karena pelanggaran.', 'danger')
                         return redirect(url_for('login'))
@@ -301,7 +307,7 @@ def login():
                     # Routing berdasarkan Role
                     if user.get('is_admin'):
                         return redirect(url_for('super_admin_dashboard'))
-                    return redirect(url_for('dashboard'))
+                    return redirect(url_for('dashboard_overview'))
             
             flash('Kombinasi Email atau Password salah.', 'danger')
             
@@ -318,13 +324,13 @@ def register():
         password = request.form.get('password')
         
         try:
-            # Validasi Duplikat
+            # Validasi Duplikat Email
             exist = supabase.table('users').select("id").eq('email', email).execute()
             if exist.data:
                 flash('Email ini sudah terdaftar. Silakan login.', 'warning')
                 return redirect(url_for('register'))
             
-            # Create User
+            # Create New User
             hashed_pw = generate_password_hash(password, method='sha256')
             new_user = {
                 'email': email,
@@ -347,7 +353,7 @@ def register():
 @app.route('/logout')
 def logout():
     uid = session.get('user_id')
-    # Cleanup memory cache
+    # Cleanup memory cache jika ada
     if uid and uid in login_states:
         try: del login_states[uid]
         except: pass
@@ -355,67 +361,120 @@ def logout():
     session.pop('user_id', None)
     return redirect(url_for('index'))
 
-# ==========================================
-# 8. USER DASHBOARD CONTROLLER
-# ==========================================
+# ==============================================================================
+# SECTION 8: USER DASHBOARD CONTROLLERS (MODULAR ROUTING)
+# ==============================================================================
 
-@app.route('/dashboard')
-@login_required
-def dashboard():
+# Helper untuk memvalidasi user sebelum render dashboard
+def get_dashboard_context():
     user = get_user_data(session['user_id'])
-    
-    # Validasi User Integrity
     if not user:
         session.pop('user_id', None)
-        return redirect(url_for('login'))
-    
+        return None
     if user.is_banned:
         session.pop('user_id', None)
         flash('⛔ Akun Anda dibekukan oleh Administrator.', 'danger')
-        return redirect(url_for('login'))
+        return None
+    return user
+
+@app.route('/dashboard')
+@login_required
+def dashboard_overview():
+    """Halaman Utama Dashboard: Ringkasan Statistik"""
+    user = get_dashboard_context()
+    if not user: return redirect(url_for('login'))
     
     uid = user.id
+    # Default values
+    logs, schedules, targets, crm_count = [], [], [], 0
     
-    # Initialize Data Containers
-    logs = []
-    schedules = []
-    targets = []
-    crm_count = 0
-    
-    # Fetch Data from Supabase
     if supabase:
         try:
-            # 1. Recent Logs
-            logs = supabase.table('blast_logs').select("*").eq('user_id', uid).order('created_at', desc=True).limit(50).execute().data
-            
-            # 2. Active Schedules
+            # Fetch essential data for overview
+            logs = supabase.table('blast_logs').select("*").eq('user_id', uid).order('created_at', desc=True).limit(20).execute().data
             schedules = supabase.table('blast_schedules').select("*").eq('user_id', uid).execute().data
-            
-            # 3. Targeted Groups
             targets = supabase.table('blast_targets').select("*").eq('user_id', uid).execute().data
-            
-            # 4. CRM Stats (Efficient Count)
+            # Efficient counting
             crm_res = supabase.table('tele_users').select("id", count='exact', head=True).eq('owner_id', uid).execute()
             crm_count = crm_res.count if crm_res.count else 0
-            
         except Exception as e:
             logger.error(f"Dashboard Data Error: {e}")
-            # Fail silently on UI, data will be empty but page loads
     
-    # Render Dashboard Index (Ringkasan)
-    # Halaman lain seperti targets, schedule, crm diload via AJAX/Tab di frontend atau route terpisah jika perlu
-    # Disini kita render 'dashboard/index.html' sebagai view utama
     return render_template('dashboard/index.html', 
                            user=user, 
                            logs=logs, 
                            schedules=schedules, 
                            targets=targets, 
-                           user_count=crm_count,
+                           user_count=crm_count, 
                            active_page='dashboard')
 
-# ==========================================
-# 9. TELEGRAM AUTHENTICATION (CORE LOGIC)
-# ==========================================
+@app.route('/dashboard/broadcast')
+@login_required
+def dashboard_broadcast():
+    """Halaman Fitur Broadcast & Preview Pesan"""
+    user = get_dashboard_context()
+    if not user: return redirect(url_for('login'))
+    
+    # Ambil jumlah CRM user untuk info
+    crm_count = 0
+    try:
+        crm_res = supabase.table('tele_users').select("id", count='exact', head=True).eq('owner_id', user.id).execute()
+        crm_count = crm_res.count if crm_res.count else 0
+    except: pass
+
+    return render_template('dashboard/broadcast.html', user=user, user_count=crm_count, active_page='broadcast')
+
+@app.route('/dashboard/targets')
+@login_required
+def dashboard_targets():
+    """Halaman Manajemen Target Grup"""
+    user = get_dashboard_context()
+    if not user: return redirect(url_for('login'))
+    
+    targets = []
+    try:
+        targets = supabase.table('blast_targets').select("*").eq('user_id', user.id).order('created_at', desc=True).execute().data
+    except: pass
+    
+    return render_template('dashboard/targets.html', user=user, targets=targets, active_page='targets')
+
+@app.route('/dashboard/schedule')
+@login_required
+def dashboard_schedule():
+    """Halaman Manajemen Jadwal Blast"""
+    user = get_dashboard_context()
+    if not user: return redirect(url_for('login'))
+    
+    schedules = []
+    try:
+        schedules = supabase.table('blast_schedules').select("*").eq('user_id', user.id).order('run_hour', desc=False).execute().data
+    except: pass
+    
+    return render_template('dashboard/schedule.html', user=user, schedules=schedules, active_page='schedule')
+
+@app.route('/dashboard/crm')
+@login_required
+def dashboard_crm():
+    """Halaman Database Pelanggan (CRM)"""
+    user = get_dashboard_context()
+    if not user: return redirect(url_for('login'))
+    
+    crm_count = 0
+    crm_users = [] # Optional: Load some users if needed
+    try:
+        # Get Count
+        crm_res = supabase.table('tele_users').select("id", count='exact', head=True).eq('owner_id', user.id).execute()
+        crm_count = crm_res.count if crm_res.count else 0
+        # Get latest 50 contacts
+        crm_users = supabase.table('tele_users').select("*").eq('owner_id', user.id).order('last_interaction', desc=True).limit(50).execute().data
+    except: pass
+    
+    return render_template('dashboard/crm.html', user=user, user_count=crm_count, crm_users=crm_users, active_page='crm')
+
+
+# ==============================================================================
+# SECTION 9: TELEGRAM AUTHENTICATION (CORE LOGIC & STATELESS)
+# ==============================================================================
 
 @app.route('/api/connect/send_code', methods=['POST'])
 @login_required
@@ -445,7 +504,7 @@ def send_code():
                 req = await client.send_code_request(phone)
                 
                 # --- STATELESS MECHANISM START ---
-                # Capture session state containing the Auth Key
+                # Capture session state containing the Auth Key (Session A)
                 temp_session_str = client.session.save()
                 
                 # Save to DB (Temporary Storage)
@@ -508,12 +567,12 @@ def verify_code():
         return jsonify({'status': 'error', 'message': f'Database Read Error: {str(e)}'})
 
     async def _process_verify():
-        # 2. Resume Session from DB String
+        # 2. Resume Session from DB String (Session A)
         client = TelegramClient(StringSession(db_session), API_ID, API_HASH)
         await client.connect()
         
         try:
-            # 3. Perform Sign In
+            # 3. Perform Sign In using existing session context
             try:
                 await client.sign_in(db_phone, otp, phone_code_hash=db_hash)
             except errors.SessionPasswordNeededError:
@@ -538,7 +597,7 @@ def verify_code():
         except errors.PhoneCodeInvalidError:
             return jsonify({'status': 'error', 'message': 'Kode OTP salah.'})
         except errors.PhoneCodeExpiredError:
-            return jsonify({'status': 'error', 'message': 'Kode OTP kadaluarsa.'})
+            return jsonify({'status': 'error', 'message': 'Kode OTP kadaluarsa/Sesi berubah. Kirim ulang.'})
         except Exception as e:
             logger.error(f"Verification Logic Error: {e}")
             return jsonify({'status': 'error', 'message': f'Gagal Login: {str(e)}'})
@@ -550,9 +609,9 @@ def verify_code():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
-# ==========================================
-# 10. BOT FEATURES ENDPOINTS
-# ==========================================
+# ==============================================================================
+# SECTION 10: BOT FEATURES API (SCAN, TARGETS, IMPORT)
+# ==============================================================================
 
 @app.route('/scan_groups_api')
 @login_required
@@ -670,16 +729,20 @@ def import_crm_api():
             
     return run_async(_import())
 
+# ==============================================================================
+# SECTION 11: BROADCAST SYSTEM (TEXT + IMAGE)
+# ==============================================================================
+
 @app.route('/start_broadcast', methods=['POST'])
 @login_required
 def start_broadcast():
     """
     Handle Broadcast Request (Text + Image Support).
-    Uses Background Thread for sending.
+    Uses Background Thread for sending to prevent blocking.
     """
     user_id = session['user_id']
     message = request.form.get('message')
-    image_file = request.files.get('image')
+    image_file = request.files.get('image') # Support Image Upload
     
     if not message:
         return jsonify({"status": "error", "message": "Pesan wajib diisi."})
@@ -706,7 +769,7 @@ def start_broadcast():
                 
                 for u in crm_users:
                     try:
-                        # Personalize
+                        # Personalize Message
                         final_msg = msg.replace("{name}", u.get('first_name') or "Kak")
                         target_peer = int(u['user_id'])
                         
@@ -726,20 +789,25 @@ def start_broadcast():
                 await client.disconnect()
                 # Cleanup Image after broadcast finishes
                 if img_path and os.path.exists(img_path):
-                    os.remove(img_path)
+                    try: os.remove(img_path)
+                    except: pass
 
-        # Run Async Logic
+        # Run Async Logic in New Event Loop
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(_logic())
-        loop.close()
+        try:
+            loop.run_until_complete(_logic())
+        finally:
+            loop.close()
 
     # Launch Thread
     threading.Thread(target=_broadcast_worker, args=(user_id, message, image_path)).start()
     
     return jsonify({"status": "success", "message": "Broadcast sedang diproses di latar belakang!"})
 
-# --- CRUD ROUTES ---
+# ==============================================================================
+# SECTION 12: CRUD ROUTES (SCHEDULE & TARGETS)
+# ==============================================================================
 
 @app.route('/add_schedule', methods=['POST'])
 @login_required
@@ -759,7 +827,7 @@ def add_schedule():
             flash('Jadwal berhasil ditambahkan.', 'success')
         except Exception as e:
             flash(f'Gagal menambah jadwal: {e}', 'danger')
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('dashboard_schedule'))
 
 @app.route('/delete_schedule/<int:id>')
 @login_required
@@ -769,7 +837,7 @@ def delete_schedule(id):
         flash('Jadwal dihapus.', 'success')
     except:
         flash('Gagal menghapus jadwal.', 'danger')
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('dashboard_schedule'))
 
 @app.route('/delete_target/<int:id>')
 @login_required
@@ -779,11 +847,11 @@ def delete_target(id):
         flash('Target grup dihapus.', 'success')
     except:
         flash('Gagal menghapus target.', 'danger')
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('dashboard_targets'))
 
-# ==========================================
-# 11. SUPER ADMIN PANEL
-# ==========================================
+# ==============================================================================
+# SECTION 13: SUPER ADMIN PANEL
+# ==============================================================================
 
 @app.route('/super-admin')
 @admin_required
@@ -793,9 +861,6 @@ def super_admin_dashboard():
         users_res = supabase.table('users').select("id, is_banned", count='exact').execute()
         bots_res = supabase.table('telegram_accounts').select("id", count='exact').eq('is_active', True).execute()
         
-        # Calculate Banned Manual (Supabase limitation on filter+count in one go sometimes)
-        # For efficiency, we rely on client side or simple counts for now.
-        # Fetch detailed users for table
         users_data = supabase.table('users').select("*").order('created_at', desc=True).execute().data
         
         stats = {
@@ -818,7 +883,7 @@ def super_admin_users():
         for u in users:
             tele = supabase.table('telegram_accounts').select("*").eq('user_id', u['id']).execute().data
             
-            # Reusing Wrapper logic for consistent template access
+            # Wrapper Class
             class UserW:
                 def __init__(self, d, t):
                     self.id = d['id']
@@ -869,9 +934,9 @@ def ban_user(user_id):
 def ping():
     return jsonify({"status": "alive", "timestamp": datetime.utcnow().isoformat()}), 200
 
-# ==========================================
-# 12. INITIALIZATION ROUTINE
-# ==========================================
+# ==============================================================================
+# SECTION 14: INITIALIZATION ROUTINE
+# ==============================================================================
 
 def init_system_check():
     """Runs once on startup to ensure admin exists & environment is healthy"""
