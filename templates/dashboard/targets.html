@@ -5,76 +5,84 @@
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-enter">
     <div>
         <h1 class="text-2xl font-bold text-gray-800">Target Grup Blast</h1>
-        <p class="text-gray-500 text-sm mt-1">Kelola grup dan forum tujuan promosi Anda.</p>
+        <p class="text-gray-500 text-sm mt-1">Kelola daftar grup dan forum yang akan menjadi sasaran promosi.</p>
     </div>
-    <button onclick="scanGroups()" id="btn-scan" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition flex items-center gap-2">
+    <button onclick="scanGroups()" id="btn-scan" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition flex items-center gap-2 transform hover:-translate-y-0.5 active:scale-95">
         <i class="fa-solid fa-radar"></i> Scan Grup Baru
     </button>
 </div>
 
-<!-- Target List -->
+<!-- Target Grid -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-enter" style="animation-delay: 0.1s;">
     {% for t in targets %}
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition group relative">
-        <div class="flex items-start justify-between">
-            <div class="flex gap-4">
-                <div class="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-xl font-bold text-gray-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition">
-                    {{ t.group_name[0]|upper }}
-                </div>
-                <div>
-                    <h3 class="font-bold text-gray-800 group-hover:text-indigo-600 transition text-lg">{{ t.group_name }}</h3>
-                    <div class="flex items-center gap-2 mt-1">
-                        <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded border font-mono">ID: {{ t.group_id }}</span>
-                        {% if t.topic_ids %}
-                        <span class="text-xs bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded border border-yellow-100 font-bold">Forum Topic</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <a href="/delete_target/{{ t.id }}" onclick="return confirm('Hapus target ini?')" class="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 flex items-center justify-center transition shadow-sm">
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition group relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <a href="/delete_target/{{ t.id }}" onclick="return confirm('Hapus target ini?')" class="w-8 h-8 rounded-full bg-red-50 text-red-500 border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition" title="Hapus Target">
                 <i class="fa-solid fa-trash-can"></i>
             </a>
         </div>
+        
+        <div class="flex items-start gap-4">
+            <div class="w-14 h-14 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl flex items-center justify-center text-xl font-bold text-gray-500 border border-gray-200 shadow-inner group-hover:from-indigo-50 group-hover:to-indigo-100 group-hover:text-indigo-600 group-hover:border-indigo-100 transition">
+                {{ t.group_name[0]|upper }}
+            </div>
+            <div class="flex-1 min-w-0 pr-8"> <!-- pr-8 to avoid overlapping delete button -->
+                <h3 class="font-bold text-gray-800 group-hover:text-indigo-600 transition text-lg truncate" title="{{ t.group_name }}">{{ t.group_name }}</h3>
+                
+                <div class="flex flex-col gap-1.5 mt-2">
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <i class="fa-solid fa-fingerprint w-4 text-center"></i>
+                        <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">{{ t.group_id }}</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
+                        <i class="fa-solid fa-layer-group w-4 text-center"></i>
+                        {% if t.topic_ids %}
+                            <span class="bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded border border-yellow-100 font-bold truncate max-w-[200px]" title="{{ t.topic_ids }}">Topik: {{ t.topic_ids }}</span>
+                        {% else %}
+                            <span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100">General Topic</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                        <i class="fa-regular fa-clock w-4 text-center"></i>
+                        <span>Ditambahkan: {{ t.created_at[:10] if t.created_at else 'Baru saja' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     {% else %}
-    <div class="col-span-full py-12 text-center bg-white rounded-3xl border border-dashed border-gray-300">
-        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-            <i class="fa-solid fa-users-slash text-2xl"></i>
+    <div class="col-span-full py-16 text-center bg-white rounded-3xl border-2 border-dashed border-gray-200 hover:border-indigo-200 transition">
+        <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+            <i class="fa-solid fa-users-slash text-3xl"></i>
         </div>
-        <h3 class="text-lg font-bold text-gray-600">Belum Ada Target</h3>
-        <p class="text-gray-400 text-sm max-w-md mx-auto mt-2">Klik tombol "Scan Grup Baru" di pojok kanan atas untuk mulai menambahkan grup Telegram Anda.</p>
+        <h3 class="text-xl font-bold text-gray-600">Belum Ada Target</h3>
+        <p class="text-gray-400 text-sm max-w-md mx-auto mt-2">Database target Anda masih kosong. Silakan lakukan scan grup terlebih dahulu untuk memulai.</p>
+        <button onclick="scanGroups()" class="mt-6 text-indigo-600 font-bold hover:underline text-sm">Scan Sekarang &rarr;</button>
     </div>
     {% endfor %}
 </div>
 
-<!-- MODAL SCANNER -->
+<!-- MODAL SCANNER (Tetap sama) -->
 <div id="scanModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center transition-opacity opacity-0">
     <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-300" id="scanModalContent">
-        
-        <!-- Modal Header -->
         <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-3xl">
             <div>
                 <h3 class="font-bold text-xl text-gray-800">Pilih Grup Target</h3>
-                <p class="text-xs text-gray-500 mt-1">Centang grup yang ingin Anda jadikan target blast.</p>
+                <p class="text-xs text-gray-500 mt-1">Pilih grup yang ingin Anda blast.</p>
             </div>
-            <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-white border hover:bg-gray-100 flex items-center justify-center transition text-gray-500">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+            <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-white border hover:bg-gray-100 flex items-center justify-center transition text-gray-500"><i class="fa-solid fa-xmark"></i></button>
         </div>
-
-        <!-- Modal Body (Results) -->
         <div id="scanResults" class="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-            <!-- Loading State -->
             <div class="text-center py-10">
                 <div class="loader-spinner mb-3"></div>
-                <p class="text-sm text-gray-500">Sedang memindai Telegram Anda...</p>
+                <p class="text-sm text-gray-500">Menghubungkan ke Telegram...</p>
             </div>
         </div>
-
-        <!-- Modal Footer -->
         <div class="p-6 border-t border-gray-100 bg-white rounded-b-3xl">
             <button onclick="saveTargets()" class="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 flex justify-center items-center gap-2">
-                <i class="fa-solid fa-save"></i> Simpan Target Terpilih
+                <i class="fa-solid fa-save"></i> Simpan Pilihan
             </button>
         </div>
     </div>
@@ -89,7 +97,6 @@
 
     function openModal() {
         modal.classList.remove('hidden');
-        // Simple animation delay hack
         setTimeout(() => {
             modal.classList.remove('opacity-0');
             content.classList.remove('scale-95');
@@ -107,33 +114,34 @@
     async function scanGroups() {
         const btn = document.getElementById('btn-scan');
         const original = btn.innerHTML;
-        btn.innerHTML = '<span class="loader-spinner border-white border-t-transparent mr-2"></span> Memproses...';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Scanning...';
         btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
 
         try {
             const res = await apiRequest('/scan_groups_api', 'GET');
             
             if(res.status === 'success') {
                 const container = document.getElementById('scanResults');
-                container.innerHTML = ''; // Clear loading
+                container.innerHTML = ''; 
 
                 if (res.data.length === 0) {
-                    container.innerHTML = `<div class="text-center py-8 text-gray-500">Tidak ada grup ditemukan.</div>`;
+                    container.innerHTML = `<div class="text-center py-8 text-gray-500 flex flex-col items-center"><i class="fa-regular fa-folder-open text-3xl mb-2 opacity-30"></i>Tidak ada grup ditemukan.</div>`;
                 } else {
                     res.data.forEach(g => {
                         container.innerHTML += `
-                        <label class="flex items-center p-3 border border-gray-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 cursor-pointer transition group select-none">
-                            <div class="flex items-center h-5">
-                                <input type="checkbox" class="group-check w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 transition" 
+                        <label class="flex items-center p-3 border border-gray-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 cursor-pointer transition group select-none relative overflow-hidden">
+                            <div class="flex items-center h-5 z-10">
+                                <input type="checkbox" class="group-check w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 transition cursor-pointer" 
                                     value="${g.id}" 
                                     data-name="${g.name}" 
                                     data-topics='${JSON.stringify(g.topics.map(t=>t.id))}'>
                             </div>
-                            <div class="ml-4 flex-1">
-                                <div class="font-bold text-gray-800 text-sm">${g.name}</div>
+                            <div class="ml-4 flex-1 z-10">
+                                <div class="font-bold text-gray-800 text-sm group-hover:text-indigo-700 transition">${g.name}</div>
                                 <div class="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
-                                    <span class="font-mono bg-gray-100 px-1 rounded">${g.id}</span>
-                                    ${g.is_forum ? '<span class="bg-yellow-100 text-yellow-700 px-1.5 rounded font-bold text-[10px]">FORUM</span>' : ''}
+                                    <span class="font-mono bg-gray-100 px-1 rounded text-[10px]">${g.id}</span>
+                                    ${g.is_forum ? '<span class="bg-yellow-100 text-yellow-700 px-1.5 rounded font-bold text-[10px] border border-yellow-200">FORUM</span>' : ''}
                                 </div>
                             </div>
                         </label>`;
@@ -144,10 +152,11 @@
                 alert(res.message);
             }
         } catch (e) {
-            alert('Gagal mengambil data.');
+            alert('Gagal mengambil data. Pastikan Telegram terkoneksi.');
         } finally {
             btn.innerHTML = original;
             btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
         }
     }
 
@@ -163,12 +172,20 @@
 
         if(selected.length === 0) return alert("Pilih minimal satu grup!");
 
+        // Show saving state on modal button
+        const saveBtn = document.querySelector('#scanModal button');
+        const orgText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Menyimpan...';
+        saveBtn.disabled = true;
+
         const res = await apiRequest('/save_bulk_targets', 'POST', {targets: selected});
         if(res.status === 'success') {
             closeModal();
             window.location.reload();
         } else {
             alert(res.message);
+            saveBtn.innerHTML = orgText;
+            saveBtn.disabled = false;
         }
     }
 </script>
