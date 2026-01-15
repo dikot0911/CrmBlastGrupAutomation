@@ -17,7 +17,7 @@
     {% for t in targets %}
     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-md transition group relative overflow-hidden">
         <div class="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <a href="/delete_target/{{ t.id }}" onclick="return confirm('Hapus target ini?')" class="w-8 h-8 rounded-full bg-red-50 text-red-500 border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition" title="Hapus Target">
+            <a href="/delete_target/{{ t.id }}" onclick="return confirm('Hapus target ini?')" class="w-8 h-8 rounded-full bg-red-50 text-red-500 border border-red-100 flex items-center justify-center hover:bg-red-50 hover:text-white transition" title="Hapus Target">
                 <i class="fa-solid fa-trash-can"></i>
             </a>
         </div>
@@ -64,7 +64,7 @@
     {% endfor %}
 </div>
 
-<!-- MODAL SCANNER (Tetap sama) -->
+<!-- MODAL SCANNER -->
 <div id="scanModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center transition-opacity opacity-0">
     <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-300" id="scanModalContent">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-3xl">
