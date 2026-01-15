@@ -4,7 +4,7 @@ import logging
 import threading
 import json
 import time
-import httpx # Ensure this is in requirements.txt
+import httpx # Pastikan ada di requirements.txt
 from functools import wraps 
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
@@ -18,11 +18,10 @@ from supabase import create_client, Client
 # ==========================================
 
 app = Flask(__name__)
-# Security: Use a strong secret key. In production, this should be a random string.
-app.secret_key = os.getenv('SECRET_KEY', 'rahasia_negara_baba_parfume_saas_ultimate_key_v99_production_ready')
+# Gunakan secret key yang kuat
+app.secret_key = os.getenv('SECRET_KEY', 'rahasia_negara_baba_parfume_saas_ultimate_key_v99')
 
 # Logging Setup (Professional Logging)
-# Logs include timestamp, severity level, and message for easier debugging.
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
@@ -46,14 +45,11 @@ else:
         supabase = None
 
 # --- GLOBAL VARIABLES ---
-# API ID/HASH Master Application (Must be present in Render Env)
-# These are used to initialize Telegram Clients.
+# API ID/HASH Master Aplikasi (Wajib ada di Env Render)
 API_ID = int(os.getenv('API_ID', '0')) 
 API_HASH = os.getenv('API_HASH', '')
 
-# Login States (RAM Cache for Rate Limiting & Client Object)
-# Note: Critical state like OTP hash is stored in DB to be stateless across workers.
-# Format: {user_id: {'client': client_obj, 'phone': str, 'hash': str, 'last_otp_req': timestamp}}
+# Login States (Hanya untuk Rate Limiting, tidak simpan client object lagi)
 login_states = {} 
 
 # ==========================================
@@ -62,10 +58,7 @@ login_states = {}
 
 # --- AUTO PING / ANTI SLEEP MECHANISM ---
 def start_self_ping():
-    """
-    Anti-Sleep Feature: Pings itself every 14 minutes.
-    Prevents Render Free Tier from spinning down due to inactivity (15 min limit).
-    """
+    """Anti-Sleep Feature: Pings itself every 14 minutes."""
     site_url = os.getenv('SITE_URL') or os.getenv('RENDER_EXTERNAL_URL')
     
     if not site_url:
@@ -81,22 +74,19 @@ def start_self_ping():
     def run_pinger():
         while True:
             try:
-                # Sleep for 14 minutes (840 seconds) - Safe margin before 15 min idle
-                time.sleep(840)
-                # Send a lightweight request
+                time.sleep(840) # 14 menit
                 r = httpx.get(ping_url, timeout=10)
-                logger.info(f"💓 [Keep-Alive] Ping Status: {r.status_code} | {datetime.utcnow()}")
+                logger.info(f"💓 [Keep-Alive] Ping Status: {r.status_code}")
             except Exception as e:
                 logger.error(f"⚠️ [Keep-Alive] Ping Failed: {e}")
 
-    # Run in a separate daemon thread so it doesn't block the main app
     threading.Thread(target=run_pinger, daemon=True).start()
 
 # --- ASYNCIO RUNNER (FLASK <-> TELETHON BRIDGE) ---
 def run_async(coro):
     """
-    Executes an asyncio coroutine within a synchronous Flask context.
-    Creates a new event loop for each execution to ensure thread safety and avoid collisions.
+    Menjalankan coroutine asyncio dalam konteks synchronous Flask.
+    Membuat loop baru setiap eksekusi untuk thread safety.
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -117,16 +107,13 @@ def get_user_data(user_id):
     """Retrieves full user data along with their telegram account info."""
     if not supabase: return None
     try:
-        # Fetch User
         u_res = supabase.table('users').select("*").eq('id', user_id).execute()
         if not u_res.data: return None
         user_data = u_res.data[0]
         
-        # Fetch Telegram Account
         t_res = supabase.table('telegram_accounts').select("*").eq('user_id', user_id).execute()
         tele_data = t_res.data[0] if t_res.data else None
         
-        # Wrapper Class for Jinja2 Template Compatibility
         class UserWrapper:
             def __init__(self, d, t):
                 self.id = d['id']
@@ -150,19 +137,17 @@ async def get_user_client(user_id):
     """Creates an active Telethon Client using the session string from DB."""
     if not supabase: return None
     try:
-        # Only fetch active accounts
         res = supabase.table('telegram_accounts').select("session_string").eq('user_id', user_id).eq('is_active', True).execute()
         if not res.data: return None
         session_str = res.data[0]['session_string']
         
+        # Inisialisasi Klien Baru (Fresh Connection)
         client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
         await client.connect()
         
-        # Validate if session is still authorized
         if not await client.is_user_authorized():
             logger.warning(f"Session expired for user {user_id}")
             await client.disconnect()
-            # Mark inactive if session expired
             supabase.table('telegram_accounts').update({'is_active': False}).eq('user_id', user_id).execute()
             return None
         return client
@@ -171,7 +156,7 @@ async def get_user_client(user_id):
         return None
 
 # ==========================================
-# 3. DECORATORS & SECURITY MIDDLEWARE
+# 3. DECORATORS & SECURITY
 # ==========================================
 
 @app.errorhandler(404)
@@ -197,7 +182,7 @@ def admin_required(f):
     return decorated_function
 
 # ==========================================
-# 4. AUTHENTICATION ROUTES (WEB)
+# 4. AUTH ROUTES (WEB)
 # ==========================================
 
 @app.route('/')
@@ -218,17 +203,12 @@ def login():
             res = supabase.table('users').select("*").eq('email', email).execute()
             if res.data:
                 user = res.data[0]
-                # Check password hash
                 if check_password_hash(user['password'], password):
-                    # Check Banned Status
                     if user.get('is_banned'):
                         flash('⛔ Akun Anda telah disuspend oleh Admin.', 'danger')
                         return redirect(url_for('login'))
                     
-                    # Login Success
                     session['user_id'] = user['id']
-                    
-                    # Redirect Based on Role
                     if user.get('is_admin'): 
                         return redirect(url_for('super_admin_dashboard'))
                     return redirect(url_for('dashboard'))
@@ -246,7 +226,6 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         try:
-            # Check for Duplicate Email
             exist = supabase.table('users').select("id").eq('email', email).execute()
             if exist.data:
                 flash('Email sudah terdaftar.', 'warning')
@@ -259,7 +238,6 @@ def register():
                 'created_at': datetime.utcnow().isoformat()
             }
             supabase.table('users').insert(data).execute()
-            
             flash('Pendaftaran berhasil! Silakan login.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
@@ -269,16 +247,11 @@ def register():
 
 @app.route('/logout')
 def logout():
-    uid = session.get('user_id')
-    # Cleanup memory state if exists
-    if uid and uid in login_states:
-        try: del login_states[uid]
-        except: pass
     session.pop('user_id', None)
     return redirect(url_for('index'))
 
 # ==========================================
-# 5. USER DASHBOARD & ANALYTICS
+# 5. USER DASHBOARD
 # ==========================================
 
 @app.route('/dashboard')
@@ -286,7 +259,6 @@ def logout():
 def dashboard():
     user = get_user_data(session['user_id'])
     
-    # Session Validation
     if not user: 
         session.pop('user_id', None)
         return redirect(url_for('login'))
@@ -301,11 +273,9 @@ def dashboard():
     
     if supabase:
         try:
-            # Using Supabase API for dashboard stats
             logs = supabase.table('blast_logs').select("*").eq('user_id', uid).order('created_at', desc=True).limit(50).execute().data
             schedules = supabase.table('blast_schedules').select("*").eq('user_id', uid).execute().data
             targets = supabase.table('blast_targets').select("*").eq('user_id', uid).execute().data
-            # Efficiently count CRM users
             crm_res = supabase.table('tele_users').select("id", count='exact', head=True).eq('owner_id', uid).execute()
             crm_count = crm_res.count if crm_res.count else 0
         except Exception as e: 
@@ -314,7 +284,7 @@ def dashboard():
     return render_template('dashboard.html', user=user, logs=logs, schedules=schedules, targets=targets, user_count=crm_count)
 
 # ==========================================
-# 6. TELEGRAM AUTHENTICATION (CORE FIX)
+# 6. TELEGRAM AUTHENTICATION (FIXED EVENT LOOP)
 # ==========================================
 
 @app.route('/api/connect/send_code', methods=['POST'])
@@ -326,54 +296,49 @@ def send_code():
     if not phone: 
         return jsonify({'status': 'error', 'message': 'Nomor HP wajib diisi.'})
 
-    # Rate Limit Check (60s cooldown)
+    # Rate Limit Check
     current_time = time.time()
     if user_id in login_states:
         last_req = login_states[user_id].get('last_otp_req', 0)
-        if current_time - last_req < 60:
-            remaining = int(60 - (current_time - last_req))
-            return jsonify({'status': 'cooldown', 'message': 'Tunggu sebentar...', 'remaining': remaining})
+        if current_time - last_req < 45: # 45 detik cooldown
+            remaining = int(45 - (current_time - last_req))
+            return jsonify({'status': 'cooldown', 'message': f'Tunggu {remaining}s...', 'remaining': remaining})
     
-    async def _send_logic():
+    async def _send_otp_logic():
+        # Bikin client BARU, connect, request, save hash, disconnect.
         client = TelegramClient(StringSession(), API_ID, API_HASH)
         await client.connect()
         try:
             if not await client.is_user_authorized():
                 req = await client.send_code_request(phone)
                 
-                # [CRITICAL FIX] STATELESS OTP STORAGE
-                # Store phone_code_hash in DATABASE temporarily (in telegram_accounts table)
-                # This ensures persistence across worker restarts
+                # SIMPAN HASH DI DATABASE (Bukan RAM Client Object)
+                # Ini kunci biar gak kena error event loop!
                 data = {
                     'user_id': user_id, 
                     'phone_number': phone,
-                    'session_string': req.phone_code_hash, # Temp Hash Storage
+                    'session_string': req.phone_code_hash, # Simpan HASH sementara disini
                     'is_active': False,
                     'created_at': datetime.utcnow().isoformat()
                 }
                 supabase.table('telegram_accounts').upsert(data, on_conflict="user_id").execute()
                 
-                # Store in RAM for fast access if worker persists
-                login_states[user_id] = {
-                    'client': client, # Client object reuse
-                    'phone': phone,
-                    'hash': req.phone_code_hash,
-                    'last_otp_req': current_time
-                }
+                # Update timestamp di RAM buat rate limit
+                login_states[user_id] = {'last_otp_req': current_time}
                 
                 return jsonify({'status': 'success', 'message': 'Kode OTP terkirim!'})
             else:
-                await client.disconnect()
                 return jsonify({'status': 'error', 'message': 'Nomor ini sudah login.'})
         except errors.FloodWaitError as e:
-            await client.disconnect()
-            return jsonify({'status': 'error', 'message': f'Terlalu sering request. Tunggu {e.seconds} detik.'})
+            return jsonify({'status': 'error', 'message': f'Terlalu sering. Tunggu {e.seconds}s.'})
         except Exception as e:
-            await client.disconnect()
             logger.error(f"OTP Error: {e}")
             return jsonify({'status': 'error', 'message': f'Error: {str(e)}'})
+        finally:
+            # PENTING: Selalu disconnect biar event loop bersih
+            await client.disconnect()
 
-    try: return run_async(_send_logic())
+    try: return run_async(_send_otp_logic())
     except Exception as e: return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/api/connect/verify_code', methods=['POST'])
@@ -383,47 +348,31 @@ def verify_code():
     otp = request.json.get('otp')
     pw = request.json.get('password')
     
-    # [CRITICAL FIX] DATA RETRIEVAL STRATEGY
-    # 1. Check RAM (login_states)
-    # 2. If empty, Fetch from DB (Fallback for server restarts)
-    
-    db_hash = None
-    db_phone = None
-    
-    # Fetch from DB Backup
+    # Ambil HASH dari Database (yang disimpen pas send_code)
     try:
         res = supabase.table('telegram_accounts').select("session_string, phone_number").eq('user_id', user_id).execute()
-        if res.data:
-            db_hash = res.data[0]['session_string']
-            db_phone = res.data[0]['phone_number']
-    except: pass
-
-    state = login_states.get(user_id) or {}
-    client = state.get('client')
-    phone = state.get('phone') or db_phone
-    phone_hash = state.get('hash') or db_hash
-
-    if not phone or not phone_hash:
-        return jsonify({'status': 'error', 'message': 'Data sesi tidak ditemukan. Mohon kirim ulang OTP.'})
+        if not res.data:
+            return jsonify({'status': 'error', 'message': 'Data sesi hilang. Kirim ulang OTP.'})
+        
+        db_hash = res.data[0]['session_string']
+        db_phone = res.data[0]['phone_number']
+    except: 
+        return jsonify({'status': 'error', 'message': 'Database Error'})
 
     async def _verify_logic():
-        # Handle Client Object Re-creation
-        nonlocal client
-        if not client:
-            client = TelegramClient(StringSession(), API_ID, API_HASH)
-            await client.connect()
-        else:
-            if not client.is_connected(): await client.connect()
-
+        # Bikin client BARU lagi (Fresh Session)
+        client = TelegramClient(StringSession(), API_ID, API_HASH)
+        await client.connect()
+        
         try:
+            # Login pake HASH yang dari DB
             try: 
-                await client.sign_in(phone, otp, phone_code_hash=phone_hash)
+                await client.sign_in(db_phone, otp, phone_code_hash=db_hash)
             except errors.SessionPasswordNeededError: 
-                if not pw: 
-                    return jsonify({'status': '2fa', 'message': 'Akun ini diproteksi Password (2FA).'})
+                if not pw: return jsonify({'status': '2fa', 'message': 'Butuh Password 2FA.'})
                 await client.sign_in(password=pw)
             
-            # LOGIN SUCCESS -> STORE PERMANENT SESSION
+            # Kalau sukses, simpan SESSION STRING ASLI (Permanen)
             real_session = client.session.save()
             
             supabase.table('telegram_accounts').update({
@@ -432,11 +381,7 @@ def verify_code():
                 'created_at': datetime.utcnow().isoformat()
             }).eq('user_id', user_id).execute()
             
-            # Cleanup
-            await client.disconnect()
-            if user_id in login_states: del login_states[user_id]
-            
-            return jsonify({'status': 'success', 'message': 'Login Berhasil! Mengalihkan...'})
+            return jsonify({'status': 'success', 'message': 'Login Berhasil!'})
             
         except errors.PhoneCodeInvalidError:
             return jsonify({'status': 'error', 'message': 'Kode OTP salah.'})
@@ -444,7 +389,9 @@ def verify_code():
             return jsonify({'status': 'error', 'message': 'Kode OTP kadaluarsa.'})
         except Exception as e:
             logger.error(f"Verify Error: {e}")
-            return jsonify({'status': 'error', 'message': f'Gagal Verifikasi: {str(e)}'})
+            return jsonify({'status': 'error', 'message': f'Gagal: {str(e)}'})
+        finally:
+            await client.disconnect()
 
     try: return run_async(_verify_logic())
     except Exception as e: return jsonify({'status': 'error', 'message': str(e)})
@@ -462,7 +409,7 @@ def scan_groups_api():
         if not client: return jsonify({"status": "error", "message": "Telegram belum terkoneksi."})
         groups = []
         try:
-            # Limit 300 dialogs for performance
+            # Limit 300 dialogs
             async for dialog in client.iter_dialogs(limit=300):
                 if dialog.is_group:
                     is_forum = getattr(dialog.entity, 'forum', False)
@@ -471,7 +418,6 @@ def scan_groups_api():
                     
                     if is_forum:
                         try:
-                            # Limit 10 latest topics
                             topics = await client.get_forum_topics(dialog.entity, limit=10)
                             if topics and topics.topics:
                                 for t in topics.topics: g_data['topics'].append({'id': t.id, 'title': t.title})
@@ -495,12 +441,9 @@ def save_bulk_targets():
         for item in selected:
             t_ids = ",".join(map(str, item.get('topic_ids', [])))
             payload = {
-                "user_id": user_id, 
-                "group_name": item['group_name'], 
-                "group_id": int(item['group_id']), 
-                "topic_ids": t_ids, 
-                "is_active": True, 
-                "created_at": datetime.utcnow().isoformat()
+                "user_id": user_id, "group_name": item['group_name'], 
+                "group_id": int(item['group_id']), "topic_ids": t_ids, 
+                "is_active": True, "created_at": datetime.utcnow().isoformat()
             }
             # Upsert Logic
             ex = supabase.table('blast_targets').select('id').eq('user_id', user_id).eq('group_id', item['group_id']).execute()
@@ -523,16 +466,12 @@ def import_crm_api():
                 if dialog.is_user and not dialog.entity.bot:
                     u = dialog.entity
                     data = {
-                        "owner_id": user_id, 
-                        "user_id": u.id, 
-                        "username": u.username, 
-                        "first_name": u.first_name, 
+                        "owner_id": user_id, "user_id": u.id, 
+                        "username": u.username, "first_name": u.first_name, 
                         "last_interaction": datetime.utcnow().isoformat(), 
                         "created_at": datetime.utcnow().isoformat()
                     }
-                    try: 
-                        supabase.table('tele_users').upsert(data, on_conflict="owner_id, user_id").execute()
-                        count += 1
+                    try: supabase.table('tele_users').upsert(data, on_conflict="owner_id, user_id").execute(); count += 1
                     except: pass
             await client.disconnect()
             return jsonify({"status": "success", "message": f"Sukses! {count} kontak ditambahkan."})
@@ -559,7 +498,6 @@ def start_broadcast():
                         await asyncio.sleep(2) 
                     except: pass
             finally: await client.disconnect()
-        
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(_broadcast_logic())
@@ -577,11 +515,8 @@ def add_schedule():
     if h and m:
         try:
             supabase.table('blast_schedules').insert({
-                "user_id": session['user_id'], 
-                "run_hour": int(h), 
-                "run_minute": int(m), 
-                "is_active": True, 
-                "created_at": datetime.utcnow().isoformat()
+                "user_id": session['user_id'], "run_hour": int(h), "run_minute": int(m), 
+                "is_active": True, "created_at": datetime.utcnow().isoformat()
             }).execute()
             flash('Jadwal ditambahkan.', 'success')
         except: flash('Gagal tambah jadwal.', 'danger')
@@ -610,13 +545,11 @@ def super_admin_dashboard():
             if u.get('is_banned'): stats['banned_users'] += 1
             tele = supabase.table('telegram_accounts').select("*").eq('user_id', u['id']).execute().data
             if tele and tele[0].get('is_active'): stats['active_bots'] += 1
-            
             class UserW:
                 def __init__(self, d, t):
                     self.id = d['id']; self.email = d['email']; self.is_admin = d.get('is_admin'); self.is_banned = d.get('is_banned')
                     self.telegram_account = type('o',(object,),t[0]) if t else None
             final_list.append(UserW(u, tele))
-            
         return render_template('super_admin.html', users=final_list, stats=stats)
     except: return "Admin Error"
 
@@ -638,10 +571,7 @@ def ping(): return jsonify({"status": "alive", "server_time": datetime.utcnow().
 # ==========================================
 
 def init_check():
-    """
-    Inisialisasi Admin saat startup.
-    [FIXED]: Memastikan password admin selalu sinkron dengan ENV.
-    """
+    """Admin Init & Password Sync"""
     adm_email = os.getenv('SUPER_ADMIN', 'admin@baba.com')
     adm_pass = os.getenv('PASS_ADMIN', 'admin123')
     
@@ -649,33 +579,20 @@ def init_check():
         try:
             logger.info(f"Checking Admin Account: {adm_email}...")
             res = supabase.table('users').select("*").eq('email', adm_email).execute()
-            
             new_hash = generate_password_hash(adm_pass)
             
             if not res.data:
-                # Admin belum ada -> Buat baru
-                data = {
-                    'email': adm_email, 
-                    'password': new_hash, 
-                    'is_admin': True, 
-                    'created_at': datetime.utcnow().isoformat()
-                }
+                data = {'email': adm_email, 'password': new_hash, 'is_admin': True, 'created_at': datetime.utcnow().isoformat()}
                 supabase.table('users').insert(data).execute()
-                logger.info("👑 Super Admin Created Successfully")
+                logger.info("👑 Super Admin Created")
             else:
-                # Admin sudah ada -> FORCE UPDATE PASSWORD (Solusi login gagal)
-                user_id = res.data[0]['id']
-                supabase.table('users').update({
-                    'password': new_hash, 
-                    'is_admin': True
-                }).eq('id', user_id).execute()
-                logger.info("🔄 Super Admin Password & Role Synced from ENV")
-                
+                uid = res.data[0]['id']
+                supabase.table('users').update({'password': new_hash, 'is_admin': True}).eq('id', uid).execute()
+                logger.info("🔄 Admin Password Synced")
         except Exception as e:
             logger.warning(f"⚠️ Init Admin Warning: {e}")
 
 if __name__ == '__main__':
     init_check()
-    # Panggil fungsi pinger otomatis saat app start
     start_self_ping() 
     app.run(debug=True, port=5000, use_reloader=False)
