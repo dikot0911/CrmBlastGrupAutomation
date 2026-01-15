@@ -1,0 +1,76 @@
+/* Dashboard Theme */
+:root {
+    --primary: #4F46E5;
+    --primary-hover: #4338CA;
+    --text-main: #1F293B;
+    --text-muted: #64748B;
+    --bg-light: #F3F4F6;
+    --bg-white: #FFFFFF;
+    --border: #E2E8F0;
+}
+
+body {
+    background-color: var(--bg-light);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+}
+
+/* Sidebar Navigation */
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    border-right: 3px solid transparent;
+}
+
+.nav-item:hover {
+    background-color: #F8FAFC;
+    color: var(--primary);
+}
+
+.nav-item.active {
+    background-color: #EEF2FF;
+    color: var(--primary);
+    border-right-color: var(--primary);
+}
+
+/* Telegram Preview Box */
+.preview-box {
+    background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+    background-color: #7289DA;
+    background-size: cover;
+}
+
+.chat-bubble {
+    position: relative;
+    background: #fff;
+    border-radius: 8px 8px 8px 0;
+    padding: 8px 12px;
+    max-width: 85%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-enter {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #CBD5E1;
+    border-radius: 4px;
+}
