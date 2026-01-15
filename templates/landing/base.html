@@ -4,20 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}UMKM Blast Pro{% endblock %} - Automasi Telegram</title>
-    <meta name="description" content="Platform automasi Telegram #1 untuk UMKM Indonesia.">
-    
     <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
 </head>
 <body class="bg-gray-50 text-slate-800">
 
-    <!-- NAVBAR -->
+    <!-- NAVBAR FIXED -->
     <nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 transition-all duration-300" id="navbar">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <a href="/" class="text-2xl font-bold flex items-center gap-2 text-indigo-600">
@@ -26,31 +23,32 @@
             
             <!-- Desktop Menu -->
             <div class="hidden md:flex gap-8 text-sm font-medium text-gray-600">
-                <a href="#features" class="hover:text-indigo-600 transition">Fitur</a>
-                <a href="#pricing" class="hover:text-indigo-600 transition">Harga</a>
-                <a href="#faq" class="hover:text-indigo-600 transition">FAQ</a>
+                <a href="/#features" class="hover:text-indigo-600 transition">Fitur</a>
+                <a href="/#pricing" class="hover:text-indigo-600 transition">Harga</a>
+                <a href="/#faq" class="hover:text-indigo-600 transition">FAQ</a>
             </div>
 
-            <!-- Auth Buttons -->
+            <!-- Auth Buttons (INI YANG PENTING BRE) -->
             <div class="flex gap-3">
-                <a href="/login" class="hidden md:block px-5 py-2.5 text-sm font-bold text-gray-600 hover:text-indigo-600 transition">Masuk</a>
+                <!-- Tombol Masuk -> Lari ke /login -->
+                <a href="/login" class="px-5 py-2.5 text-sm font-bold text-gray-600 hover:text-indigo-600 transition">Masuk</a>
+                
+                <!-- Tombol Daftar -> Lari ke /register -->
                 <a href="/register" class="px-5 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-full hover:bg-indigo-700 transition shadow-lg shadow-indigo-200">Daftar Gratis</a>
             </div>
         </div>
     </nav>
 
-    <!-- CONTENT INJECTION -->
+    <!-- CONTENT -->
     {% block content %}{% endblock %}
 
-    <!-- FOOTER INJECTION -->
+    <!-- FOOTER -->
     {% include 'landing/_footer.html' %}
 
     <!-- SCRIPTS -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
         AOS.init({ duration: 800, once: true });
-        
-        // Sticky Navbar Logic
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('navbar');
             if (window.scrollY > 50) {
@@ -61,11 +59,7 @@
                 nav.classList.add('bg-white/80');
             }
         });
-
-        // FAQ Logic
-        function toggleFaq(el) {
-            el.parentElement.classList.toggle('active');
-        }
+        function toggleFaq(el) { el.parentElement.classList.toggle('active'); }
     </script>
 </body>
 </html>
