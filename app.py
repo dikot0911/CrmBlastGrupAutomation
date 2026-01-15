@@ -284,7 +284,7 @@ def dashboard():
     return render_template('dashboard.html', user=user, logs=logs, schedules=schedules, targets=targets, user_count=crm_count)
 
 # ==========================================
-# 6. TELEGRAM AUTHENTICATION (FIXED EVENT LOOP)
+# 6. TELEGRAM AUTHENTICATION (CORE FIX)
 # ==========================================
 
 @app.route('/api/connect/send_code', methods=['POST'])
@@ -296,28 +296,34 @@ def send_code():
     if not phone: 
         return jsonify({'status': 'error', 'message': 'Nomor HP wajib diisi.'})
 
-    # Rate Limit Check
+    # Rate Limit Check (45s cooldown)
     current_time = time.time()
     if user_id in login_states:
         last_req = login_states[user_id].get('last_otp_req', 0)
-        if current_time - last_req < 45: # 45 detik cooldown
+        if current_time - last_req < 45: 
             remaining = int(45 - (current_time - last_req))
             return jsonify({'status': 'cooldown', 'message': f'Tunggu {remaining}s...', 'remaining': remaining})
     
     async def _send_otp_logic():
-        # Bikin client BARU, connect, request, save hash, disconnect.
+        # [FIX] Start with a FRESH session
         client = TelegramClient(StringSession(), API_ID, API_HASH)
         await client.connect()
         try:
             if not await client.is_user_authorized():
                 req = await client.send_code_request(phone)
                 
-                # SIMPAN HASH DI DATABASE (Bukan RAM Client Object)
-                # Ini kunci biar gak kena error event loop!
+                # [FIX] Capture the TEMP SESSION that has the auth request state
+                temp_session_str = client.session.save()
+
+                # [FIX] Save TEMP SESSION to session_string AND Hash to targets (Temporary storage hack)
+                # Why targets? Because we need to store 2 things (Session + Hash)
+                # session_string -> Holds the connection state (Session A)
+                # targets -> Holds the Hash Code (needed for verification)
                 data = {
                     'user_id': user_id, 
                     'phone_number': phone,
-                    'session_string': req.phone_code_hash, # Simpan HASH sementara disini
+                    'session_string': temp_session_str, 
+                    'targets': req.phone_code_hash, # Menyimpan HASH sementara di kolom targets
                     'is_active': False,
                     'created_at': datetime.utcnow().isoformat()
                 }
@@ -335,7 +341,6 @@ def send_code():
             logger.error(f"OTP Error: {e}")
             return jsonify({'status': 'error', 'message': f'Error: {str(e)}'})
         finally:
-            # PENTING: Selalu disconnect biar event loop bersih
             await client.disconnect()
 
     try: return run_async(_send_otp_logic())
@@ -348,36 +353,43 @@ def verify_code():
     otp = request.json.get('otp')
     pw = request.json.get('password')
     
-    # Ambil HASH dari Database (yang disimpen pas send_code)
+    # [FIX] Retrieve TEMP SESSION and HASH from DB
+    db_session = None
+    db_hash = None
+    db_phone = None
+    
     try:
-        res = supabase.table('telegram_accounts').select("session_string, phone_number").eq('user_id', user_id).execute()
+        res = supabase.table('telegram_accounts').select("session_string, phone_number, targets").eq('user_id', user_id).execute()
         if not res.data:
             return jsonify({'status': 'error', 'message': 'Data sesi hilang. Kirim ulang OTP.'})
         
-        db_hash = res.data[0]['session_string']
+        db_session = res.data[0]['session_string'] # Ini Sesi A
         db_phone = res.data[0]['phone_number']
+        db_hash = res.data[0]['targets'] # Ini Hash yang kita simpan di kolom targets
     except: 
         return jsonify({'status': 'error', 'message': 'Database Error'})
 
     async def _verify_logic():
-        # Bikin client BARU lagi (Fresh Session)
-        client = TelegramClient(StringSession(), API_ID, API_HASH)
+        # [FIX] Resume Sesi A (Gunakan string session yang disimpan saat send_code)
+        client = TelegramClient(StringSession(db_session), API_ID, API_HASH)
         await client.connect()
         
         try:
-            # Login pake HASH yang dari DB
             try: 
+                # Login menggunakan HASH yang cocok dengan Sesi A
                 await client.sign_in(db_phone, otp, phone_code_hash=db_hash)
             except errors.SessionPasswordNeededError: 
                 if not pw: return jsonify({'status': '2fa', 'message': 'Butuh Password 2FA.'})
                 await client.sign_in(password=pw)
             
-            # Kalau sukses, simpan SESSION STRING ASLI (Permanen)
-            real_session = client.session.save()
+            # [FIX] Login Sukses! Ambil Final Session (Authenticated)
+            final_session = client.session.save()
             
+            # Update DB: Simpan session final, set Active, dan bersihkan targets
             supabase.table('telegram_accounts').update({
-                'session_string': real_session, 
+                'session_string': final_session, 
                 'is_active': True, 
+                'targets': '[]', # Reset targets jadi kosong lagi
                 'created_at': datetime.utcnow().isoformat()
             }).eq('user_id', user_id).execute()
             
@@ -386,7 +398,7 @@ def verify_code():
         except errors.PhoneCodeInvalidError:
             return jsonify({'status': 'error', 'message': 'Kode OTP salah.'})
         except errors.PhoneCodeExpiredError:
-            return jsonify({'status': 'error', 'message': 'Kode OTP kadaluarsa.'})
+            return jsonify({'status': 'error', 'message': 'Kode OTP kadaluarsa/Sesi berubah. Kirim ulang.'})
         except Exception as e:
             logger.error(f"Verify Error: {e}")
             return jsonify({'status': 'error', 'message': f'Gagal: {str(e)}'})
