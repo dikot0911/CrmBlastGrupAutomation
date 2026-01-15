@@ -2,45 +2,79 @@
 {% block title %}CRM User{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">Database Pelanggan</h1>
-    <div class="flex gap-2">
-        <button onclick="importCRM()" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-bold hover:bg-gray-50 text-sm">
-            <i class="fa-solid fa-rotate mr-2"></i> Sync
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 animate-enter">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Database Pelanggan</h1>
+        <p class="text-gray-500 text-sm mt-1">Daftar kontak yang dikumpulkan dari riwayat chat pribadi.</p>
+    </div>
+    <div class="flex gap-3">
+        <button onclick="importCRM()" id="btn-import" class="bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-xl font-bold hover:bg-gray-50 hover:text-indigo-600 transition flex items-center gap-2 shadow-sm transform hover:-translate-y-0.5 active:scale-95 text-sm">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Sync / Import
         </button>
-        <button onclick="broadcastSelected()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 text-sm shadow-lg">
-            <i class="fa-solid fa-paper-plane mr-2"></i> Broadcast Terpilih (<span id="countSelected">0</span>)
+        <button onclick="broadcastSelected()" id="btn-blast-selected" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition flex items-center gap-2 transform hover:-translate-y-0.5 active:scale-95 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+            <i class="fa-solid fa-paper-plane"></i> Blast Terpilih (<span id="countSelected">0</span>)
         </button>
     </div>
 </div>
 
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-enter" style="animation-delay: 0.1s;">
+    <!-- Toolbar Select All -->
+    <div class="p-4 bg-gray-50 border-b border-gray-100 flex items-center gap-3">
+        <div class="flex items-center gap-3 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm hover:border-indigo-300 transition">
+            <input type="checkbox" id="selectAll" onchange="toggleAll(this)" class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer">
+            <label for="selectAll" class="text-xs font-bold text-gray-600 cursor-pointer select-none">Pilih Semua</label>
+        </div>
+        <span class="text-xs text-gray-400">Menampilkan {{ crm_users|length }} pengguna terbaru</span>
+    </div>
+
     <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
-            <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-xs border-b">
+            <thead class="bg-white text-gray-500 font-bold uppercase text-xs border-b border-gray-100">
                 <tr>
-                    <th class="px-6 py-4 w-10">
-                        <input type="checkbox" onchange="toggleAll(this)" class="w-4 h-4 text-indigo-600 rounded">
-                    </th>
+                    <th class="px-6 py-4 w-10">#</th>
                     <th class="px-6 py-4">Nama</th>
                     <th class="px-6 py-4">Username</th>
-                    <th class="px-6 py-4">ID</th>
-                    <th class="px-6 py-4">Last Interaction</th>
+                    <th class="px-6 py-4">ID User</th>
+                    <th class="px-6 py-4">Terakhir Interaksi</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100">
+            <tbody class="divide-y divide-gray-50">
                 {% for u in crm_users %}
-                <tr class="hover:bg-gray-50">
+                <tr class="hover:bg-indigo-50/30 transition group">
                     <td class="px-6 py-4">
-                        <input type="checkbox" value="{{ u.user_id }}" class="user-check w-4 h-4 text-indigo-600 rounded" onchange="updateCount()">
+                        <input type="checkbox" value="{{ u.user_id }}" class="user-check w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" onchange="updateCount()">
                     </td>
-                    <td class="px-6 py-4 font-bold text-gray-800">{{ u.first_name }}</td>
-                    <td class="px-6 py-4 text-blue-500">@{{ u.username or '-' }}</td>
-                    <td class="px-6 py-4 font-mono text-xs text-gray-400">{{ u.user_id }}</td>
-                    <td class="px-6 py-4 text-gray-500 text-xs">{{ u.last_interaction[:10] }}</td>
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-gray-800">{{ u.first_name }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if u.username %}
+                        <a href="https://t.me/{{ u.username }}" target="_blank" class="text-blue-500 hover:underline flex items-center gap-1">
+                            @{{ u.username }} <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        </a>
+                        {% else %}
+                        <span class="text-gray-400 text-xs italic">Tanpa Username</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 font-mono text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded w-fit border border-gray-100">
+                        {{ u.user_id }}
+                    </td>
+                    <td class="px-6 py-4 text-gray-500 text-xs flex items-center gap-2">
+                        <i class="fa-regular fa-clock text-gray-300"></i>
+                        {{ u.last_interaction[:10] if u.last_interaction else '-' }}
+                    </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">Data kosong. Klik Sync untuk import.</td></tr>
+                <tr>
+                    <td colspan="5" class="px-6 py-16 text-center">
+                        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+                            <i class="fa-solid fa-database text-2xl"></i>
+                        </div>
+                        <h3 class="text-gray-800 font-bold mb-1">Database Kosong</h3>
+                        <p class="text-gray-400 text-sm mb-4">Belum ada data pelanggan yang tersimpan.</p>
+                        <button onclick="importCRM()" class="text-indigo-600 font-bold text-sm hover:underline">Sync Sekarang</button>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -58,6 +92,16 @@
     function updateCount() {
         const count = document.querySelectorAll('.user-check:checked').length;
         document.getElementById('countSelected').innerText = count;
+        
+        // Update Select All checkbox state based on individual selections
+        const allChecks = document.querySelectorAll('.user-check');
+        const allChecked = document.querySelectorAll('.user-check:checked');
+        const selectAll = document.getElementById('selectAll');
+        
+        if (allChecks.length > 0) {
+            selectAll.checked = allChecks.length === allChecked.length;
+            selectAll.indeterminate = allChecked.length > 0 && allChecked.length < allChecks.length;
+        }
     }
 
     function broadcastSelected() {
@@ -65,15 +109,31 @@
         if (selected.length === 0) return alert("Pilih minimal satu user!");
         
         // Redirect ke halaman broadcast dengan parameter ID
-        const ids = selected.join(',');
+        // Gunakan encodeURIComponent untuk keamanan URL
+        const ids = encodeURIComponent(selected.join(','));
         window.location.href = `/dashboard/broadcast?ids=${ids}`;
     }
 
     async function importCRM() {
-        if(!confirm("Scan kontak?")) return;
-        const res = await apiRequest('/import_crm_api', 'POST');
-        alert(res.message);
-        if(res.status === 'success') location.reload();
+        if(!confirm("Mulai scanning riwayat chat? Proses ini akan berjalan di background.")) return;
+        
+        const btn = document.getElementById('btn-import');
+        const original = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Scanning...';
+        btn.disabled = true;
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+        try {
+            const res = await apiRequest('/import_crm_api', 'POST');
+            alert(res.message);
+            if(res.status === 'success') location.reload();
+        } catch(e) {
+            alert("Gagal koneksi server.");
+        } finally {
+            btn.innerHTML = original;
+            btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
+        }
     }
 </script>
 {% endblock %}
