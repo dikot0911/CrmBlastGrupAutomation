@@ -1,0 +1,72 @@
+/* --- GLOBAL ADMIN THEME (DARK) --- */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0F172A; /* Slate 900 */
+    color: #E2E8F0; /* Slate 200 */
+}
+
+/* --- SCROLLBAR (Dark) --- */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #1E293B; }
+::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #64748B; }
+
+/* --- SIDEBAR --- */
+.admin-sidebar {
+    background-color: #1E293B; /* Slate 800 */
+    border-right: 1px solid #334155;
+}
+.nav-link {
+    color: #94A3B8;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #F8FAFC;
+}
+.nav-link.active {
+    background-color: rgba(59, 130, 246, 0.1); /* Blue tint */
+    color: #60A5FA; /* Blue 400 */
+    border-left-color: #60A5FA;
+}
+
+/* --- GLASS PANELS --- */
+.glass-panel {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* --- TABLES --- */
+.admin-table thead th {
+    background-color: #0F172A;
+    color: #94A3B8;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #334155;
+}
+.admin-table tbody tr {
+    border-bottom: 1px solid #1E293B;
+    transition: background-color 0.2s;
+}
+.admin-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+.admin-table td {
+    color: #CBD5E1;
+}
+
+/* --- STATUS BADGES --- */
+.badge-active { background: rgba(16, 185, 129, 0.2); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-banned { background: rgba(239, 68, 68, 0.2); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+.badge-admin { background: rgba(139, 92, 246, 0.2); color: #A78BFA; border: 1px solid rgba(139, 92, 246, 0.3); }
+
+/* --- ANIMATIONS --- */
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 5px rgba(96, 165, 250, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(96, 165, 250, 0.8); }
+}
+.glow-effect { animation: glow 3s infinite; }

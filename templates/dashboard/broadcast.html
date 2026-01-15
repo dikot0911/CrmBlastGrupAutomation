@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Broadcast Pesan - Dashboard UMKM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F3F4F6; }
+        .preview-box {
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-color: #7289DA; /* Fallback color */
+            background-repeat: repeat;
+        }
+        .chat-bubble {
+            position: relative;
+            background: #fff;
+            border-radius: .4em;
+            padding: 10px;
+            max-width: 80%;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+        .chat-bubble::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 0;
+            height: 0;
+            border: 0.625em solid transparent;
+            border-right-color: #fff;
+            border-left: 0;
+            border-top: 0;
+            margin-top: -0.312em;
+            margin-left: -0.625em;
+        }
+        /* Animasi loading */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR (Sama kayak dashboard.html, bisa di-include kalau pake Jinja2 layout) -->
+    <aside class="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col z-20">
+        <div class="p-6 border-b border-gray-100 flex items-center gap-3">
+             <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+            <span class="font-bold text-xl text-gray-800">BlastPro</span>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4">
+             <ul class="space-y-1">
+                <li><a href="/dashboard" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition flex items-center gap-3"><i class="fa-solid fa-chart-pie w-5 text-center"></i> Ringkasan</a></li>
+                <!-- ... Menu lainnya ... -->
+                <li><a href="/dashboard/broadcast" class="nav-item w-full text-left px-6 py-3 text-sm font-medium text-indigo-600 bg-indigo-50 border-r-4 border-indigo-600 transition flex items-center gap-3"><i class="fa-solid fa-paper-plane w-5 text-center"></i> Broadcast</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+        <header class="bg-white border-b border-gray-200 p-4 flex justify-between items-center z-20">
+            <h2 class="text-xl font-bold text-gray-800">Buat Pesan Broadcast</h2>
+            <div class="flex items-center gap-4">
+                 <span class="text-sm text-gray-500">Saldo Kredit: <strong>Unlimited</strong></span>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 md:p-8">
+            <div class="flex flex-col lg:flex-row gap-8 h-full">
+                
+                <!-- EDITOR SECTION (KIRI) -->
+                <div class="w-full lg:w-1/2 flex flex-col">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex-1">
+                        <form id="broadcastForm" onsubmit="sendBroadcast(event)" class="h-full flex flex-col">
+                            
+                            <div class="mb-4">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Pesan Anda</label>
+                                <textarea id="messageInput" name="message" class="w-full h-64 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none" placeholder="Halo {name}, kami punya promo menarik khusus hari ini!..." oninput="updatePreview()"></textarea>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    <i class="fa-solid fa-circle-info mr-1"></i> Gunakan <code>{name}</code> untuk menyapa nama pelanggan secara otomatis.
+                                </p>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Gambar (Opsional)</label>
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 transition cursor-pointer" onclick="document.getElementById('imageUpload').click()">
+                                    <input type="file" id="imageUpload" class="hidden" accept="image/*" onchange="previewImage(event)">
+                                    <div id="uploadPlaceholder">
+                                        <i class="fa-solid fa-image text-4xl text-gray-300 mb-2"></i>
+                                        <p class="text-sm text-gray-500">Klik untuk upload gambar promo</p>
+                                    </div>
+                                    <img id="imagePreviewSrc" class="hidden max-h-40 mx-auto rounded-lg shadow-sm">
+                                </div>
+                            </div>
+
+                            <div class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
+                                <span class="text-sm text-gray-500" id="charCount">0 karakter</span>
+                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-indigo-200 transition transform hover:-translate-y-1 flex items-center gap-2">
+                                    <i class="fa-solid fa-paper-plane"></i> Kirim Broadcast
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- PREVIEW SECTION (KANAN) -->
+                <div class="w-full lg:w-1/2 flex flex-col">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex-1 flex flex-col">
+                        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Preview Tampilan User</h3>
+                        
+                        <!-- Mockup HP -->
+                        <div class="flex-1 border-8 border-gray-800 rounded-[2.5rem] overflow-hidden relative shadow-2xl bg-gray-100 max-w-sm mx-auto w-full">
+                            <!-- Notch -->
+                            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-xl z-20"></div>
+                            
+                            <!-- Screen -->
+                            <div class="w-full h-full preview-box flex flex-col relative">
+                                <!-- Telegram Header -->
+                                <div class="bg-[#517DA2] text-white p-3 pt-8 flex items-center gap-3 shadow-md z-10">
+                                    <i class="fa-solid fa-arrow-left"></i>
+                                    <div class="flex-1">
+                                        <h4 class="font-bold text-sm">Baba Parfume Admin</h4>
+                                        <p class="text-xs opacity-80">bot</p>
+                                    </div>
+                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                </div>
+
+                                <!-- Chat Area -->
+                                <div class="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
+                                    <!-- Bot Message Bubble -->
+                                    <div class="self-start max-w-[85%]">
+                                        <div class="bg-white rounded-lg rounded-tl-none p-3 shadow-sm text-sm text-gray-800 break-words relative">
+                                            <!-- Image Preview in Bubble -->
+                                            <div id="bubbleImage" class="hidden mb-2 rounded-lg overflow-hidden">
+                                                <img src="" class="w-full h-auto object-cover">
+                                            </div>
+                                            
+                                            <!-- Text Content -->
+                                            <div id="bubbleText" class="whitespace-pre-wrap">Halo Kak Budi, ...</div>
+                                            
+                                            <div class="text-[10px] text-gray-400 text-right mt-1 flex items-center justify-end gap-1">
+                                                <span>10:30</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Input Area Mockup -->
+                                <div class="bg-white p-2 flex items-center gap-2 border-t">
+                                    <i class="fa-regular fa-face-smile text-gray-400 text-xl"></i>
+                                    <div class="flex-1 bg-gray-100 rounded-full h-8"></div>
+                                    <i class="fa-solid fa-microphone text-gray-400 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-center text-xs text-gray-400 mt-4">* Tampilan mungkin sedikit berbeda tergantung perangkat user.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- JS Logic -->
+    <script>
+        function updatePreview() {
+            const input = document.getElementById('messageInput');
+            const preview = document.getElementById('bubbleText');
+            const charCount = document.getElementById('charCount');
+            
+            // Simulasi ganti {name}
+            let text = input.value;
+            if (!text) text = "Halo Kak Budi, ..."; // Default placeholder
+            
+            // Highlight variabel
+            text = text.replace(/{name}/g, '<span class="bg-yellow-100 text-yellow-800 px-1 rounded font-bold">{Nama User}</span>');
+            
+            preview.innerHTML = text;
+            charCount.innerText = input.value.length + " karakter";
+        }
+
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Update Editor Preview
+                    document.getElementById('uploadPlaceholder').classList.add('hidden');
+                    const imgPreviewSrc = document.getElementById('imagePreviewSrc');
+                    imgPreviewSrc.src = e.target.result;
+                    imgPreviewSrc.classList.remove('hidden');
+
+                    // Update Chat Bubble Preview
+                    const bubbleImgDiv = document.getElementById('bubbleImage');
+                    bubbleImgDiv.classList.remove('hidden');
+                    bubbleImgDiv.querySelector('img').src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function sendBroadcast(e) {
+            e.preventDefault();
+            if(!confirm("Kirim pesan ini ke semua pelanggan?")) return;
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="loader mr-2 border-white border-t-transparent w-4 h-4"></div> Mengirim...';
+            btn.disabled = true;
+
+            const formData = new FormData(e.target);
+            
+            try {
+                const res = await fetch('/start_broadcast', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    alert('Berhasil! Broadcast sedang diproses di background.');
+                    e.target.reset();
+                    // Reset previews
+                    document.getElementById('bubbleText').innerText = "Halo Kak Budi, ...";
+                    document.getElementById('bubbleImage').classList.add('hidden');
+                    document.getElementById('uploadPlaceholder').classList.remove('hidden');
+                    document.getElementById('imagePreviewSrc').classList.add('hidden');
+                    document.getElementById('charCount').innerText = "0 karakter";
+                } else {
+                    alert('Gagal: ' + data.message);
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Init preview on load
+        updatePreview();
+    </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Ringkasan{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-end mb-8 animate-enter">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Ringkasan Aktivitas</h1>
+        <p class="text-gray-500 text-sm mt-1">Pantau performa bot dan statistik harian Anda.</p>
+    </div>
+    <div class="text-right hidden sm:block">
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Server Time</span>
+        <div id="clock-widget" class="text-2xl font-mono font-bold text-indigo-600">--:--</div>
+    </div>
+</div>
+
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 animate-enter">
+    <!-- Stat 1 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Log</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ logs|length }}</h3>
+            </div>
+            <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><i class="fa-solid fa-server"></i></div>
+        </div>
+    </div>
+    <!-- Stat 2 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Target Grup</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ targets|length }}</h3>
+            </div>
+            <div class="p-3 bg-purple-50 text-purple-600 rounded-xl"><i class="fa-solid fa-users-viewfinder"></i></div>
+        </div>
+    </div>
+    <!-- Stat 3 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">CRM User</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ user_count }}</h3>
+            </div>
+            <div class="p-3 bg-green-50 text-green-600 rounded-xl"><i class="fa-solid fa-address-book"></i></div>
+        </div>
+    </div>
+    <!-- Stat 4 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Jadwal</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ schedules|length }}</h3>
+            </div>
+            <div class="p-3 bg-orange-50 text-orange-600 rounded-xl"><i class="fa-solid fa-clock"></i></div>
+        </div>
+    </div>
+</div>
+
+<!-- Logs Table -->
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-enter" style="animation-delay: 0.1s;">
+    <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <div>
+            <h3 class="font-bold text-gray-800">Aktivitas Terakhir</h3>
+            <p class="text-xs text-gray-500">Log pengiriman pesan otomatis.</p>
+        </div>
+        <button onclick="location.reload()" class="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-400 hover:text-indigo-600 flex items-center justify-center transition shadow-sm">
+            <i class="fa-solid fa-sync-alt"></i>
+        </button>
+    </div>
+    
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 text-gray-500 font-bold uppercase text-xs tracking-wider">
+                <tr>
+                    <th class="px-6 py-4">Waktu</th>
+                    <th class="px-6 py-4">Target</th>
+                    <th class="px-6 py-4">Status</th>
+                    <th class="px-6 py-4">Pesan Sistem</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 bg-white">
+                {% for log in logs %}
+                <tr class="hover:bg-gray-50 transition group">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded inline-block">
+                            {{ log.created_at[11:19] }}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 font-medium text-gray-700 group-hover:text-indigo-600 transition">
+                        {{ log.group_name }}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if 'SUCCESS' in log.status %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-600 border border-green-100">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Sukses
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-100">
+                                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Gagal
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-gray-400 text-xs max-w-xs truncate">
+                        {{ log.error_message or 'Terkirim tanpa error.' }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="px-6 py-12 text-center text-gray-400 bg-gray-50/30">
+                        <i class="fa-solid fa-inbox text-3xl mb-3 opacity-20 block"></i>
+                        Belum ada aktivitas tercatat hari ini.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

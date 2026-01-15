@@ -1,0 +1,74 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Jadwal Blast{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto animate-enter">
+    <div class="text-center mb-10">
+        <h1 class="text-3xl font-bold text-gray-800">Jadwal Blast Otomatis</h1>
+        <p class="text-gray-500 mt-2">Tentukan kapan bot Anda bekerja. Waktu mengikuti zona WIB (UTC+7).</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+        
+        <!-- Form Card -->
+        <div class="bg-white rounded-3xl p-8 shadow-lg border border-indigo-100 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -mr-10 -mt-10 z-0"></div>
+            
+            <div class="relative z-10">
+                <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-2xl mb-6">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-6">Tambah Waktu Baru</h3>
+                
+                <form action="/add_schedule" method="POST">
+                    <div class="flex gap-4 mb-6">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Jam (00-23)</label>
+                            <input type="number" name="hour" min="0" max="23" placeholder="09" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-center text-2xl font-bold text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition" required>
+                        </div>
+                        <div class="flex items-center pt-6 text-2xl text-gray-300">:</div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Menit (00-59)</label>
+                            <input type="number" name="minute" min="0" max="59" placeholder="00" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-center text-2xl font-bold text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-200 transition transform hover:-translate-y-1">
+                        Simpan Jadwal
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Schedule List -->
+        <div class="md:col-span-2">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Jadwal Aktif Saat Ini</h3>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {% for s in schedules %}
+                <div class="bg-white p-4 rounded-2xl border border-gray-100 hover:border-indigo-200 shadow-sm hover:shadow-md transition group relative flex flex-col items-center justify-center text-center h-32">
+                    <div class="text-3xl font-mono font-bold text-gray-800 mb-1 group-hover:text-indigo-600 transition">
+                        {{ '%02d' % s.run_hour }}:{{ '%02d' % s.run_minute }}
+                    </div>
+                    <span class="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded">WIB</span>
+                    
+                    <a href="/delete_schedule/{{ s.id }}" class="absolute -top-2 -right-2 w-8 h-8 bg-white text-red-500 rounded-full shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition transform hover:scale-110 hover:bg-red-50">
+                        <i class="fa-solid fa-times"></i>
+                    </a>
+                </div>
+                {% else %}
+                <div class="col-span-full bg-gray-50 rounded-2xl p-8 text-center border border-dashed border-gray-300">
+                    <p class="text-gray-400">Belum ada jadwal yang diatur.</p>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-8 bg-blue-50 text-blue-800 p-4 rounded-xl text-sm flex items-start gap-3 border border-blue-100">
+                <i class="fa-solid fa-circle-info mt-1"></i>
+                <p>Bot akan mengirim pesan secara otomatis pada jam-jam di atas setiap harinya. Pastikan Anda memiliki target grup yang aktif.</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

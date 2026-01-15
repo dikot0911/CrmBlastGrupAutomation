@@ -1,0 +1,42 @@
+{% extends "landing/base.html" %}
+
+{% block content %}
+
+    <!-- 1. Hero Section -->
+    {% include 'landing/_hero.html' %}
+
+    <!-- 2. Features Section -->
+    {% include 'landing/_features.html' %}
+
+    <!-- 3. Stats Section -->
+    <section class="py-20 bg-indigo-900 text-white relative overflow-hidden">
+        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-indigo-800/50">
+                <div data-aos="zoom-in">
+                    <div class="text-4xl font-bold mb-2 text-yellow-400">10k+</div>
+                    <div class="text-indigo-200 text-xs md:text-sm font-medium uppercase tracking-wider">Grup Terkelola</div>
+                </div>
+                <div data-aos="zoom-in" data-aos-delay="100">
+                    <div class="text-4xl font-bold mb-2 text-yellow-400">5M+</div>
+                    <div class="text-indigo-200 text-xs md:text-sm font-medium uppercase tracking-wider">Pesan Terkirim</div>
+                </div>
+                <div data-aos="zoom-in" data-aos-delay="200">
+                    <div class="text-4xl font-bold mb-2 text-yellow-400">500+</div>
+                    <div class="text-indigo-200 text-xs md:text-sm font-medium uppercase tracking-wider">UMKM Bergabung</div>
+                </div>
+                <div data-aos="zoom-in" data-aos-delay="300">
+                    <div class="text-4xl font-bold mb-2 text-yellow-400">99.9%</div>
+                    <div class="text-indigo-200 text-xs md:text-sm font-medium uppercase tracking-wider">Server Uptime</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Pricing Section -->
+    {% include 'landing/_pricing.html' %}
+
+    <!-- 5. FAQ Section -->
+    {% include 'landing/_faq.html' %}
+
+{% endblock %}

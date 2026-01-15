@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Super Admin{% endblock %} - God Mode</title>
+    
+    <!-- Libs -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Admin CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="flex h-screen overflow-hidden antialiased">
+
+    <!-- ADMIN SIDEBAR -->
+    <aside class="w-64 admin-sidebar hidden md:flex flex-col z-20 shadow-2xl">
+        <!-- Logo Area -->
+        <div class="h-16 flex items-center px-6 border-b border-gray-700 bg-gray-900">
+            <i class="fa-solid fa-user-astronaut text-red-500 text-xl mr-3"></i>
+            <span class="font-bold text-lg tracking-wider text-white">GOD MODE</span>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto py-6 space-y-1">
+            <p class="px-6 text-xs font-bold text-gray-500 uppercase mb-2">Main Control</p>
+            
+            <a href="/super-admin" class="nav-link flex items-center px-6 py-3 text-sm font-medium {% if active_page == 'dashboard' %}active{% endif %}">
+                <i class="fa-solid fa-gauge-high w-5"></i> Dashboard
+            </a>
+            <a href="/super-admin/users" class="nav-link flex items-center px-6 py-3 text-sm font-medium {% if active_page == 'users' %}active{% endif %}">
+                <i class="fa-solid fa-users-gear w-5"></i> Manage Users
+            </a>
+             <!-- Placeholder for future features -->
+            <a href="#" class="nav-link flex items-center px-6 py-3 text-sm font-medium opacity-50 cursor-not-allowed">
+                <i class="fa-solid fa-server w-5"></i> Server Status <span class="ml-auto text-[10px] bg-gray-700 px-1 rounded">SOON</span>
+            </a>
+        </nav>
+
+        <!-- Admin Profile -->
+        <div class="p-4 border-t border-gray-700 bg-gray-900/50">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded bg-red-600 flex items-center justify-center font-bold text-white text-xs">
+                    ADM
+                </div>
+                <div class="overflow-hidden flex-1">
+                    <p class="text-xs font-bold text-gray-200 truncate">Super Admin</p>
+                    <p class="text-[10px] text-green-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
+                    </p>
+                </div>
+                <a href="/logout" class="text-gray-500 hover:text-white transition"><i class="fa-solid fa-right-from-bracket"></i></a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- CONTENT WRAPPER -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden relative bg-[#0F172A]">
+        
+        <!-- Mobile Header -->
+        <header class="md:hidden h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4 z-30">
+            <span class="font-bold text-white">God Mode</span>
+            <button class="text-gray-400"><i class="fa-solid fa-bars"></i></button>
+        </header>
+
+        <!-- Flash Messages -->
+        <div class="fixed top-5 right-5 z-50 space-y-2 pointer-events-none">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="px-4 py-3 rounded border shadow-2xl text-white text-sm font-bold flex items-center pointer-events-auto {{ 'bg-red-900/90 border-red-700 text-red-100' if category == 'danger' else 'bg-green-900/90 border-green-700 text-green-100' }}">
+                            <i class="fa-solid {{ 'fa-triangle-exclamation' if category == 'danger' else 'fa-circle-check' }} mr-3"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Dynamic Content -->
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 scroll-smooth">
+            {% block content %}{% endblock %}
+        </div>
+        
+    </main>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

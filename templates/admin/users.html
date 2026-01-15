@@ -1,0 +1,117 @@
+{% extends "admin/base.html" %}
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-white">Database Pengguna</h1>
+        <p class="text-gray-400 text-sm mt-1">Kelola akses dan status akun UMKM.</p>
+    </div>
+    <div class="flex gap-2">
+        <input type="text" id="userSearch" placeholder="Cari email..." class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none w-64">
+    </div>
+</div>
+
+<div class="glass-panel rounded-xl overflow-hidden shadow-2xl">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm admin-table">
+            <thead>
+                <tr>
+                    <th class="px-6 py-4">User Identity</th>
+                    <th class="px-6 py-4">Telegram Status</th>
+                    <th class="px-6 py-4">Account Status</th>
+                    <th class="px-6 py-4">Joined At</th>
+                    <th class="px-6 py-4 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-300 divide-y divide-gray-800">
+                {% for user in users %}
+                <tr class="hover:bg-gray-800/50 transition group">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <div class="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 mr-3">
+                                {{ user.email[0]|upper }}
+                            </div>
+                            <div>
+                                <div class="font-bold text-white">{{ user.email }}</div>
+                                <div class="text-xs text-gray-500 font-mono">ID: #{{ user.id }}</div>
+                            </div>
+                            {% if user.is_admin %}
+                                <span class="ml-2 badge-admin text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider">Admin</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if user.telegram_account %}
+                            <div class="flex items-center gap-2">
+                                <span class="text-green-400 font-mono">{{ user.telegram_account.phone_number }}</span>
+                                {% if user.telegram_account.is_active %}
+                                    <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" title="Active"></span>
+                                {% else %}
+                                    <span class="w-2 h-2 rounded-full bg-yellow-500" title="Inactive/Session Expired"></span>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span class="text-gray-600 italic text-xs">Belum Terhubung</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if user.is_banned %}
+                            <span class="badge-banned px-2 py-1 rounded text-xs font-bold uppercase">BANNED</span>
+                        {% else %}
+                            <span class="badge-active px-2 py-1 rounded text-xs font-bold uppercase">ACTIVE</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-gray-500 font-mono text-xs">
+                        {{ user.created_at.strftime('%Y-%m-%d') }}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        {% if not user.is_admin %}
+                            <form action="/super-admin/ban/{{ user.id }}" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin mengubah status user ini? Akses bot mereka akan terpengaruh.')">
+                                {% if user.is_banned %}
+                                    <button type="submit" class="text-green-400 hover:text-green-300 font-bold text-xs border border-green-900 bg-green-900/20 px-3 py-1.5 rounded hover:bg-green-900/40 transition">
+                                        <i class="fa-solid fa-unlock mr-1"></i> UNBAN
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="text-red-400 hover:text-red-300 font-bold text-xs border border-red-900 bg-red-900/20 px-3 py-1.5 rounded hover:bg-red-900/40 transition">
+                                        <i class="fa-solid fa-ban mr-1"></i> SUSPEND
+                                    </button>
+                                {% endif %}
+                            </form>
+                        {% else %}
+                            <span class="text-gray-600 text-xs cursor-not-allowed"><i class="fa-solid fa-lock"></i> Protected</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fa-solid fa-ghost text-4xl mb-3 opacity-20"></i>
+                        <p>Belum ada user yang mendaftar.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Simple Client-side Search
+    document.getElementById('userSearch').addEventListener('keyup', function() {
+        const value = this.value.toLowerCase();
+        const rows = document.querySelectorAll('tbody tr');
+        
+        rows.forEach(row => {
+            const email = row.querySelector('td:nth-child(1)').innerText.toLowerCase();
+            const phone = row.querySelector('td:nth-child(2)').innerText.toLowerCase();
+            
+            if (email.includes(value) || phone.includes(value)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

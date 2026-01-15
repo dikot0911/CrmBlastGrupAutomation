@@ -1,0 +1,53 @@
+/* --- GLOBAL --- */
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+}
+
+/* --- ANIMATIONS --- */
+.blob {
+    position: absolute;
+    filter: blur(80px);
+    z-index: -1;
+    opacity: 0.6;
+    animation: move 10s infinite alternate;
+}
+
+@keyframes move {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(20px, -20px) scale(1.1); }
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #4F46E5 0%, #EC4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* --- COMPONENTS --- */
+.feature-card:hover .icon-box {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.pricing-card.popular {
+    transform: scale(1.05);
+    border: 2px solid #4F46E5;
+    z-index: 10;
+}
+
+/* --- ACCORDION (FAQ) --- */
+.faq-item.active .faq-answer {
+    max-height: 200px;
+    opacity: 1;
+    margin-top: 0.75rem;
+}
+.faq-item .faq-answer {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+.faq-item.active .faq-icon {
+    transform: rotate(180deg);
+}
