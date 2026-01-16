@@ -25,22 +25,34 @@
             </a>
         </div>
         
-        <div class="mt-16 relative mx-auto max-w-5xl" data-aos="fade-up" data-aos-delay="300">
-            <div class="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl blur opacity-20"></div>
-            <div class="relative bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
-                <div class="bg-gray-100 px-4 py-3 flex gap-2 border-b">
+    <div class="mt-16 relative mx-auto max-w-5xl" data-aos="fade-up" data-aos-delay="300">
+        <div class="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-pink-500 rounded-2xl blur opacity-20"></div>
+        
+        <div class="relative bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div class="bg-gray-100 px-4 py-3 flex gap-2 border-b items-center">
+                <div class="flex gap-2">
                     <div class="w-3 h-3 rounded-full bg-red-400"></div>
                     <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
                     <div class="w-3 h-3 rounded-full bg-green-400"></div>
-                    <div class="ml-4 bg-white rounded-md px-3 py-0.5 text-xs text-gray-400 flex-1 text-center">dashboard.blastpro.id</div>
                 </div>
-                <div class="aspect-[16/9] bg-gray-50 flex flex-col items-center justify-center text-gray-400 relative overflow-hidden group">
-                    <div class="absolute inset-0 bg-cover bg-center opacity-90 transition duration-500 group-hover:scale-105" 
-                         style="background-image: url('https://cdn.dribbble.com/users/411475/screenshots/16867623/media/f94796e955d5b7218671609109724128.png?resize=1600x1200&vertical=center');">
-                    </div>
-                    <div class="absolute inset-0 bg-gradient-to-t from-white/50 to-transparent"></div>
+                <div class="ml-4 bg-white border border-gray-200 rounded-md px-3 py-1 text-xs text-gray-500 flex-1 text-center font-mono flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-lock text-green-500"></i> https://app.blastpro.id/dashboard/demo-mode
                 </div>
+            </div>
+    
+            <div class="aspect-[16/9] bg-gray-50 relative w-full">
+                <iframe 
+                    src="/live-demo/dashboard" 
+                    class="absolute inset-0 w-full h-full" 
+                    frameborder="0" 
+                    scrolling="yes"
+                    style="overflow: hidden; height: 100%; width: 100%;"
+                    title="Dashboard Live Demo">
+                </iframe>
+                
+                <div class="absolute inset-0 bg-indigo-900 opacity-5 pointer-events-none"></div>
             </div>
         </div>
     </div>
 </header>
+
