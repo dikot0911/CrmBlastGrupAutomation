@@ -331,7 +331,7 @@ def register():
                 return redirect(url_for('register'))
             
             # Create New User
-            hashed_pw = generate_password_hash(password, method='sha256')
+            hashed_pw = generate_password_hash(password)
             new_user = {
                 'email': email,
                 'password': hashed_pw,
@@ -1036,10 +1036,15 @@ def init_system_check():
         except Exception as e:
             logger.warning(f"⚠️ Admin Init Warning: {e}")
 
-if __name__ == '__main__':
-    # Initialize System
+# --- [PERBAIKAN DISINI] ---
+if supabase:
+    print("⚙️ Executing System Check...", flush=True) # Debug log
     init_system_check()
-    # Start Background Pinger
-    start_self_ping()
+    
+# Start Background Pinger
+start_self_ping()
+    
+# --- [BATAS SUCI] --
+if __name__ == '__main__':
     # Run App
     app.run(debug=True, port=5000, use_reloader=False)
