@@ -2,46 +2,35 @@
 {% block title %}Profil Saya{% endblock %}
 
 {% block content %}
-<!-- Page Header Animation -->
 <div class="animate-enter">
     
-    <!-- COVER IMAGE & PROFILE HEADER -->
     <div class="relative mb-8">
-        <!-- Cover Image with Gradient overlay -->
         <div class="h-48 w-full rounded-3xl overflow-hidden relative shadow-lg">
             <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 opacity-90"></div>
-            <!-- Decorative Patterns -->
             <div class="absolute top-0 left-0 w-full h-full opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
             <div class="absolute bottom-4 right-6 text-white text-right">
                 <p class="text-xs font-bold uppercase tracking-widest opacity-70">Member ID</p>
-                <p class="font-mono text-xl font-bold">#{{ user.id|string|zfill(6) }}</p>
+                <p class="font-mono text-xl font-bold">#{{ "%06d" | format(user.id) }}</p>
             </div>
         </div>
 
-        <!-- Profile Card -->
         <div class="absolute -bottom-16 left-6 md:left-10 flex items-end">
             <div class="relative">
-                <!-- Avatar Circle (Click to Upload) -->
                 <div class="w-32 h-32 bg-white rounded-2xl p-1 shadow-2xl group">
                     <div class="w-full h-full bg-gray-100 rounded-xl flex items-center justify-center text-4xl font-bold text-gray-400 border-2 border-dashed border-gray-300 relative overflow-hidden cursor-pointer hover:border-indigo-400 transition" onclick="document.getElementById('avatarUpload').click()">
                         
-                        <!-- Image Preview -->
                         <img id="avatarPreview" class="hidden w-full h-full object-cover">
                         
-                        <!-- Placeholder Text -->
                         <span id="avatarPlaceholder" class="group-hover:opacity-0 transition">{{ user.email[0]|upper }}</span>
                         
-                        <!-- Hover Overlay -->
                         <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-white text-sm font-medium">
                             <i class="fa-solid fa-camera mr-1"></i> Ubah
                         </div>
                         
-                        <!-- Hidden Input File -->
                         <input type="file" id="avatarUpload" class="hidden" accept="image/*" onchange="previewAvatar(event)">
                     </div>
                 </div>
                 
-                <!-- Status Badge -->
                 <div class="absolute -bottom-2 -right-2 z-10">
                     {% if user.is_banned %}
                         <span class="flex h-8 w-8 relative" title="Akun Banned">
@@ -76,16 +65,12 @@
         </div>
     </div>
 
-    <!-- Spacer -->
     <div class="h-16 mb-6"></div>
 
-    <!-- MAIN GRID LAYOUT -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
 
-        <!-- LEFT COLUMN: MENU & QUICK STATS -->
         <div class="space-y-8">
             
-            <!-- Quick Menu -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
                 <div class="p-5 border-b border-gray-100 bg-gray-50/50">
                     <h3 class="font-bold text-gray-800">Navigasi Profil</h3>
@@ -111,10 +96,8 @@
             </div>
         </div>
 
-        <!-- CENTER/RIGHT COLUMN: DETAIL SECTIONS -->
         <div class="xl:col-span-2 space-y-8">
 
-            <!-- SECTION 1: PERSONAL INFO -->
             <div id="personal-info" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 scroll-mt-24">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -155,9 +138,7 @@
                 </form>
             </div>
 
-            <!-- SECTION 2: TELEGRAM CONNECTION -->
             <div id="telegram-connection" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 relative overflow-hidden scroll-mt-24">
-                <!-- Background Decor -->
                 <div class="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full -mr-32 -mt-32 opacity-50 blur-3xl pointer-events-none"></div>
                 
                 <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-6">
@@ -165,9 +146,8 @@
                 </h3>
 
                 <div class="flex flex-col md:flex-row gap-8 items-center">
-                    <!-- Icon Status -->
-                    <div class="w-24 h-24 flex-shrink-0 rounded-full flex items-center justify-center relative {{ 'bg-green-50' if user.telegram_account.is_active else 'bg-red-50' }}">
-                        {% if user.telegram_account.is_active %}
+                    <div class="w-24 h-24 flex-shrink-0 rounded-full flex items-center justify-center relative {{ 'bg-green-50' if user.telegram_account and user.telegram_account.is_active else 'bg-red-50' }}">
+                        {% if user.telegram_account and user.telegram_account.is_active %}
                             <div class="absolute inset-0 border-4 border-green-100 rounded-full animate-pulse"></div>
                             <i class="fa-brands fa-telegram text-5xl text-green-500"></i>
                             <div class="absolute bottom-1 right-1 w-7 h-7 bg-green-500 border-4 border-white rounded-full flex items-center justify-center text-[10px] text-white shadow-sm">
@@ -178,7 +158,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- Details -->
                     <div class="flex-1 w-full">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
@@ -190,7 +169,7 @@
                             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
                                 <span class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Status Sesi</span>
                                 <div>
-                                    {% if user.telegram_account.is_active %}
+                                    {% if user.telegram_account and user.telegram_account.is_active %}
                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-green-100 text-green-700 border border-green-200">
                                             <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span> AKTIF
                                         </span>
@@ -203,9 +182,8 @@
                             </div>
                         </div>
 
-                        <!-- Action Buttons -->
                         <div class="flex gap-3">
-                            {% if user.telegram_account.is_active %}
+                            {% if user.telegram_account and user.telegram_account.is_active %}
                                 <button class="px-5 py-2.5 border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-50 transition flex items-center gap-2" onclick="window.location.href='/dashboard/connection'">
                                     <i class="fa-solid fa-power-off"></i> Putuskan
                                 </button>
@@ -222,14 +200,12 @@
                 </div>
             </div>
 
-            <!-- SECTION 3: SUBSCRIPTION -->
             <div id="subscription" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 scroll-mt-24">
                 <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-6">
                     <span class="w-1 h-6 bg-green-500 rounded-full"></span> Paket Langganan
                 </h3>
 
                 <div class="flex flex-col md:flex-row gap-6">
-                    <!-- Current Plan -->
                     <div class="flex-1 bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 rounded-2xl p-6 relative overflow-hidden">
                         <div class="relative z-10">
                             <span class="bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Paket Saat Ini</span>
@@ -241,7 +217,6 @@
                                 <span class="text-sm text-green-700 mb-1 font-bold">Hari Lagi</span>
                             </div>
                             
-                            <!-- Progress Bar -->
                             <div class="w-full bg-white/50 rounded-full h-2.5 mb-2 backdrop-blur-sm">
                                 <div class="bg-green-500 h-2.5 rounded-full" style="width: 25%"></div>
                             </div>
@@ -251,7 +226,6 @@
                         <i class="fa-solid fa-leaf absolute -bottom-4 -right-4 text-9xl text-green-600 opacity-10 rotate-12"></i>
                     </div>
 
-                    <!-- Billing History -->
                     <div class="flex-1 border border-gray-100 rounded-2xl p-5 flex flex-col">
                         <div class="flex justify-between items-center mb-4">
                             <h5 class="font-bold text-gray-700 text-sm">Riwayat Tagihan</h5>
@@ -276,7 +250,6 @@
                 </div>
             </div>
 
-            <!-- SECTION 4: SECURITY -->
             <div id="security" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 scroll-mt-24">
                 <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-6">
                     <span class="w-1 h-6 bg-red-500 rounded-full"></span> Keamanan
