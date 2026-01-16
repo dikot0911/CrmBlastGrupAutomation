@@ -13,8 +13,60 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <style>
-        /* Tambahan CSS Inline jika diperlukan */
-        .nav-item.active { border-right: 3px solid #4F46E5; background-color: #EEF2FF; color: #4F46E5; }
+        body { font-family: 'Inter', sans-serif; background-color: #F3F4F6; }
+        
+        /* Sidebar Styling */
+        .nav-item {
+            transition: all 0.2s ease-in-out;
+            border-right: 3px solid transparent;
+        }
+        .nav-item:hover {
+            background-color: #F9FAFB;
+            color: #4F46E5;
+        }
+        .nav-item.active {
+            background-color: #EEF2FF;
+            color: #4F46E5;
+            border-right-color: #4F46E5;
+            font-weight: 600;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        /* Status Pulse */
+        .pulse-green {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        
+        /* Loader Spinner */
+        .loader-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4F46E5;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden bg-gray-50">
@@ -29,48 +81,72 @@
         </div>
 
         <nav class="flex-1 overflow-y-auto py-6 space-y-1">
-            <a href="/dashboard" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition {% if active_page == 'dashboard' %}active{% endif %}">
+            <!-- Dashboard Home -->
+            <a href="/dashboard" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 {% if active_page == 'dashboard' %}active{% endif %}">
                 <i class="fa-solid fa-chart-pie w-5 text-center"></i> Ringkasan
             </a>
             
             <div class="px-6 pt-4 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Automasi</div>
             
-            <a href="/dashboard/connection" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition {% if active_page == 'connection' %}active{% endif %}">
-                <i class="fa-brands fa-telegram w-5 text-center"></i> Koneksi Telegram
-                {% if user.telegram_account and user.telegram_account.is_active %}
-                <span class="w-2 h-2 bg-green-500 rounded-full ml-auto animate-pulse"></span>
-                {% else %}
-                <span class="w-2 h-2 bg-red-500 rounded-full ml-auto"></span>
-                {% endif %}
-            </a>
-
-            <a href="/dashboard/targets" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition {% if active_page == 'targets' %}active{% endif %}">
+            <!-- Targets -->
+            <a href="/dashboard/targets" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 {% if active_page == 'targets' %}active{% endif %}">
                 <i class="fa-solid fa-bullseye w-5 text-center"></i> Target Grup
             </a>
-            <a href="/dashboard/schedule" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition {% if active_page == 'schedule' %}active{% endif %}">
+            
+            <!-- Schedule -->
+            <a href="/dashboard/schedule" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 {% if active_page == 'schedule' %}active{% endif %}">
                 <i class="fa-solid fa-calendar-clock w-5 text-center"></i> Jadwal Blast
             </a>
 
             <div class="px-6 pt-4 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Database</div>
             
-            <a href="/dashboard/crm" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition {% if active_page == 'crm' %}active{% endif %}">
+            <!-- CRM -->
+            <a href="/dashboard/crm" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 {% if active_page == 'crm' %}active{% endif %}">
                 <i class="fa-solid fa-address-book w-5 text-center"></i> CRM User
             </a>
-            <a href="/dashboard/broadcast" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition {% if active_page == 'broadcast' %}active{% endif %}">
+            
+            <!-- Broadcast -->
+            <a href="/dashboard/broadcast" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 {% if active_page == 'broadcast' %}active{% endif %}">
                 <i class="fa-solid fa-paper-plane w-5 text-center"></i> Broadcast
+            </a>
+
+            <div class="px-6 pt-4 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Pengaturan</div>
+            <!-- Profile Link (Optional in menu too) -->
+            <a href="/dashboard/profile" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 {% if active_page == 'profile' %}active{% endif %}">
+                <i class="fa-solid fa-user-gear w-5 text-center"></i> Profil Saya
+            </a>
+            <!-- Telegram Connection -->
+            <a href="/dashboard/connection" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 {% if active_page == 'connection' %}active{% endif %}">
+                <i class="fa-brands fa-telegram w-5 text-center"></i> Koneksi Telegram
+                {% if user.telegram_account and user.telegram_account.is_active %}
+                <span class="w-2 h-2 bg-green-500 rounded-full ml-auto animate-pulse" title="Connected"></span>
+                {% else %}
+                <span class="w-2 h-2 bg-red-500 rounded-full ml-auto" title="Offline"></span>
+                {% endif %}
             </a>
         </nav>
 
-        <!-- User Profile Bottom -->
+        <!-- User Profile Bottom (CLICKABLE NOW) -->
         <div class="p-4 border-t border-gray-100 bg-gray-50">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg">
-                    {{ user.email[0]|upper }}
-                </div>
-                <div class="overflow-hidden flex-1">
-                    <p class="text-sm font-bold text-gray-700 truncate" title="{{ user.email }}">{{ user.email }}</p>
-                    <a href="/logout" class="text-xs text-red-500 hover:underline">Keluar</a>
-                </div>
+            <div class="flex items-center justify-between gap-2">
+                <!-- Link ke Halaman Profil -->
+                <a href="/dashboard/profile" class="flex items-center gap-3 flex-1 hover:bg-white p-2 rounded-lg transition-colors group overflow-hidden">
+                    <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg group-hover:scale-105 transition-transform flex-shrink-0">
+                        {{ user.email[0]|upper }}
+                    </div>
+                    <div class="overflow-hidden flex-1 min-w-0">
+                        <p class="text-sm font-bold text-gray-700 truncate group-hover:text-indigo-600 transition-colors" title="{{ user.email }}">{{ user.email }}</p>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="w-2 h-2 rounded-full flex-shrink-0 {{ 'bg-green-500 pulse-green' if user.telegram_account and user.telegram_account.is_active else 'bg-red-400' }}"></span>
+                            <span class="text-xs text-gray-500 truncate">{{ 'Online' if user.telegram_account and user.telegram_account.is_active else 'Offline' }}</span>
+                        </div>
+                    </div>
+                </a>
+                
+                <!-- Logout Button -->
+                <a href="/logout" class="text-gray-400 hover:text-red-500 transition p-2 rounded-lg hover:bg-red-50 flex-shrink-0" title="Keluar">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </a>
             </div>
         </div>
     </aside>
@@ -81,7 +157,7 @@
         <!-- Mobile Header -->
         <header class="bg-white border-b border-gray-200 p-4 md:hidden flex justify-between items-center z-30">
             <span class="font-bold text-lg text-indigo-600">BlastPro</span>
-            <button class="text-gray-600 hover:text-indigo-600"><i class="fa-solid fa-bars fa-lg"></i></button>
+            <button class="text-gray-600 hover:text-indigo-600" onclick="alert('Gunakan Desktop Mode untuk pengalaman terbaik.')"><i class="fa-solid fa-bars fa-lg"></i></button>
         </header>
 
         <!-- Flash Messages (Toast) -->
