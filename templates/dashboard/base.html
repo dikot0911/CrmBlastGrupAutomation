@@ -182,96 +182,150 @@
     </main>
 
     <!-- Global Scripts -->
-<script>
-        // Clock Widget (Tetap Biarkan)
-        setInterval(() => {
-            const el = document.getElementById('clock-widget');
-            if(el) {
-                const now = new Date();
-                el.innerText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) + ' WIB';
-            }
-        }, 1000);
-
-        async function apiRequest(url, method = 'POST', body = null) {
-                try {
-                    const opts = { method: method, headers: {'Content-Type': 'application/json'} };
-                    if (body) opts.body = JSON.stringify(body);
-                    const res = await fetch(url, opts);
-                    return await res.json();
-                } catch (e) {
-                return { status: 'error', message: 'Koneksi bermasalah.' };
-            }
-        }
-    </script>
-
-    {% if is_demo_mode %}
-    <style>
-        /* Sembunyikan elemen yang bikin demo jelek */
-        a[href="/logout"], .badge-admin, button#btn-scan, button#btn-import { 
-            pointer-events: none; opacity: 0.5; filter: grayscale(1); 
-        }
-        /* Tambah overlay biar user tau ini demo */
-        body::before {
-            content: "LIVE DEMO MODE";
-            position: fixed;
-            bottom: 10px; right: 10px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 5px 10px;
-            font-size: 10px;
-            border-radius: 5px;
-            z-index: 9999;
-            pointer-events: none;
-        }
-    </style>
-
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log("🚀 DEMO MODE ACTIVE");
-
-            // 1. BAJAK SEMUA LINK (Anti Data Leak)
-            // Mengubah semua link sidebar dari /dashboard/... menjadi /live-demo/...
-            document.querySelectorAll('a').forEach(link => {
-                const href = link.getAttribute('href');
-                if (href && href.startsWith('/dashboard/')) {
-                    const page = href.split('/').pop(); // ambil nama halaman (targets, schedule, dll)
-                    link.setAttribute('href', `/live-demo/${page}`);
+            // Clock Widget (Tetap Biarkan)
+            setInterval(() => {
+                const el = document.getElementById('clock-widget');
+                if(el) {
+                    const now = new Date();
+                    el.innerText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) + ' WIB';
                 }
-                // Matikan link logout & setting user
-                if (href === '/logout' || href === '/dashboard/profile') {
-                    link.href = "javascript:void(0)";
+            }, 1000);
+    
+            async function apiRequest(url, method = 'POST', body = null) {
+                    try {
+                        const opts = { method: method, headers: {'Content-Type': 'application/json'} };
+                        if (body) opts.body = JSON.stringify(body);
+                        const res = await fetch(url, opts);
+                        return await res.json();
+                    } catch (e) {
+                    return { status: 'error', message: 'Koneksi bermasalah.' };
+                }
+            }
+        </script>
+    
+        {% if is_demo_mode %}
+        <style>
+            /* Sembunyikan elemen yang bikin demo jelek */
+            a[href="/logout"], .badge-admin, button#btn-scan, button#btn-import { 
+                pointer-events: none; opacity: 0.5; filter: grayscale(1); 
+            }
+            /* Tambah overlay biar user tau ini demo */
+            body::before {
+                content: "LIVE DEMO MODE";
+                position: fixed;
+                bottom: 10px; right: 10px;
+                background: rgba(0,0,0,0.7);
+                color: white;
+                padding: 5px 10px;
+                font-size: 10px;
+                border-radius: 5px;
+                z-index: 9999;
+                pointer-events: none;
+            }
+        </style>
+    
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log("🚀 DEMO MODE ACTIVE");
+    
+                // 1. BAJAK SEMUA LINK (Anti Data Leak)
+                // Mengubah semua link sidebar dari /dashboard/... menjadi /live-demo/...
+                document.querySelectorAll('a').forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (href && href.startsWith('/dashboard/')) {
+                        const page = href.split('/').pop(); // ambil nama halaman (targets, schedule, dll)
+                        link.setAttribute('href', `/live-demo/${page}`);
+                    }
+                    // Matikan link logout & setting user
+                    if (href === '/logout' || href === '/dashboard/profile') {
+                        link.href = "javascript:void(0)";
+                    }
+                });
+    
+                // 2. AUTO TOUR LOGIC (Bolak-balik Otomatis)
+                const tourPages = [
+                    'dashboard', 
+                    'targets', 
+                    'schedule', 
+                    'crm',
+                    'broadcast',
+                    'connection'
+                ];
+                
+                // Cek kita lagi di halaman mana
+                const currentPath = window.location.pathname.split('/').pop();
+                let currentIndex = tourPages.indexOf(currentPath);
+                
+                if (currentIndex === -1) currentIndex = 0; // Default ke awal kalo nyasar
+    
+                // Tentukan halaman berikutnya
+                const nextIndex = (currentIndex + 1) % tourPages.length;
+                const nextPage = tourPages[nextIndex];
+    
+                // Set Timer 5 Detik untuk pindah halaman
+                setTimeout(() => {
+                    console.log(`Touring to: ${nextPage}`);
+                    window.location.href = `/live-demo/${nextPage}`;
+                }, 5000); // 5000ms = 5 detik
+            });
+        </script>
+        {% endif %}
+        {% block scripts %}{% endblock %}
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                // Cek apakah halaman ini dibuka di dalam Iframe (Kotak Demo)
+                if (window.self !== window.top) {
+                    console.log("🚀 DEMO MODE ACTIVE (Inside Iframe)");
+    
+                    // 1. TAMBAH OVERLAY BIAR GANTENG
+                    const badge = document.createElement('div');
+                    badge.innerHTML = "LIVE DEMO PREVIEW";
+                    badge.style.cssText = "position:fixed; bottom:10px; right:10px; background:rgba(0,0,0,0.8); color:white; padding:5px 10px; font-size:10px; border-radius:5px; z-index:9999; pointer-events:none;";
+                    document.body.appendChild(badge);
+    
+                    // 2. BAJAK SEMUA LINK SIDEBAR (Solusi Anti-Mental)
+                    const links = document.querySelectorAll('a');
+                    links.forEach(link => {
+                        const href = link.getAttribute('href');
+                        if (!href) return;
+    
+                        // A. Fix Link Ringkasan (yang bikin mental ke login/data asli)
+                        if (href === '/dashboard' || href === '/dashboard/') {
+                            link.setAttribute('href', '/live-demo/dashboard');
+                            // Paksa event click (Double protection)
+                            link.onclick = (e) => {
+                                e.preventDefault();
+                                window.location.href = '/live-demo/dashboard';
+                            };
+                        }
+                        // B. Fix link dashboard lainnya
+                        else if (href.startsWith('/dashboard/')) {
+                            const page = href.split('/').pop();
+                            link.setAttribute('href', `/live-demo/${page}`);
+                        }
+                        // C. Matikan Link Logout & Profil
+                        else if (href === '/logout' || href === '/dashboard/profile') {
+                            link.href = "javascript:void(0)";
+                            link.style.opacity = "0.5";
+                            link.style.cursor = "not-allowed";
+                        }
+                    });
+    
+                    // 3. AUTO TOUR 10 DETIK (Biar user puas liat-liat)
+                    const tourPages = ['dashboard', 'targets', 'schedule', 'crm', 'broadcast', 'connection'];
+                    const currentPath = window.location.pathname.split('/').pop();
+                    
+                    let nextIndex = (tourPages.indexOf(currentPath) + 1) % tourPages.length;
+                    
+                    setTimeout(() => {
+                        console.log("Auto touring...");
+                        window.location.href = `/live-demo/${tourPages[nextIndex]}`;
+                    }, 10000); // 10 Detik
                 }
             });
-
-            // 2. AUTO TOUR LOGIC (Bolak-balik Otomatis)
-            const tourPages = [
-                'dashboard', 
-                'targets', 
-                'schedule', 
-                'crm',
-                'broadcast',
-                'connection'
-            ];
-            
-            // Cek kita lagi di halaman mana
-            const currentPath = window.location.pathname.split('/').pop();
-            let currentIndex = tourPages.indexOf(currentPath);
-            
-            if (currentIndex === -1) currentIndex = 0; // Default ke awal kalo nyasar
-
-            // Tentukan halaman berikutnya
-            const nextIndex = (currentIndex + 1) % tourPages.length;
-            const nextPage = tourPages[nextIndex];
-
-            // Set Timer 5 Detik untuk pindah halaman
-            setTimeout(() => {
-                console.log(`Touring to: ${nextPage}`);
-                window.location.href = `/live-demo/${nextPage}`;
-            }, 5000); // 5000ms = 5 detik
-        });
-    </script>
-    {% endif %}
-    {% block scripts %}{% endblock %}
-</body>
+        </script>
+    </body>
 </html>
+
 
