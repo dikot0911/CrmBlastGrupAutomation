@@ -506,12 +506,12 @@ def dashboard_crm():
 @app.route('/dashboard/profile')
 @login_required
 def dashboard_profile():
-    """Halaman Profil User Lengkap"""
+    """Halaman Profile User Lengkap"""
     user = get_user_data(session['user_id'])
     if not user: return redirect(url_for('login'))
     
     # Render template profil yang baru dibuat
-    return render_template('dashboard/profil.html', user=user, active_page='profile')
+    return render_template('dashboard/profile.html', user=user, active_page='profile')
 
 # ==============================================================================
 # SECTION 9: TELEGRAM AUTHENTICATION (CORE LOGIC & STATELESS)
