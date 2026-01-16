@@ -46,9 +46,9 @@ def get_demo_data():
         ],
         'crm_count': 888,
         'crm_users': [ # Data CRM Palsu
-            {'user_id': 113211, 'first_name': 'Budi Santoso', 'username': 'budiganteng', 'last_interaction': now.isoformat()},
+            {'user_id': 113211, 'first_name': 'Budi Santoso', 'username': 'bud1g4nt3n9999999', 'last_interaction': now.isoformat()},
             {'user_id': 221122, 'first_name': 'Siti Aminah', 'username': None, 'last_interaction': (now - timedelta(days=1)).isoformat()},
-            {'user_id': 337783, 'first_name': 'Dracin Lovers', 'username': 'dracin_indo', 'last_interaction': (now - timedelta(days=2)).isoformat()},
+            {'user_id': 337783, 'first_name': 'Dracin Lovers', 'username': 'dr4mamu_b0t321', 'last_interaction': (now - timedelta(days=2)).isoformat()},
         ]
     }
 
