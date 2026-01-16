@@ -164,8 +164,7 @@
         
     </main>
 
-    <script>
-        // Clock Widget (Tetap Biarkan)
+   <script>
         setInterval(() => {
             const el = document.getElementById('clock-widget');
             if(el) {
@@ -174,7 +173,6 @@
             }
         }, 1000);
 
-        // API Request Function (PENTING! JANGAN DIHAPUS)
         async function apiRequest(url, method = 'POST', body = null) {
             try {
                 const opts = { method: method, headers: {'Content-Type': 'application/json'} };
@@ -191,17 +189,14 @@
 
     {% if is_demo_mode %}
     <style>
-        /* Styling biar demo terlihat bersih */
         a[href="/logout"], .badge-admin, button#btn-scan, button#btn-import, button[type="submit"] { 
             pointer-events: none; opacity: 0.5; filter: grayscale(1); 
         }
-        
-        /* Overlay Penanda Demo */
         body::before {
             content: "LIVE DEMO MODE";
             position: fixed;
             bottom: 15px; right: 15px;
-            background: rgba(79, 70, 229, 0.9); /* Warna Indigo */
+            background: rgba(79, 70, 229, 0.9);
             color: white;
             padding: 6px 12px;
             font-size: 10px;
@@ -213,8 +208,6 @@
             animation: float 3s ease-in-out infinite;
         }
         @keyframes float { 0%,100% {transform: translateY(0);} 50% {transform: translateY(-5px);} }
-
-        /* Transisi Halus untuk Konten Utama */
         #page-content {
             transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
             opacity: 1;
@@ -222,102 +215,105 @@
         }
         #page-content.fading-out {
             opacity: 0;
-            transform: translateY(10px); /* Turun dikit pas ilang */
+            transform: translateY(10px);
         }
     </style>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("🚀 DEMO MODE: SPA ENGINE STARTED");
+            console.log("🚀 DEMO MODE: INTERACTIVE STARTED");
 
-            // Daftar Halaman Tour
             const tourPages = ['dashboard', 'targets', 'schedule', 'crm', 'broadcast', 'connection'];
-            
-            // Cek posisi sekarang
-            let currentPath = window.location.pathname.split('/').pop();
-            let currentIndex = tourPages.indexOf(currentPath);
-            if (currentIndex === -1) currentIndex = 0;
+            let autoTourTimer = null; 
 
-            // Fungsi Ganti Halaman Tanpa Reload (AJAX)
-            async function softTransition() {
-                // 1. Tentukan halaman berikutnya
-                const nextIndex = (currentIndex + 1) % tourPages.length;
-                const nextPage = tourPages[nextIndex];
-                const url = `/live-demo/${nextPage}`;
-                
+            // 1. Fungsi Pindah Halaman Tanpa Reload
+            async function softTransition(targetPageName) {
+                const url = `/live-demo/${targetPageName}`;
                 const contentContainer = document.getElementById('page-content');
 
-                // 2. Efek Fade Out (Keluar)
+                // Efek Keluar
                 contentContainer.classList.add('fading-out');
-
-                // Tunggu animasi fade out selesai (400ms)
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 300));
 
                 try {
-                    // 3. Ambil Halaman Baru di Background
                     const res = await fetch(url);
                     const text = await res.text();
-                    
-                    // 4. Ambil isi konten dari halaman baru
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(text, 'text/html');
                     const newContent = doc.getElementById('page-content').innerHTML;
                     
-                    // 5. Tukar Konten
                     contentContainer.innerHTML = newContent;
-                    
-                    // Update URL di browser (biar keliatan beneran pindah)
                     window.history.pushState({}, '', url);
                     
-                    // 6. Update Sidebar Active State
+                    // Update Warna Sidebar
                     document.querySelectorAll('.nav-item').forEach(el => {
-                        el.classList.remove('active', 'bg-indigo-50', 'text-indigo-600'); // Reset style
+                        el.classList.remove('active', 'bg-indigo-50', 'text-indigo-600');
                         const href = el.getAttribute('href');
-                        // Cek kecocokan link
-                        if(href && href.includes(nextPage)) {
+                        if(href && href.includes(targetPageName)) {
                             el.classList.add('active', 'bg-indigo-50', 'text-indigo-600');
                         }
                     });
 
-                    // Update index
-                    currentIndex = nextIndex;
-
                 } catch (err) {
                     console.error("Gagal load demo page", err);
+                    }
+
+                // Efek Masuk
+                contentContainer.classList.remove('fading-out');
                 }
 
-                // 7. Efek Fade In (Masuk)
-                contentContainer.classList.remove('fading-out');
-                
-                // Jadwalkan perpindahan berikutnya
-                setTimeout(softTransition, 5000); // Ganti tiap 5 detik
-            }
+            // 2. Logic Auto Tour (Pindah otomatis kalau didiemin)
+            function startAutoTour() {
+                if (autoTourTimer) clearTimeout(autoTourTimer);
 
-            // --- ANTI LEAK: Bajak Klik Manual ---
+                autoTourTimer = setTimeout(() => {
+                    const currentPath = window.location.pathname.split('/').pop();
+                    let currentIndex = tourPages.indexOf(currentPath);
+                    if (currentIndex === -1) currentIndex = 0;
+                    
+                    const nextIndex = (currentIndex + 1) % tourPages.length;
+                    const nextPage = tourPages[nextIndex];
+                    
+                    console.log(`Auto Touring to: ${nextPage}`);
+                    softTransition(nextPage);
+                    startAutoTour(); // Loop lagi
+                    }, 8000); // 8 Detik
+                }
+
+            // 3. Logic Klik Manual (User Klik Sidebar)
             document.body.addEventListener('click', (e) => {
                 const link = e.target.closest('a');
-                if (link) {
-                    const href = link.getAttribute('href');
+                if (!link) return;
+
+                const href = link.getAttribute('href');
+                if (!href) return;
+
+                // Cegah link berbahaya
+                if (href === '/logout' || href.includes('profile')) {
+                    e.preventDefault();
+                    return;
+                    }
+
+                // Kalau user klik link dashboard
+                if (href.startsWith('/dashboard/')) {
+                    e.preventDefault(); // Jangan reload
+                    const pageName = href.split('/').pop();
                     
-                    // Cegah link logout & profile
-                    if (href === '/logout' || href.includes('profile')) {
-                        e.preventDefault();
-                        return;
+                    softTransition(pageName); // Pindah halus
+                    startAutoTour(); // Reset timer auto tour
                     }
+                else if (href === '/dashboard') {
+                    e.preventDefault();
+                    softTransition('dashboard');
+                    startAutoTour();
+                    }
+                });
 
-                    // Bajak link dashboard biasa biar jadi soft transition juga
-                    if (href.startsWith('/dashboard/')) {
-                        e.preventDefault(); 
-                        // Optional: Bisa dibuat manual transition ke halaman yg diklik
-                    }
-                }
+            // Mulai Auto Tour Pertama Kali
+            startAutoTour();
             });
-
-            // Mulai Loop Tour
-            setTimeout(softTransition, 5000);
-        });
-    </script>
-    {% endif %}
-
+        </script>
+        {% endif %}
 </body>
 </html>
+
