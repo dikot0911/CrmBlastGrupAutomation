@@ -27,7 +27,7 @@ def get_demo_data():
         'logs': [
             {'id': 1, 'group_name': 'KASKUS KAMBOJA KPS', 'status': 'success', 'created_at': (now).isoformat()},
             {'id': 2, 'group_name': 'Fjb Kaskus Kps', 'status': 'success', 'created_at': (now - timedelta(minutes=12)).isoformat()},
-            {'id': 3, 'group_name': 'Info Loker Kamboja', 'status': 'failed', 'error_message': 'FloodWait', 'created_at': (now - timedelta(minutes=45)).isoformat()},
+            {'id': 3, 'group_name': 'Info Loker Kamboja', 'status': 'success', 'created_at': (now - timedelta(minutes=45)).isoformat()},
             {'id': 4, 'group_name': 'ALFAMART KPS POIPET', 'status': 'success', 'created_at': (now - timedelta(minutes=12)).isoformat()},
             {'id': 5, 'group_name': 'Kaskus Cambodia ( KPS, POIPET, PP, CT, BAVET, DLL )', 'status': 'success', 'created_at': (now - timedelta(minutes=12)).isoformat()},
             {'id': 5, 'group_name': 'KASKUS FJB POIPET', 'status': 'success', 'created_at': (now - timedelta(minutes=12)).isoformat()},
@@ -35,20 +35,20 @@ def get_demo_data():
         'schedules': [
             {'id': 1, 'run_hour': 8, 'run_minute': 0, 'is_active': True},
             {'id': 2, 'run_hour': 12, 'run_minute': 0, 'is_active': True},
-            {'id': 3, 'run_hour': 18, 'run_minute': 30, 'is_active': False},
+            {'id': 3, 'run_hour': 18, 'run_minute': 30, 'is_active': True},
         ],
         'targets': [
             {'id': 1, 'group_name': 'KASKUS KAMBOJA KPS', 'topic_ids': None, 'created_at': now.isoformat()},
             {'id': 2, 'group_name': 'Fjb Kaskus Kps', 'topic_ids': '1,5', 'created_at': now.isoformat()},
-            {'id': 3, 'group_name': 'Info Loker Kamboja', 'topic_ids': '1,5', 'created_at': now.isoformat()},
-            {'id': 4, 'group_name': 'ALFAMART KPS POIPET', 'topic_ids': '1,5', 'created_at': now.isoformat()},
-            {'id': 5, 'group_name': 'KASKUS FJB POIPET', 'topic_ids': '1,5', 'created_at': now.isoformat()},
+            {'id': 3, 'group_name': 'Info Loker Kamboja', 'topic_ids': '1,8', 'created_at': now.isoformat()},
+            {'id': 4, 'group_name': 'ALFAMART KPS POIPET', 'topic_ids': '1,3', 'created_at': now.isoformat()},
+            {'id': 5, 'group_name': 'KASKUS FJB POIPET', 'topic_ids': '1,7', 'created_at': now.isoformat()},
         ],
         'crm_count': 888,
         'crm_users': [ # Data CRM Palsu
-            {'user_id': 111, 'first_name': 'Budi Santoso', 'username': 'budiganteng', 'last_interaction': now.isoformat()},
-            {'user_id': 222, 'first_name': 'Siti Aminah', 'username': None, 'last_interaction': (now - timedelta(days=1)).isoformat()},
-            {'user_id': 333, 'first_name': 'Dracin Lovers', 'username': 'dracin_indo', 'last_interaction': (now - timedelta(days=2)).isoformat()},
+            {'user_id': 113211, 'first_name': 'Budi Santoso', 'username': 'budiganteng', 'last_interaction': now.isoformat()},
+            {'user_id': 221122, 'first_name': 'Siti Aminah', 'username': None, 'last_interaction': (now - timedelta(days=1)).isoformat()},
+            {'user_id': 337783, 'first_name': 'Dracin Lovers', 'username': 'dracin_indo', 'last_interaction': (now - timedelta(days=2)).isoformat()},
         ]
     }
 
