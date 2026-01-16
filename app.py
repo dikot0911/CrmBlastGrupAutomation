@@ -503,6 +503,13 @@ def dashboard_crm():
     
     return render_template('dashboard/crm.html', user=user, user_count=crm_count, crm_users=crm_users, active_page='crm')
 
+@app.route('/dashboard/connection')
+@login_required
+def dashboard_connection():
+    user = get_user_data(session['user_id'])
+    if not user: return redirect(url_for('login'))
+    return render_template('dashboard/connection.html', user=user, active_page='connection')
+
 @app.route('/dashboard/profile')
 @login_required
 def dashboard_profile():
