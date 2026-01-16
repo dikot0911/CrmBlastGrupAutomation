@@ -61,5 +61,43 @@
         });
         function toggleFaq(el) { el.parentElement.classList.toggle('active'); }
     </script>
+    <script>
+    // Cek apakah halaman ini sedang dibuka di dalam IFRAME
+    if (window.self !== window.top) {
+        console.log("Running in Demo Mode (Iframe)");
+        
+        // Tambahkan class khusus ke body biar bisa kita styling kalo perlu
+        document.body.classList.add('demo-mode-active');
+        
+        // Bajak semua link di sidebar
+        const sidebarLinks = document.querySelectorAll('.sidebar a.nav-item');
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault(); // Stop link aslinya
+                
+                // Ambil tujuan asli, misal '/dashboard/schedule'
+                const targetUrl = this.getAttribute('href');
+                
+                // Ubah jadi rute demo, misal '/live-demo/schedule'
+                const pageName = targetUrl.split('/').pop();
+                const demoUrl = '/live-demo/' + pageName;
+                
+                // Pindah halaman DI DALAM iframe aja
+                window.location.href = demoUrl;
+            });
+        });
+
+        // Bajak tombol logout juga biar gak keluar dari iframe
+        const logoutBtn = document.querySelector('a[href="/logout"]');
+        if(logoutBtn) {
+             logoutBtn.addEventListener('click', function(e){
+                 e.preventDefault();
+                 alert("Ini hanya demo, Bro! Login beneran dulu kalau mau logout 😂");
+             });
+        }
+    }
+</script>
+    
 </body>
 </html>
+
