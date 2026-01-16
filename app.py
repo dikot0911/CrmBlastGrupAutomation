@@ -1043,6 +1043,108 @@ if supabase:
     
 # Start Background Pinger
 start_self_ping()
+
+==============================================================================
+# SECTION TAMBAHAN: LIVE DEMO ROUTES (Taruh sebelum 'if __name__ == ...')
+# ==============================================================================
+
+# 1. Bikin Kelas User Palsu buat Demo
+class DemoUserEntity:
+    def __init__(self):
+        self.id = 99999
+        self.email = "demo.umkm@blastpro.id"
+        self.is_admin = False
+        self.is_banned = False
+        self.created_at = datetime.utcnow()
+        # Pura-pura udah connect Telegram
+        self.telegram_account = type('TeleInfo', (object,), {
+            'phone_number': '+6281234567890',
+            'is_active': True,
+            'created_at': datetime.utcnow()
+        })
+
+# 2. Siapin Data Palsu yang Keliatan Real
+def get_demo_data():
+    now = datetime.utcnow()
+    return {
+        # Pura-pura ada log blast yang berhasil
+        'logs': [
+            {'id': 1, 'target_name': 'FJB WNI Kamboja 🇰🇭', 'message_preview': 'Halo kak, ready stok...', 'status': 'success', 'created_at': (now).isoformat()},
+            {'id': 2, 'target_name': 'Komunitas Kuliner Phnom Penh', 'message_preview': 'Promo diskon 20%...', 'status': 'success', 'created_at': (now - timedelta(minutes=15)).isoformat()},
+            {'id': 3, 'target_name': 'Info Loker Kamboja', 'message_preview': 'Dicari reseller...', 'status': 'failed', 'error_msg': 'FloodWait', 'created_at': (now - timedelta(minutes=30)).isoformat()},
+            {'id': 4, 'target_name': 'Grup Jual Beli Sihanoukville', 'message_preview': 'Ready lagi bosku...', 'status': 'success', 'created_at': (now - timedelta(hours=1)).isoformat()},
+            {'id': 5, 'target_name': 'Forum Bisnis Indo-Cam', 'message_preview': 'Open PO batch 2...', 'status': 'success', 'created_at': (now - timedelta(hours=2)).isoformat()},
+        ],
+        # Pura-pura ada jadwal aktif
+        'schedules': [
+            {'id': 1, 'run_hour': 9, 'run_minute': 0, 'is_active': True},
+            {'id': 2, 'run_hour': 12, 'run_minute': 30, 'is_active': True},
+            {'id': 3, 'run_hour': 17, 'run_minute': 0, 'is_active': False},
+        ],
+        # Pura-pura ada target grup
+        'targets': [
+            {'id': 1, 'group_name': 'FJB WNI Kamboja 🇰🇭', 'topic_ids': None, 'created_at': now.isoformat()},
+            {'id': 2, 'group_name': 'Kuliner Nusantara PP', 'topic_ids': '1,5,9', 'created_at': now.isoformat()},
+        ],
+        'crm_count': 154 # Pura-pura punya 154 kontak
+    }
+
+# 3. Bikin Rute Khusus Demo (GAK PAKE @login_required)
+# Ini rute pintar yang bisa nanganin beberapa halaman sekaligus
+@app.route('/live-demo/<path:page>')
+def live_demo_view(page):
+    """Rute khusus untuk iframe di landing page"""
+    # Cek security header biar bisa di-iframe di domain sendiri
+    response = None
+    demo_user = DemoUserEntity()
+    data = get_demo_data()
+
+    # Tambahin flag 'is_demo_mode=True' biar template tau ini lagi mode demo
+    common_args = {
+        'user': demo_user, 
+        'user_count': data['crm_count'], 
+        'is_demo_mode': True
+    }
+
+    try:
+        if page == 'dashboard':
+             # Untuk demo dashboard, kita hardcode paginationnya biar simpel
+            response = render_template('dashboard/index.html', 
+                                    **common_args,
+                                    logs=data['logs'], 
+                                    schedules=data['schedules'], 
+                                    targets=data['targets'],
+                                    current_page=1, total_pages=5, per_page=5, total_logs=25, # Fake pagination
+                                    active_page='dashboard')
+            
+        elif page == 'broadcast':
+            response = render_template('dashboard/broadcast.html', **common_args, active_page='broadcast')
+            
+        elif page == 'targets':
+            response = render_template('dashboard/targets.html', **common_args, targets=data['targets'], active_page='targets')
+            
+        elif page == 'schedule':
+            response = render_template('dashboard/schedule.html', **common_args, schedules=data['schedules'], active_page='schedule')
+        
+        elif page == 'connection':
+             response = render_template('dashboard/connection.html', **common_args, active_page='connection')
+
+        else:
+            # Kalau halaman gak dikenal, balikin ke dashboard demo
+            return redirect('/live-demo/dashboard')
+            
+    except Exception as e:
+        logger.error(f"Demo View Error: {e}")
+        return "Demo sedang gangguan."
+
+    # PENTING: Pastikan browser mengizinkan iframe dari domain yang sama
+    from flask import make_response
+    resp = make_response(response)
+    # Hapus header X-Frame-Options jika ada, atau set ke SAMEORIGIN
+    resp.headers.pop('X-Frame-Options', None) 
+    # resp.headers['X-Frame-Options'] = 'SAMEORIGIN' # Opsional, biasanya defaultnya udah aman
+
+    return resp
     
 # --- [BATAS SUCI] --
 if __name__ == '__main__':
