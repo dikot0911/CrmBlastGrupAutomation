@@ -1200,47 +1200,7 @@ def fetch_telegram_message():
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)})
         finally: await client.disconnect()
-    return run_async(_fetch())
         
-        try:
-            # Pake parser baru
-            entity, msg_id = parse_telegram_link(link)
-            
-            if not entity or not msg_id:
-                return jsonify({'status': 'error', 'message': 'Format link tidak valid. Pastikan link benar (contoh: https://t.me/channel/123).'})
-
-            logger.info(f"Fetching: Entity={entity}, MsgID={msg_id}")
-
-            # Fetch pesan
-            # Kita pake get_messages dengan list ids biar lebih aman
-            msgs = await client.get_messages(entity, ids=[msg_id])
-            msg = msgs[0] if msgs else None
-            
-            if not msg: 
-                return jsonify({'status': 'error', 'message': 'Pesan tidak ditemukan. Pastikan bot sudah JOIN ke channel/grup tersebut!'})
-
-            response = {
-                'status': 'success', 
-                'text': msg.text or "", # Ambil teks atau caption
-                'has_media': False
-            }
-
-            # Cek Media
-            if msg.media:
-                response['has_media'] = True
-                # (Optional) Disini bisa tambah logic download gambar kalau server kuat
-            
-            return jsonify(response)
-
-        except ValueError as e:
-            # Error khas Telethon kalau entity gak ketemu (bot belum join)
-            return jsonify({'status': 'error', 'message': 'Bot tidak bisa mengakses chat ini. Pastikan bot sudah JOIN grup/channelnya.'})
-        except Exception as e:
-            logger.error(f"Fetch System Error: {e}")
-            return jsonify({'status': 'error', 'message': f'Error sistem: {str(e)}'})
-        finally:
-            await client.disconnect()
-
     return run_async(_fetch())
 
 # ==============================================================================
