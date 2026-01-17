@@ -1114,87 +1114,87 @@ def fetch_telegram_message():
 
 @app.route('/start_broadcast', methods=['POST'])
 @login_required
-def start_broadcast():
-    user_id = session['user_id']
-    message = request.form.get('message')
-    template_id = request.form.get('template_id')
-    selected_ids_str = request.form.get('selected_ids') # Tangkap ID
-    image_file = request.files.get('image')
-    
-    # Logic Template
-    if not message and template_id:
-        tmpl = MessageTemplateManager.get_template_by_id(template_id)
-        if tmpl: message = tmpl['content']
-            
-    if not message:
-        return jsonify({"status": "error", "message": "Pesan wajib diisi."})
-
-    # Upload Image
-    image_path = None
-    if image_file and allowed_file(image_file.filename):
-        filename = secure_filename(f"broadcast_{user_id}_{int(time.time())}_{image_file.filename}")
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        image_file.save(image_path)
-
-    # --- [INI BAGIAN WORKER YANG GUA PERBAIKI] ---
-def _broadcast_worker(uid, msg, img_path, target_ids): # Tambah parameter target_ids
-    async def _logic():
-            client = await get_active_client(uid)
-            if not client: 
-                if img_path and os.path.exists(img_path): os.remove(img_path)
-                return
-            
-            # --- [FIX UTAMA] PEMANASAN CACHE ---
-            # Kita suruh bot baca chat history dulu biar dia "inget" sama User ID di database
-            # Tanpa ini, StringSession bakal lupa dan error "Could not find entity"
-            try:
-                await client.get_dialogs(limit=None)
-            except: pass 
-            # -----------------------------------
-            try:
-                query = supabase.table('tele_users').select("*").eq('owner_id', uid)
-                # Logic filter target (tetap sama)
-                if target_ids and target_ids.strip():
-                    query = query.in_('user_id', target_ids.split(','))
-                
-                crm_users = query.execute().data
-                
-                for u in crm_users:
-                    try:
-                        # [FIX KEDUA] Gunakan get_entity (lebih robust cari user)
-                        user_tele_id = int(u['user_id'])
-                        try:
-                            target = await client.get_entity(user_tele_id)
-                        except:
-                            # Fallback kalau get_entity gagal, coba input entity manual
-                            target = await client.get_input_entity(user_tele_id)
-
-                        final_msg = msg.replace("{name}", u.get('first_name') or "Kak")
-                        
-                        if img_path: 
-                            await client.send_file(target, img_path, caption=final_msg)
-                        else: 
-                            await client.send_message(target, final_msg)
-                            
-                        await asyncio.sleep(2) # Jeda aman anti-flood
-                    except Exception as e:
-                        # Log error spesifik per user biar tau siapa yang gagal
-                        print(f"❌ Gagal kirim ke {u['user_id']}: {e}")
-            except Exception as e:
-                print(f"❌ Broadcast Error: {e}")
-            finally:
-                await client.disconnect()
-                if img_path and os.path.exists(img_path): os.remove(img_path)
+    def start_broadcast():
+        user_id = session['user_id']
+        message = request.form.get('message')
+        template_id = request.form.get('template_id')
+        selected_ids_str = request.form.get('selected_ids') # Tangkap ID
+        image_file = request.files.get('image')
         
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try: loop.run_until_complete(_logic())
-        finally: loop.close()
-
-    # Pass selected_ids_str ke worker
-    threading.Thread(target=_broadcast_worker, args=(user_id, message, image_path, selected_ids_str)).start()
+        # Logic Template
+        if not message and template_id:
+            tmpl = MessageTemplateManager.get_template_by_id(template_id)
+            if tmpl: message = tmpl['content']
+                
+        if not message:
+            return jsonify({"status": "error", "message": "Pesan wajib diisi."})
     
-    return jsonify({"status": "success", "message": "Broadcast sedang diproses!"})
+        # Upload Image
+        image_path = None
+        if image_file and allowed_file(image_file.filename):
+            filename = secure_filename(f"broadcast_{user_id}_{int(time.time())}_{image_file.filename}")
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image_file.save(image_path)
+    
+        # --- [INI BAGIAN WORKER YANG GUA PERBAIKI] ---
+    def _broadcast_worker(uid, msg, img_path, target_ids): # Tambah parameter target_ids
+        async def _logic():
+                client = await get_active_client(uid)
+                if not client: 
+                    if img_path and os.path.exists(img_path): os.remove(img_path)
+                    return
+                
+                # --- [FIX UTAMA] PEMANASAN CACHE ---
+                # Kita suruh bot baca chat history dulu biar dia "inget" sama User ID di database
+                # Tanpa ini, StringSession bakal lupa dan error "Could not find entity"
+                try:
+                    await client.get_dialogs(limit=None)
+                except: pass 
+                # -----------------------------------
+                try:
+                    query = supabase.table('tele_users').select("*").eq('owner_id', uid)
+                    # Logic filter target (tetap sama)
+                    if target_ids and target_ids.strip():
+                        query = query.in_('user_id', target_ids.split(','))
+                    
+                    crm_users = query.execute().data
+                    
+                    for u in crm_users:
+                        try:
+                            # [FIX KEDUA] Gunakan get_entity (lebih robust cari user)
+                            user_tele_id = int(u['user_id'])
+                            try:
+                                target = await client.get_entity(user_tele_id)
+                            except:
+                                # Fallback kalau get_entity gagal, coba input entity manual
+                                target = await client.get_input_entity(user_tele_id)
+    
+                            final_msg = msg.replace("{name}", u.get('first_name') or "Kak")
+                            
+                            if img_path: 
+                                await client.send_file(target, img_path, caption=final_msg)
+                            else: 
+                                await client.send_message(target, final_msg)
+                                
+                            await asyncio.sleep(2) # Jeda aman anti-flood
+                        except Exception as e:
+                            # Log error spesifik per user biar tau siapa yang gagal
+                            print(f"❌ Gagal kirim ke {u['user_id']}: {e}")
+                except Exception as e:
+                    print(f"❌ Broadcast Error: {e}")
+                finally:
+                    await client.disconnect()
+                    if img_path and os.path.exists(img_path): os.remove(img_path)
+            
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try: loop.run_until_complete(_logic())
+            finally: loop.close()
+    
+        # Pass selected_ids_str ke worker
+        threading.Thread(target=_broadcast_worker, args=(user_id, message, image_path, selected_ids_str)).start()
+        
+        return jsonify({"status": "success", "message": "Broadcast sedang diproses!"})
 
 # ==============================================================================
 # SECTION 12: CRUD ROUTES (SCHEDULE, TARGETS, & TEMPLATES)
