@@ -198,7 +198,7 @@ class MessageTemplateManager:
             logger.error(f"Single Template Fetch Error: {e}")
             return None
 
-@staticmethod
+    @staticmethod
     def create_template(user_id, name, content):
         if not supabase: return False
         try:
