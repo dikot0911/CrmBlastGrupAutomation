@@ -198,15 +198,19 @@ class MessageTemplateManager:
             logger.error(f"Single Template Fetch Error: {e}")
             return None
 
+    class MessageTemplateManager:
+    # ... (method get & delete biarin sama) ...
+
     @staticmethod
-    def create_template(user_id, name, content):
+    def create_template(user_id, name, content, source_chat_id=None, source_message_id=None):
         if not supabase: return False
         try:
-            # FIX: Ganti 'content' jadi 'message_text' sesuai nama kolom database
             data = {
                 'user_id': user_id, 
                 'name': name, 
                 'message_text': content, 
+                'source_chat_id': source_chat_id,     # <-- Simpan ID Chat Sumber
+                'source_message_id': source_message_id, # <-- Simpan ID Pesan Sumber
                 'created_at': datetime.utcnow().isoformat()
             }
             supabase.table('message_templates').insert(data).execute()
@@ -1173,14 +1177,33 @@ class MessageTemplateManager:
 def fetch_telegram_message():
     user_id = session['user_id']
     link = request.json.get('link')
-    
-    if not link: 
-        return jsonify({'status': 'error', 'message': 'Link kosong.'})
+    if not link: return jsonify({'status': 'error', 'message': 'Link kosong.'})
 
     async def _fetch():
         client = await get_active_client(user_id)
-        if not client: 
-            return jsonify({'status': 'error', 'message': 'Telegram belum terhubung. Connect dulu di menu Pengaturan.'})
+        if not client: return jsonify({'status': 'error', 'message': 'Telegram disconnected.'})
+        try:
+            # Parsing Link
+            entity, msg_id = parse_telegram_link(link)
+            if not entity or not msg_id:
+                return jsonify({'status': 'error', 'message': 'Link tidak valid.'})
+
+            # Cek Pesan
+            msg = await client.get_messages(entity, ids=msg_id)
+            if not msg: return jsonify({'status': 'error', 'message': 'Pesan tidak ditemukan.'})
+
+            # Kita balikin ID-nya ke Frontend biar disimpen pas user klik Save
+            return jsonify({
+                'status': 'success', 
+                'text': msg.text or "", 
+                'has_media': True if msg.media else False,
+                'source_chat_id': str(utils.get_peer_id(msg.peer_id)), # ID Chat
+                'source_message_id': msg.id # ID Pesan
+            })
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)})
+        finally: await client.disconnect()
+    return run_async(_fetch())
         
         try:
             # Pake parser baru
@@ -1252,62 +1275,66 @@ def start_broadcast():
             image_file.save(image_path)
     
         # --- [INI BAGIAN WORKER YANG GUA PERBAIKI] ---
-def _broadcast_worker(uid, msg, img_path, target_ids):
-    async def _logic():
-        client = await get_active_client(uid)
-        if not client:
-            if img_path and os.path.exists(img_path):
-                os.remove(img_path)
-            return
+# ... (bagian awal fungsi start_broadcast sama) ...
 
-        try:
-            await client.get_dialogs(limit=None)
-        except:
-            pass
+    # --- WORKER BARU (SUPPORT CLOUD MEDIA) ---
+    def _broadcast_worker(uid, msg, img_path, target_ids, template_id=None):
+        async def _logic():
+            client = await get_active_client(uid)
+            if not client: return
+            
+            # Pemanasan
+            try: await client.get_dialogs(limit=None)
+            except: pass
 
-        try:
-            query = supabase.table('tele_users').select("*").eq('owner_id', uid)
-            if target_ids and target_ids.strip():
-                query = query.in_('user_id', target_ids.split(','))
-
-            crm_users = query.execute().data
-
-            for u in crm_users:
-                try:
-                    user_tele_id = int(u['user_id'])
+            # Cek Template Source (Kalau pakai template)
+            source_media = None
+            if template_id:
+                tmpl = MessageTemplateManager.get_template_by_id(template_id)
+                # Cek apakah template punya referensi media (Database Mandiri)
+                if tmpl and tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
                     try:
-                        target = await client.get_entity(user_tele_id)
-                    except:
+                        # Ambil pesan aslinya dari "Database Mandiri" user
+                        src_chat = int(tmpl['source_chat_id'])
+                        src_id = int(tmpl['source_message_id'])
+                        original_msg = await client.get_messages(src_chat, ids=src_id)
+                        if original_msg and original_msg.media:
+                            source_media = original_msg.media
+                    except: 
+                        print("Gagal load media source")
+
+            try:
+                # ... (query user crm sama kayak sebelumnya) ...
+                
+                for u in crm_users:
+                    try:
+                        user_tele_id = int(u['user_id'])
                         target = await client.get_input_entity(user_tele_id)
+                        final_msg = msg.replace("{name}", u.get('first_name') or "Kak")
+                        
+                        # LOGIC PENGIRIMAN SAKTI
+                        if source_media:
+                            # 1. Prioritas: Kirim Media dari Telegram Database (TANPA FORWARD LABEL)
+                            await client.send_file(target, source_media, caption=final_msg)
+                        elif img_path: 
+                            # 2. Upload manual (file lokal)
+                            await client.send_file(target, img_path, caption=final_msg)
+                        else: 
+                            # 3. Teks doang
+                            await client.send_message(target, final_msg)
+                        
+                        await asyncio.sleep(2)
+                    except: pass
+            finally:
+                await client.disconnect()
+                if img_path: os.remove(img_path)
+        
+        run_async(_logic())
 
-                    final_msg = msg.replace("{name}", u.get('first_name') or "Kak")
-
-                    if img_path:
-                        await client.send_file(target, img_path, caption=final_msg)
-                    else:
-                        await client.send_message(target, final_msg)
-
-                    await asyncio.sleep(2)
-                except Exception as e:
-                    print(f"❌ Gagal kirim ke {u['user_id']}: {e}")
-
-        except Exception as e:
-            print(f"❌ Broadcast Error: {e}")
-        finally:
-            await client.disconnect()
-            if img_path and os.path.exists(img_path):
-                os.remove(img_path)
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(_logic())
-    finally:
-        loop.close()
-    
-    # Pass selected_ids_str ke worker
-    threading.Thread(target=_broadcast_worker, args=(user_id, message, image_path, selected_ids_str)).start()
-    return jsonify({"status": "success", "message": "Broadcast sedang diproses!"})
+    # Panggil worker (tambah parameter template_id)
+    # Pastikan template_id di-pass ke worker
+    t_id_int = int(template_id) if template_id else None
+    threading.Thread(target=_broadcast_worker, args=(user_id, message, image_path, selected_ids_str, t_id_int)).start()
 
 # ==============================================================================
 # SECTION 12: CRUD ROUTES (SCHEDULE, TARGETS, & TEMPLATES)
@@ -1381,27 +1408,22 @@ def save_template():
     name = request.form.get('name')
     msg = request.form.get('message')
     
-    # Handle Upload Gambar Manual
-    image_file = request.files.get('image_file')
-    image_url = None
-
-    if image_file and allowed_file(image_file.filename):
-        filename = secure_filename(f"template_{user_id}_{int(time.time())}_{image_file.filename}")
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        image_file.save(save_path)
-        # Simpan path relatif biar bisa diakses via static
-        image_url = f"/static/uploads/{filename}"
-
-    if not msg and not image_url: 
-        msg = request.form.get('content') # Fallback
+    # Tangkap ID Sumber (Hidden Input di HTML)
+    src_chat = request.form.get('source_chat_id')
+    src_msg = request.form.get('source_message_id')
+    
+    # Konversi ke int/bigint kalau ada datanya
+    final_chat = int(src_chat) if src_chat and src_chat != 'null' else None
+    final_msg = int(src_msg) if src_msg and src_msg != 'null' else None
 
     if not name:
         flash('Nama Template wajib diisi.', 'warning')
         return redirect(url_for('dashboard_templates'))
     
-    if MessageTemplateManager.create_template(user_id, name, msg, image_url):
-        flash('Template tersimpan!', 'success')
-    else: flash('Gagal simpan.', 'danger')
+    if MessageTemplateManager.create_template(user_id, name, msg, final_chat, final_msg):
+        flash('Template tersimpan (Mode Cloud Reference)!', 'success')
+    else: 
+        flash('Gagal simpan.', 'danger')
     
     return redirect(url_for('dashboard_templates'))
 
