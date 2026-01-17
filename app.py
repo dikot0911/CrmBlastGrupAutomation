@@ -217,14 +217,43 @@ class MessageTemplateManager:
 
     @staticmethod
     def delete_template(user_id, template_id):
-        """Menghapus template."""
-        if not supabase: return False
+        """
+        Menghapus template dengan Pengecekan Jadwal.
+        Returns: (Success: bool, Message: str)
+        """
+        if not supabase: return False, "Database Error"
+        
         try:
-            supabase.table('message_templates').delete().eq('id', template_id).eq('user_id', user_id).execute()
-            return True
+            # 1. CEK DULU: Apakah template ini dipake di jadwal?
+            # Kita cari di tabel blast_schedules
+            usage_check = supabase.table('blast_schedules')\
+                .select("run_hour, run_minute")\
+                .eq('template_id', template_id)\
+                .eq('is_active', True)\
+                .execute()
+            
+            # Kalau ada isinya, berarti LAGI DIPAKE
+            if usage_check.data and len(usage_check.data) > 0:
+                # Ambil jam-jam jadwalnya buat laporan ke user
+                used_at = [f"{s['run_hour']:02d}:{s['run_minute']:02d}" for s in usage_check.data]
+                time_list = ", ".join(used_at)
+                return False, f"⚠️ Gagal Hapus! Template ini sedang aktif untuk Jadwal Pukul: {time_list} WIB. Hapus/Ganti jadwal dulu."
+
+            # 2. Kalau aman (ga dipake), baru HAPUS
+            res = supabase.table('message_templates').delete().eq('id', template_id).eq('user_id', user_id).execute()
+            
+            if res.data:
+                return True, "✅ Template berhasil dihapus."
+            else:
+                return False, "Template tidak ditemukan atau bukan milik Anda."
+                
         except Exception as e:
+            # Tangkap error database (misal constraint violation)
+            if "violates foreign key constraint" in str(e):
+                return False, "Template sedang digunakan di sistem dan tidak bisa dihapus."
+            
             logger.error(f"Template Delete Error: {e}")
-            return False
+            return False, f"Error sistem: {str(e)}"
 
 # ==============================================================================
 # SECTION 4.6: SCHEDULER & AUTO-BLAST WORKER (NEW FEATURE)
@@ -1361,12 +1390,15 @@ def save_template():
 @app.route('/delete_template/<int:id>')
 @login_required
 def delete_template(id):
-    """API Endpoint untuk menghapus template"""
-    success = MessageTemplateManager.delete_template(session['user_id'], id)
+    # Panggil fungsi manager baru (terima 2 output)
+    success, msg = MessageTemplateManager.delete_template(session['user_id'], id)
+    
     if success:
-        flash('Template dihapus.', 'success')
+        flash(msg, 'success')
     else:
-        flash('Gagal menghapus template.', 'danger')
+        # Tampilkan pesan error spesifik (misal: "Dipake di jadwal 08:00")
+        flash(msg, 'danger')
+        
     return redirect(url_for('dashboard_templates'))
 
 # ==============================================================================
