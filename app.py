@@ -199,8 +199,8 @@ class MessageTemplateManager:
             return None
 
     class MessageTemplateManager:
+        
     # ... (method get & delete biarin sama) ...
-
     @staticmethod
     def create_template(user_id, name, content, source_chat_id=None, source_message_id=None):
         if not supabase: return False
