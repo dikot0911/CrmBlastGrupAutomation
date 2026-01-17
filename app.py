@@ -5,17 +5,25 @@ import threading
 import json
 import time
 import httpx
+import pytz
 from functools import wraps 
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_from_directory
-from demo_routes import demo_bp
 
 # --- TELETHON & SUPABASE ---
 from telethon import TelegramClient, errors, functions, utils
 from telethon.sessions import StringSession
 from supabase import create_client, Client
+
+# --- CUSTOM BLUEPRINTS (EXISTING) ---
+# Kami mempertahankan blueprint lama agar tidak merusak struktur folder yang sudah ada
+try:
+    from demo_routes import demo_bp
+except ImportError:
+    # Fallback aman jika file demo_routes.py belum ada di environment baru
+    demo_bp = None
 
 # ==============================================================================
 # SECTION 1: SYSTEM CONFIGURATION & ENVIRONMENT SETUP
@@ -25,11 +33,12 @@ from supabase import create_client, Client
 app = Flask(__name__)
 
 # Security Configuration
-# Gunakan Secret Key yang sangat kuat untuk production environment
+# Gunakan Secret Key yang sangat kuat untuk production environment SaaS
 app.secret_key = os.getenv('SECRET_KEY', 'rahasia_negara_baba_parfume_saas_ultimate_key_v99_production_ready')
 
-#  BLUEPRINT DISINI
-app.register_blueprint(demo_bp)  
+# Registrasi Blueprint Lama (Jika Ada)
+if demo_bp:
+    app.register_blueprint(demo_bp)  
 
 # Session Configuration (Agar login user awet dan aman)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
@@ -37,7 +46,7 @@ app.config['SESSION_COOKIE_SECURE'] = True  # Hanya kirim cookie via HTTPS (Waji
 app.config['SESSION_COOKIE_HTTPONLY'] = True # Mencegah akses JavaScript ke cookie (Anti-XSS)
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # Mencegah CSRF
 
-# Upload Configuration (Untuk fitur Broadcast Gambar masa depan)
+# Upload Configuration (Untuk fitur Broadcast Gambar)
 UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -64,7 +73,6 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 if not SUPABASE_URL or not SUPABASE_KEY:
     logger.critical("❌ CRITICAL ERROR: Environment Variables Missing (SUPABASE_URL / KEY).")
     logger.critical("   System cannot start properly without database connection.")
-    # Kita set None, tapi aplikasi akan tetap jalan (dengan fitur terbatas/error saat akses DB)
     supabase = None
 else:
     try:
@@ -79,13 +87,11 @@ else:
 # ==============================================================================
 
 # Telegram API Credentials (Master App)
-# Wajib ada di Environment Variables Render
 API_ID = int(os.getenv('API_ID', '0')) 
 API_HASH = os.getenv('API_HASH', '')
 
 # In-Memory State Storage
 # Digunakan untuk rate limiting dan caching sementara objek client saat login.
-# Data kritis (seperti Hash OTP) tetap disimpan di Database agar Stateless (aman saat restart).
 login_states = {} 
 
 # ==============================================================================
@@ -126,16 +132,15 @@ def start_self_ping():
                         
             except Exception as e:
                 logger.error(f"❌ [Heartbeat] Ping Failed: {e}")
-                # Tunggu sebentar jika error sebelum coba lagi agar tidak spam log
                 time.sleep(60)
 
-    # Jalankan sebagai Daemon Thread (Mati otomatis jika main app mati)
+    # Jalankan sebagai Daemon Thread
     threading.Thread(target=_worker, daemon=True, name="PingWorker").start()
 
 def run_async(coroutine):
     """
     Bridge Helper: Menjalankan Asyncio Coroutine di dalam Flask (Synchronous).
-    Membuat Event Loop terisolasi untuk setiap eksekusi guna mencegah blocking dan thread safety issue.
+    Membuat Event Loop terisolasi untuk setiap eksekusi.
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -146,7 +151,6 @@ def run_async(coroutine):
         raise e
     finally:
         try:
-            # Clean up pending tasks generator
             pending = asyncio.all_tasks(loop)
             for task in pending:
                 task.cancel()
@@ -157,6 +161,230 @@ def run_async(coroutine):
 def allowed_file(filename):
     """Cek ekstensi file yang diizinkan untuk upload gambar"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# ==============================================================================
+# SECTION 4.5: MESSAGE TEMPLATE MANAGER (NEW FEATURE)
+# ==============================================================================
+# Class ini ditambahkan untuk mengelola logika Template Pesan tanpa mengganggu
+# kode existing. Ini adalah "Add-on" logic.
+
+class MessageTemplateManager:
+    """
+    Manajer untuk menangani CRUD Template Pesan.
+    Sistem ini memungkinkan user menyimpan format pesan yang sering digunakan.
+    """
+    
+    @staticmethod
+    def get_templates(user_id):
+        """Mengambil semua template milik user tertentu."""
+        if not supabase: return []
+        try:
+            # Mengambil dari tabel 'message_templates'
+            # Pastikan table ini dibuat di Supabase (lihat instruksi SQL di dokumentasi)
+            res = supabase.table('message_templates').select("*").eq('user_id', user_id).order('created_at', desc=True).execute()
+            return res.data if res.data else []
+        except Exception as e:
+            logger.error(f"Template Fetch Error: {e}")
+            return []
+
+    @staticmethod
+    def get_template_by_id(template_id):
+        """Mengambil satu template spesifik berdasarkan ID."""
+        if not supabase or not template_id: return None
+        try:
+            res = supabase.table('message_templates').select("*").eq('id', template_id).execute()
+            return res.data[0] if res.data else None
+        except Exception as e:
+            logger.error(f"Single Template Fetch Error: {e}")
+            return None
+
+    @staticmethod
+    def create_template(user_id, name, content):
+        """Membuat template baru."""
+        if not supabase: return False
+        try:
+            data = {
+                'user_id': user_id,
+                'name': name,
+                'content': content,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            supabase.table('message_templates').insert(data).execute()
+            return True
+        except Exception as e:
+            logger.error(f"Template Create Error: {e}")
+            return False
+
+    @staticmethod
+    def delete_template(user_id, template_id):
+        """Menghapus template."""
+        if not supabase: return False
+        try:
+            supabase.table('message_templates').delete().eq('id', template_id).eq('user_id', user_id).execute()
+            return True
+        except Exception as e:
+            logger.error(f"Template Delete Error: {e}")
+            return False
+
+# ==============================================================================
+# SECTION 4.6: SCHEDULER & AUTO-BLAST WORKER (NEW FEATURE)
+# ==============================================================================
+# Worker ini akan berjalan di background untuk mengecek jadwal setiap menit.
+# Ini melengkapi fitur "Jadwal" yang sebelumnya hanya menyimpan data.
+
+class SchedulerWorker:
+    """
+    Worker cerdas yang berjalan di thread terpisah.
+    Tugasnya mengecek database 'blast_schedules' setiap menit dan
+    mengeksekusi pengiriman pesan jika waktunya cocok.
+    """
+    
+    @staticmethod
+    def start():
+        threading.Thread(target=SchedulerWorker._loop, daemon=True, name="SchedulerEngine").start()
+        logger.info("🕒 Scheduler Engine Started (Background Mode)")
+
+    @staticmethod
+    def _loop():
+        """Main Loop untuk pengecekan jadwal"""
+        while True:
+            try:
+                # Cek setiap awal menit (detik 00)
+                now = datetime.utcnow() # Gunakan UTC sebagai standar server
+                
+                # Kita bisa menambahkan logika konversi timezone user di sini nantinya.
+                # Untuk saat ini, kita asumsikan server time (UTC) atau disesuaikan +7 manual oleh user.
+                
+                if supabase:
+                    SchedulerWorker._process_schedules(now)
+                
+                # Sleep selama 60 detik agar tidak spam DB
+                # Hitung sisa detik menuju menit berikutnya agar presisi
+                sleep_time = 60 - datetime.now().second
+                time.sleep(sleep_time)
+                
+            except Exception as e:
+                logger.error(f"Scheduler Loop Error: {e}")
+                time.sleep(60) # Sleep aman jika error
+
+    @staticmethod
+    def _process_schedules(current_time):
+        """Logika inti pengecekan dan eksekusi jadwal"""
+        try:
+            current_hour = current_time.hour
+            current_minute = current_time.minute
+            
+            # Ambil semua jadwal yang AKTIF dan cocok dengan JAM & MENIT sekarang
+            # NOTE: Di production, perlu query yang lebih efisien atau batch processing.
+            res = supabase.table('blast_schedules').select("*")\
+                .eq('is_active', True)\
+                .eq('run_hour', current_hour)\
+                .eq('run_minute', current_minute)\
+                .execute()
+                
+            schedules = res.data
+            
+            if not schedules:
+                return # Tidak ada jadwal saat ini
+                
+            logger.info(f"🕒 Scheduler: Found {len(schedules)} tasks to run at {current_hour}:{current_minute} UTC")
+            
+            for task in schedules:
+                # Jalankan blast di thread terpisah agar tidak memblokir loop scheduler
+                threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
+                
+        except Exception as e:
+            logger.error(f"Scheduler Process Error: {e}")
+
+    @staticmethod
+    def _execute_task(task):
+        """Eksekusi satu task jadwal"""
+        user_id = task['user_id']
+        template_id = task.get('template_id') # Kolom baru (Integrasi Template)
+        target_group_id = task.get('target_group_id') # Opsional: jika jadwal spesifik grup
+        
+        # 1. Tentukan Konten Pesan
+        message_content = "Halo! Ini pesan terjadwal otomatis." # Default fallback
+        
+        if template_id:
+            # Ambil konten dari Template Manager (Fitur Baru)
+            tmpl = MessageTemplateManager.get_template_by_id(template_id)
+            if tmpl:
+                message_content = tmpl['content']
+                logger.info(f"✅ Task {task['id']}: Using Template '{tmpl['name']}'")
+            else:
+                logger.warning(f"⚠️ Task {task['id']}: Template ID {template_id} not found. Using default.")
+        
+        # 2. Logic Pengiriman (Mirip dengan Broadcast Manual tapi Otomatis)
+        # Kita gunakan run_async bridge karena Telethon itu async
+        
+        async def _async_send():
+            client = await get_active_client(user_id)
+            if not client:
+                logger.warning(f"❌ Task {task['id']}: Client not connected for User {user_id}")
+                return
+            
+            try:
+                # Logika: Kirim ke Target yang relevan
+                # Jika target_group_id ada, kirim ke sana. Jika tidak, mungkin broadcast ke semua target?
+                # Sesuai 'app.py' lama, logic broadcast agak umum. Kita pertajam di sini.
+                
+                # Ambil daftar target user
+                targets_query = supabase.table('blast_targets').select("*").eq('user_id', user_id)
+                if target_group_id:
+                    targets_query = targets_query.eq('id', target_group_id)
+                
+                targets = targets_query.execute().data
+                
+                sent_count = 0
+                for tg in targets:
+                    try:
+                        # Resolve Entity
+                        entity = await client.get_entity(int(tg['group_id']))
+                        
+                        # Kirim Pesan
+                        await client.send_message(entity, message_content)
+                        sent_count += 1
+                        
+                        # Catat Log
+                        log_data = {
+                            "user_id": user_id,
+                            "group_name": tg['group_name'],
+                            "group_id": tg['group_id'],
+                            "status": "SUCCESS",
+                            "error_message": "Scheduled Broadcast",
+                            "created_at": datetime.utcnow().isoformat()
+                        }
+                        supabase.table('blast_logs').insert(log_data).execute()
+                        
+                        # Delay anti-flood
+                        await asyncio.sleep(2)
+                        
+                    except Exception as e:
+                        logger.error(f"Task Send Error to {tg.get('group_name')}: {e}")
+                        # Log Failure
+                        supabase.table('blast_logs').insert({
+                            "user_id": user_id,
+                            "group_name": tg.get('group_name', 'Unknown'),
+                            "status": "FAILED",
+                            "error_message": str(e),
+                            "created_at": datetime.utcnow().isoformat()
+                        }).execute()
+
+                logger.info(f"✅ Task {task['id']} Completed. Sent to {sent_count} targets.")
+                
+            except Exception as e:
+                logger.error(f"Task Async Exec Error: {e}")
+            finally:
+                await client.disconnect()
+
+        # Jalankan di event loop baru
+        run_async(_async_send())
+
+
+# Jalankan Scheduler saat app start
+if supabase:
+    SchedulerWorker.start()
 
 # ==============================================================================
 # SECTION 5: DATA ACCESS LAYER (DAL)
@@ -453,12 +681,22 @@ def dashboard_broadcast():
     
     # Ambil jumlah CRM user untuk info
     crm_count = 0
+    templates = []
+    
     try:
         crm_res = supabase.table('tele_users').select("id", count='exact', head=True).eq('owner_id', user.id).execute()
         crm_count = crm_res.count if crm_res.count else 0
+        
+        # UPGRADE: Ambil daftar template agar user bisa memilih template saat manual broadcast
+        templates = MessageTemplateManager.get_templates(user.id)
+        
     except: pass
 
-    return render_template('dashboard/broadcast.html', user=user, user_count=crm_count, active_page='broadcast')
+    return render_template('dashboard/broadcast.html', 
+                           user=user, 
+                           user_count=crm_count, 
+                           templates=templates, # Kirim templates ke UI
+                           active_page='broadcast')
 
 @app.route('/dashboard/targets')
 @login_required
@@ -482,11 +720,54 @@ def dashboard_schedule():
     if not user: return redirect(url_for('login'))
     
     schedules = []
-    try:
-        schedules = supabase.table('blast_schedules').select("*").eq('user_id', user.id).order('run_hour', desc=False).execute().data
-    except: pass
+    templates = [] # Variable baru untuk dropdown
+    targets = []   # Variable baru untuk dropdown target grup
     
-    return render_template('dashboard/schedule.html', user=user, schedules=schedules, active_page='schedule')
+    try:
+        # Ambil jadwal lama
+        schedules = supabase.table('blast_schedules').select("*").eq('user_id', user.id).order('run_hour', desc=False).execute().data
+        
+        # UPGRADE: Fetch Templates & Targets untuk form "Add Schedule"
+        templates = MessageTemplateManager.get_templates(user.id)
+        targets = supabase.table('blast_targets').select("*").eq('user_id', user.id).execute().data
+        
+        # Enrich schedule data with template names (Manual Join)
+        # Agar di UI tampil nama templatenya, bukan cuma ID
+        for s in schedules:
+            t_id = s.get('template_id')
+            s['template_name'] = 'Custom / No Template'
+            if t_id:
+                # Cari nama template di list templates (in-memory search biar cepat)
+                found = next((t for t in templates if t['id'] == t_id), None)
+                if found:
+                    s['template_name'] = found['name']
+        
+    except Exception as e:
+        logger.error(f"Schedule Page Error: {e}")
+    
+    return render_template('dashboard/schedule.html', 
+                           user=user, 
+                           schedules=schedules, 
+                           templates=templates, # Kirim ke UI
+                           targets=targets,     # Kirim ke UI
+                           active_page='schedule')
+
+@app.route('/dashboard/templates')
+@login_required
+def dashboard_templates():
+    """
+    [FITUR BARU] Halaman Manajemen Template Pesan.
+    User bisa CRUD template di sini.
+    """
+    user = get_dashboard_context()
+    if not user: return redirect(url_for('login'))
+    
+    templates = MessageTemplateManager.get_templates(user.id)
+    
+    return render_template('dashboard/templates.html', # Pastikan buat file HTML ini nanti
+                           user=user, 
+                           templates=templates, 
+                           active_page='templates')
 
 @app.route('/dashboard/crm')
 @login_required
@@ -785,21 +1066,31 @@ def import_crm_api():
 # SECTION 11: BROADCAST SYSTEM (TEXT + IMAGE)
 # ==============================================================================
 
-# ... Bagian atas app.py tetap sama ...
-
 @app.route('/start_broadcast', methods=['POST'])
 @login_required
 def start_broadcast():
     """
     Handle Broadcast Request (Text + Image Support).
     Uses Background Thread for sending to prevent blocking.
+    
+    [UPGRADE] Added support for Template ID in form data.
     """
     user_id = session['user_id']
     message = request.form.get('message')
-    image_file = request.files.get('image') # Support Image Upload
+    template_id = request.form.get('template_id') # New Parameter
+    image_file = request.files.get('image') 
     
+    # Logic Pemilihan Konten Pesan:
+    # 1. Jika User ketik pesan manual -> Pakai itu.
+    # 2. Jika pesan kosong TAPI pilih template -> Ambil dari template.
+    
+    if not message and template_id:
+        tmpl = MessageTemplateManager.get_template_by_id(template_id)
+        if tmpl:
+            message = tmpl['content']
+            
     if not message:
-        return jsonify({"status": "error", "message": "Pesan wajib diisi."})
+        return jsonify({"status": "error", "message": "Pesan wajib diisi atau pilih template."})
 
     # Handle Image Upload
     image_path = None
@@ -813,7 +1104,6 @@ def start_broadcast():
         async def _logic():
             client = await get_active_client(uid)
             if not client: 
-                # Cleanup Image if failed
                 if img_path and os.path.exists(img_path): os.remove(img_path)
                 return
             
@@ -874,27 +1164,46 @@ def start_broadcast():
     return jsonify({"status": "success", "message": "Broadcast sedang diproses di latar belakang!"})
 
 # ==============================================================================
-# SECTION 12: CRUD ROUTES (SCHEDULE & TARGETS)
+# SECTION 12: CRUD ROUTES (SCHEDULE, TARGETS, & TEMPLATES)
 # ==============================================================================
 
 @app.route('/add_schedule', methods=['POST'])
 @login_required
 def add_schedule():
+    """
+    [UPGRADE] Menambah jadwal dengan dukungan Template & Target Group
+    """
     h = request.form.get('hour')
     m = request.form.get('minute')
     
+    # New Fields
+    template_id = request.form.get('template_id')
+    target_group_id = request.form.get('target_group_id')
+    
     if h and m:
         try:
-            supabase.table('blast_schedules').insert({
+            payload = {
                 "user_id": session['user_id'],
                 "run_hour": int(h),
                 "run_minute": int(m),
                 "is_active": True,
                 "created_at": datetime.utcnow().isoformat()
-            }).execute()
-            flash('Jadwal berhasil ditambahkan.', 'success')
+            }
+            
+            # Jika user memilih template, simpan ID-nya
+            if template_id and template_id != "":
+                payload['template_id'] = int(template_id)
+                
+            # Jika user memilih target group spesifik
+            if target_group_id and target_group_id != "":
+                payload['target_group_id'] = int(target_group_id)
+
+            supabase.table('blast_schedules').insert(payload).execute()
+            flash('Jadwal berhasil ditambahkan dengan konfigurasi baru.', 'success')
         except Exception as e:
             flash(f'Gagal menambah jadwal: {e}', 'danger')
+            logger.error(f"Add Schedule Error: {e}")
+            
     return redirect(url_for('dashboard_schedule'))
 
 @app.route('/delete_schedule/<int:id>')
@@ -916,6 +1225,38 @@ def delete_target(id):
     except:
         flash('Gagal menghapus target.', 'danger')
     return redirect(url_for('dashboard_targets'))
+
+# --- NEW ROUTES FOR TEMPLATES ---
+
+@app.route('/create_template', methods=['POST'])
+@login_required
+def create_template():
+    """API Endpoint untuk membuat template baru via Form"""
+    name = request.form.get('name')
+    content = request.form.get('content')
+    
+    if not name or not content:
+        flash('Nama dan Isi Template wajib diisi.', 'warning')
+        return redirect(url_for('dashboard_templates'))
+        
+    success = MessageTemplateManager.create_template(session['user_id'], name, content)
+    if success:
+        flash('Template berhasil disimpan!', 'success')
+    else:
+        flash('Gagal menyimpan template. Coba lagi.', 'danger')
+        
+    return redirect(url_for('dashboard_templates'))
+
+@app.route('/delete_template/<int:id>')
+@login_required
+def delete_template(id):
+    """API Endpoint untuk menghapus template"""
+    success = MessageTemplateManager.delete_template(session['user_id'], id)
+    if success:
+        flash('Template dihapus.', 'success')
+    else:
+        flash('Gagal menghapus template.', 'danger')
+    return redirect(url_for('dashboard_templates'))
 
 # ==============================================================================
 # SECTION 13: SUPER ADMIN PANEL
