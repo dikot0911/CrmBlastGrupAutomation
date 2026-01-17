@@ -7,3 +7,4 @@ psycopg2-binary
 supabase
 python-dotenv
 httpx[http2]
+pytz
