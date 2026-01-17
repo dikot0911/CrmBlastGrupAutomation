@@ -1099,34 +1099,42 @@ def import_crm_api():
             return jsonify({"status": "error", "message": str(e)})
             
     return run_async(_import())
+    
 #telegram API Routes fot tamplates
-@app.route('/api/fetch_message', methods=['POST'])
-@login_required
 def parse_telegram_link(link):
     """
-    Logic Cerdas konversi Link Telegram jadi Entity & Message ID
+    Parser Link Telegram Cerdas.
     Support:
-    - Public: https://t.me/username/123
-    - Private: https://t.me/c/1234567890/123
+    - Public: t.me/username/123
+    - Private: t.me/c/1234567890/123
     """
     try:
-        parts = link.strip().split('/')
+        # Bersihin link dari https:// atau t.me/
+        clean_link = link.replace("https://t.me/", "").replace("t.me/", "").strip()
+        parts = clean_link.split('/')
+        
+        # Validasi dasar
         if len(parts) < 2: return None, None
         
-        msg_id = int(parts[-1])
-        identifier = parts[-2]
-        
-        # Cek apakah link private (ada /c/)
-        if parts[-3] == 'c':
-            # Private Channel ID biasanya butuh prefix -100
-            # Link: t.me/c/1791234567/100 -> ID: -1001791234567
-            chat_id = int(f"-100{identifier}")
+        # Ambil Message ID (pasti yang terakhir)
+        try:
+            msg_id = int(parts[-1])
+        except:
+            return None, None # Kalau bukan angka berarti salah link
+
+        # Cek tipe channel (Private 'c' atau Public 'username')
+        if parts[0] == 'c':
+            # Private Channel ID di link biasanya tanpa -100, jadi kita tambah manual
+            # Contoh: t.me/c/1791234567/100 -> ID asli: -1001791234567
+            chat_id_raw = parts[1]
+            chat_id = int(f"-100{chat_id_raw}")
         else:
-            # Public Username
-            chat_id = identifier
+            # Public Channel (Username)
+            chat_id = parts[0]
             
         return chat_id, msg_id
-    except:
+    except Exception as e:
+        logger.error(f"Link Parse Error: {e}")
         return None, None
 
 # --- UPDATE MANAGER (User Isolation) ---
@@ -1165,41 +1173,51 @@ class MessageTemplateManager:
 def fetch_telegram_message():
     user_id = session['user_id']
     link = request.json.get('link')
-    if not link: return jsonify({'status': 'error', 'message': 'Link kosong.'})
+    
+    if not link: 
+        return jsonify({'status': 'error', 'message': 'Link kosong.'})
 
     async def _fetch():
         client = await get_active_client(user_id)
-        if not client: return jsonify({'status': 'error', 'message': 'Telegram belum terhubung.'})
+        if not client: 
+            return jsonify({'status': 'error', 'message': 'Telegram belum terhubung. Connect dulu di menu Pengaturan.'})
         
         try:
-            # Pake Logic Parsing yang baru
+            # Pake parser baru
             entity, msg_id = parse_telegram_link(link)
+            
             if not entity or not msg_id:
-                return jsonify({'status': 'error', 'message': 'Format link tidak valid.'})
+                return jsonify({'status': 'error', 'message': 'Format link tidak valid. Pastikan link benar (contoh: https://t.me/channel/123).'})
 
-            # Fetch pesan dari Telegram
-            msg = await client.get_messages(entity, ids=msg_id)
+            logger.info(f"Fetching: Entity={entity}, MsgID={msg_id}")
+
+            # Fetch pesan
+            # Kita pake get_messages dengan list ids biar lebih aman
+            msgs = await client.get_messages(entity, ids=[msg_id])
+            msg = msgs[0] if msgs else None
             
             if not msg: 
-                return jsonify({'status': 'error', 'message': 'Pesan tidak ditemukan / Bot belum join grup.'})
+                return jsonify({'status': 'error', 'message': 'Pesan tidak ditemukan. Pastikan bot sudah JOIN ke channel/grup tersebut!'})
 
             response = {
                 'status': 'success', 
-                'text': msg.text or "", 
+                'text': msg.text or "", # Ambil teks atau caption
                 'has_media': False
             }
 
             # Cek Media
             if msg.media:
                 response['has_media'] = True
-                # Disini kita bisa tambah logic download gambar kalau mau
-                # Tapi untuk sekarang kita kasih info aja ke UI
+                # (Optional) Disini bisa tambah logic download gambar kalau server kuat
             
             return jsonify(response)
 
+        except ValueError as e:
+            # Error khas Telethon kalau entity gak ketemu (bot belum join)
+            return jsonify({'status': 'error', 'message': 'Bot tidak bisa mengakses chat ini. Pastikan bot sudah JOIN grup/channelnya.'})
         except Exception as e:
-            logger.error(f"Fetch Error: {e}")
-            return jsonify({'status': 'error', 'message': f'Gagal fetch: {str(e)}'})
+            logger.error(f"Fetch System Error: {e}")
+            return jsonify({'status': 'error', 'message': f'Error sistem: {str(e)}'})
         finally:
             await client.disconnect()
 
