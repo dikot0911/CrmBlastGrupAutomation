@@ -288,6 +288,7 @@
     async function fetchMessage() {
         const link = document.getElementById('teleLink').value;
         const btn = document.getElementById('btnFetchAction');
+        const msgArea = document.getElementById('messageArea'); // Target textarea
         
         if(!link) return alert("Link kosong!");
         
@@ -304,19 +305,25 @@
             const data = await res.json();
             
             if(data.status === 'success') {
-                messageArea.value = data.text;
-                updatePreview();
-                messageArea.classList.add('ring-2', 'ring-green-500');
-                setTimeout(() => messageArea.classList.remove('ring-2', 'ring-green-500'), 500);
+                // 1. Masukkan teks ke textarea
+                msgArea.value = data.text;
+                
+                // 2. TRIGGER PREVIEW MANUAL (Ini kuncinya biar preview muncul!)
+                updatePreview(); 
+                
+                // Efek Visual
+                msgArea.classList.add('ring-2', 'ring-green-500');
+                setTimeout(() => msgArea.classList.remove('ring-2', 'ring-green-500'), 500);
                 
                 if(data.has_media) {
-                    alert("Pesan berhasil diambil! Pesan asli memiliki gambar/video. Silakan upload ulang gambar tersebut secara manual di kolom 'Media Gambar' untuk menyimpannya.");
+                    alert("✅ Pesan berhasil diambil!\n⚠️ Pesan asli memiliki gambar/video. Harap upload gambar secara manual di kolom bawah.");
                 }
             } else {
-                alert(data.message);
+                alert("❌ Gagal: " + data.message);
             }
         } catch(e) {
-            alert("Gagal koneksi server.");
+            alert("❌ Gagal koneksi server. Coba lagi.");
+            console.error(e);
         } finally {
             btn.innerHTML = originalHtml;
             btn.disabled = false;
