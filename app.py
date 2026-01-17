@@ -1114,7 +1114,7 @@ def fetch_telegram_message():
 
 @app.route('/start_broadcast', methods=['POST'])
 @login_required
-    def start_broadcast():
+def start_broadcast():
         user_id = session['user_id']
         message = request.form.get('message')
         template_id = request.form.get('template_id')
