@@ -1137,8 +1137,8 @@ def start_broadcast():
         image_file.save(image_path)
 
     # --- [INI BAGIAN WORKER YANG GUA PERBAIKI] ---
-    def _broadcast_worker(uid, msg, img_path, target_ids): # Tambah parameter target_ids
-       async def _logic():
+def _broadcast_worker(uid, msg, img_path, target_ids): # Tambah parameter target_ids
+    async def _logic():
             client = await get_active_client(uid)
             if not client: 
                 if img_path and os.path.exists(img_path): os.remove(img_path)
