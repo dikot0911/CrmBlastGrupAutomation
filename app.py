@@ -198,15 +198,15 @@ class MessageTemplateManager:
             logger.error(f"Single Template Fetch Error: {e}")
             return None
 
-    @staticmethod
+@staticmethod
     def create_template(user_id, name, content):
-        """Membuat template baru."""
         if not supabase: return False
         try:
+            # FIX: Ganti 'content' jadi 'message_text' sesuai nama kolom database
             data = {
-                'user_id': user_id,
-                'name': name,
-                'content': content,
+                'user_id': user_id, 
+                'name': name, 
+                'message_text': content, 
                 'created_at': datetime.utcnow().isoformat()
             }
             supabase.table('message_templates').insert(data).execute()
@@ -679,23 +679,32 @@ def dashboard_broadcast():
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
-    # Ambil jumlah CRM user untuk info
     crm_count = 0
     templates = []
+    selected_ids = ""
+    count_selected = 0
     
     try:
         crm_res = supabase.table('tele_users').select("id", count='exact', head=True).eq('owner_id', user.id).execute()
         crm_count = crm_res.count if crm_res.count else 0
         
-        # UPGRADE: Ambil daftar template agar user bisa memilih template saat manual broadcast
+        # Load Templates
         templates = MessageTemplateManager.get_templates(user.id)
         
+        # Tangkap ID dari URL (hasil lemparan dari CRM)
+        ids_arg = request.args.get('ids')
+        if ids_arg:
+            selected_ids = ids_arg
+            count_selected = len(ids_arg.split(','))
+        # ------------------------------------
     except: pass
 
     return render_template('dashboard/broadcast.html', 
                            user=user, 
                            user_count=crm_count, 
-                           templates=templates, # Kirim templates ke UI
+                           templates=templates, 
+                           selected_ids=selected_ids,     # Kirim ke HTML
+                           count_selected=count_selected, # Kirim ke HTML
                            active_page='broadcast')
 
 @app.route('/dashboard/targets')
@@ -1061,6 +1070,43 @@ def import_crm_api():
             return jsonify({"status": "error", "message": str(e)})
             
     return run_async(_import())
+#telegram API Routes fot tamplates
+@app.route('/api/fetch_message', methods=['POST'])
+@login_required
+def fetch_telegram_message():
+    user_id = session['user_id']
+    link = request.json.get('link')
+    if not link: return jsonify({'status': 'error', 'message': 'Link kosong.'})
+
+    async def _fetch():
+        client = await get_active_client(user_id)
+        if not client: return jsonify({'status': 'error', 'message': 'Telegram belum terhubung.'})
+        try:
+            # Logic Parsing Link Telegram
+            parts = link.strip('/').split('/')
+            if len(parts) < 2: return jsonify({'status': 'error', 'message': 'Link tidak valid.'})
+            
+            msg_id = int(parts[-1])
+            entity_part = parts[-2]
+            
+            # Cek apakah private group (ada 'c')
+            if parts[-3] == 'c':
+                entity = int(f"-100{entity_part}") 
+            else:
+                entity = entity_part
+
+            msg = await client.get_messages(entity, ids=msg_id)
+            if msg and msg.text:
+                return jsonify({'status': 'success', 'text': msg.text})
+            else:
+                return jsonify({'status': 'error', 'message': 'Pesan teks tidak ditemukan.'})
+        except Exception as e:
+            logger.error(f"Fetch Error: {e}")
+            return jsonify({'status': 'error', 'message': 'Gagal ambil pesan. Pastikan bot sudah join grup.'})
+        finally:
+            await client.disconnect()
+
+    return run_async(_fetch())
 
 # ==============================================================================
 # SECTION 11: BROADCAST SYSTEM (TEXT + IMAGE)
@@ -1069,99 +1115,72 @@ def import_crm_api():
 @app.route('/start_broadcast', methods=['POST'])
 @login_required
 def start_broadcast():
-    """
-    Handle Broadcast Request (Text + Image Support).
-    Uses Background Thread for sending to prevent blocking.
-    
-    [UPGRADE] Added support for Template ID in form data.
-    """
     user_id = session['user_id']
     message = request.form.get('message')
-    template_id = request.form.get('template_id') # New Parameter
-    image_file = request.files.get('image') 
+    template_id = request.form.get('template_id')
+    selected_ids_str = request.form.get('selected_ids') # Tangkap ID
+    image_file = request.files.get('image')
     
-    # Logic Pemilihan Konten Pesan:
-    # 1. Jika User ketik pesan manual -> Pakai itu.
-    # 2. Jika pesan kosong TAPI pilih template -> Ambil dari template.
-    
+    # Logic Template
     if not message and template_id:
         tmpl = MessageTemplateManager.get_template_by_id(template_id)
-        if tmpl:
-            message = tmpl['content']
+        if tmpl: message = tmpl['content']
             
     if not message:
-        return jsonify({"status": "error", "message": "Pesan wajib diisi atau pilih template."})
+        return jsonify({"status": "error", "message": "Pesan wajib diisi."})
 
-    # Handle Image Upload
+    # Upload Image
     image_path = None
     if image_file and allowed_file(image_file.filename):
         filename = secure_filename(f"broadcast_{user_id}_{int(time.time())}_{image_file.filename}")
         image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         image_file.save(image_path)
 
-    # Define Background Worker
-    def _broadcast_worker(uid, msg, img_path):
+    # --- [INI BAGIAN WORKER YANG GUA PERBAIKI] ---
+    def _broadcast_worker(uid, msg, img_path, target_ids): # Tambah parameter target_ids
         async def _logic():
             client = await get_active_client(uid)
             if not client: 
                 if img_path and os.path.exists(img_path): os.remove(img_path)
                 return
-            
             try:
-                # Fetch CRM Users
-                crm_users = supabase.table('tele_users').select("*").eq('owner_id', uid).execute().data
+                # Query Dasar
+                query = supabase.table('tele_users').select("*").eq('owner_id', uid)
+                
+                # FILTER: Kalau ada ID terpilih, ambil user yang ID-nya cocok aja
+                if target_ids and target_ids.strip():
+                    id_list = target_ids.split(',')
+                    query = query.in_('user_id', id_list)
+                    logger.info(f"Broadcast targeted to {len(id_list)} users.")
+                
+                crm_users = query.execute().data
                 
                 for u in crm_users:
                     try:
-                        target_peer = None
-                        user_tele_id = int(u['user_id'])
-
-                        # CRITICAL FIX: Robust Entity Resolving
-                        # 1. Coba ambil dari cache
-                        try:
-                            target_peer = await client.get_input_entity(user_tele_id)
-                        except ValueError:
-                            # 2. Jika gagal, coba fetch paksa dari network (Slow but works)
-                            try:
-                                target_peer = await client.get_entity(user_tele_id)
-                            except Exception as e:
-                                logger.warning(f"Entity not found for {user_tele_id}: {e}")
-                                continue
-
-                        # Personalize Message
+                        target = await client.get_input_entity(int(u['user_id']))
                         final_msg = msg.replace("{name}", u.get('first_name') or "Kak")
                         
-                        # Send with or without Image
-                        if img_path:
-                            await client.send_file(target_peer, img_path, caption=final_msg)
-                        else:
-                            await client.send_message(target_peer, final_msg)
+                        if img_path: 
+                            await client.send_file(target, img_path, caption=final_msg)
+                        else: 
+                            await client.send_message(target, final_msg)
                             
-                        # Anti-Flood Delay
-                        await asyncio.sleep(3) 
+                        await asyncio.sleep(2) 
                     except Exception as e:
-                        logger.warning(f"Broadcast Fail to {u['user_id']}: {e}")
-            except Exception as e:
-                logger.error(f"Broadcast System Error: {e}")
+                        logger.error(f"Failed to {u['user_id']}: {e}")
             finally:
                 await client.disconnect()
-                # Cleanup Image after broadcast finishes
-                if img_path and os.path.exists(img_path):
-                    try: os.remove(img_path)
-                    except: pass
-
-        # Run Async Logic in New Event Loop
+                if img_path and os.path.exists(img_path): os.remove(img_path)
+        
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(_logic())
-        finally:
-            loop.close()
+        try: loop.run_until_complete(_logic())
+        finally: loop.close()
 
-    # Launch Thread
-    threading.Thread(target=_broadcast_worker, args=(user_id, message, image_path)).start()
+    # Pass selected_ids_str ke worker
+    threading.Thread(target=_broadcast_worker, args=(user_id, message, image_path, selected_ids_str)).start()
     
-    return jsonify({"status": "success", "message": "Broadcast sedang diproses di latar belakang!"})
+    return jsonify({"status": "success", "message": "Broadcast sedang diproses!"})
 
 # ==============================================================================
 # SECTION 12: CRUD ROUTES (SCHEDULE, TARGETS, & TEMPLATES)
@@ -1228,22 +1247,27 @@ def delete_target(id):
 
 # --- NEW ROUTES FOR TEMPLATES ---
 
-@app.route('/create_template', methods=['POST'])
+@app.route('/save_template', methods=['POST'])
 @login_required
-def create_template():
+def save_template():
     """API Endpoint untuk membuat template baru via Form"""
     name = request.form.get('name')
-    content = request.form.get('content')
+    content = request.form.get('message') # Pastikan name di HTML adalah 'message' atau sesuaikan
     
+    # Fallback kalau di form HTML name-nya 'content'
+    if not content:
+        content = request.form.get('content')
+
     if not name or not content:
         flash('Nama dan Isi Template wajib diisi.', 'warning')
         return redirect(url_for('dashboard_templates'))
         
+    # Panggil fungsi manager yang sudah diperbaiki di langkah 1
     success = MessageTemplateManager.create_template(session['user_id'], name, content)
     if success:
         flash('Template berhasil disimpan!', 'success')
     else:
-        flash('Gagal menyimpan template. Coba lagi.', 'danger')
+        flash('Gagal menyimpan template. Cek log.', 'danger')
         
     return redirect(url_for('dashboard_templates'))
 
