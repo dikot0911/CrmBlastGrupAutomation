@@ -1073,6 +1073,66 @@ def import_crm_api():
 #telegram API Routes fot tamplates
 @app.route('/api/fetch_message', methods=['POST'])
 @login_required
+def parse_telegram_link(link):
+    """
+    Logic Cerdas konversi Link Telegram jadi Entity & Message ID
+    Support:
+    - Public: https://t.me/username/123
+    - Private: https://t.me/c/1234567890/123
+    """
+    try:
+        parts = link.strip().split('/')
+        if len(parts) < 2: return None, None
+        
+        msg_id = int(parts[-1])
+        identifier = parts[-2]
+        
+        # Cek apakah link private (ada /c/)
+        if parts[-3] == 'c':
+            # Private Channel ID biasanya butuh prefix -100
+            # Link: t.me/c/1791234567/100 -> ID: -1001791234567
+            chat_id = int(f"-100{identifier}")
+        else:
+            # Public Username
+            chat_id = identifier
+            
+        return chat_id, msg_id
+    except:
+        return None, None
+
+# --- UPDATE MANAGER (User Isolation) ---
+class MessageTemplateManager:
+    @staticmethod
+    def get_templates(user_id):
+        if not supabase: return []
+        try:
+            # FILTER user_id DI SINI BIAR AMAN
+            res = supabase.table('message_templates').select("*").eq('user_id', user_id).order('created_at', desc=True).execute()
+            return res.data if res.data else []
+        except: return []
+
+    @staticmethod
+    def create_template(user_id, name, content, image_url=None):
+        if not supabase: return False
+        try:
+            data = {
+                'user_id': user_id,  # Menandai template milik user ini
+                'name': name, 
+                'message_text': content, 
+                'image_url': image_url,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            supabase.table('message_templates').insert(data).execute()
+            return True
+        except Exception as e:
+            logger.error(f"Template Create Error: {e}")
+            return False
+    
+    # ... (method delete dll biarin sama, pastikan ada .eq('user_id', user_id) juga)
+
+# --- UPDATE API FETCH ---
+@app.route('/api/fetch_message', methods=['POST'])
+@login_required
 def fetch_telegram_message():
     user_id = session['user_id']
     link = request.json.get('link')
@@ -1081,28 +1141,36 @@ def fetch_telegram_message():
     async def _fetch():
         client = await get_active_client(user_id)
         if not client: return jsonify({'status': 'error', 'message': 'Telegram belum terhubung.'})
+        
         try:
-            # Logic Parsing Link Telegram
-            parts = link.strip('/').split('/')
-            if len(parts) < 2: return jsonify({'status': 'error', 'message': 'Link tidak valid.'})
-            
-            msg_id = int(parts[-1])
-            entity_part = parts[-2]
-            
-            # Cek apakah private group (ada 'c')
-            if parts[-3] == 'c':
-                entity = int(f"-100{entity_part}") 
-            else:
-                entity = entity_part
+            # Pake Logic Parsing yang baru
+            entity, msg_id = parse_telegram_link(link)
+            if not entity or not msg_id:
+                return jsonify({'status': 'error', 'message': 'Format link tidak valid.'})
 
+            # Fetch pesan dari Telegram
             msg = await client.get_messages(entity, ids=msg_id)
-            if msg and msg.text:
-                return jsonify({'status': 'success', 'text': msg.text})
-            else:
-                return jsonify({'status': 'error', 'message': 'Pesan teks tidak ditemukan.'})
+            
+            if not msg: 
+                return jsonify({'status': 'error', 'message': 'Pesan tidak ditemukan / Bot belum join grup.'})
+
+            response = {
+                'status': 'success', 
+                'text': msg.text or "", 
+                'has_media': False
+            }
+
+            # Cek Media
+            if msg.media:
+                response['has_media'] = True
+                # Disini kita bisa tambah logic download gambar kalau mau
+                # Tapi untuk sekarang kita kasih info aja ke UI
+            
+            return jsonify(response)
+
         except Exception as e:
             logger.error(f"Fetch Error: {e}")
-            return jsonify({'status': 'error', 'message': 'Gagal ambil pesan. Pastikan bot sudah join grup.'})
+            return jsonify({'status': 'error', 'message': f'Gagal fetch: {str(e)}'})
         finally:
             await client.disconnect()
 
@@ -1262,25 +1330,32 @@ def delete_target(id):
 @app.route('/save_template', methods=['POST'])
 @login_required
 def save_template():
-    """API Endpoint untuk membuat template baru via Form"""
+    user_id = session['user_id']
     name = request.form.get('name')
-    content = request.form.get('message') # Pastikan name di HTML adalah 'message' atau sesuaikan
+    msg = request.form.get('message')
     
-    # Fallback kalau di form HTML name-nya 'content'
-    if not content:
-        content = request.form.get('content')
+    # Handle Upload Gambar Manual
+    image_file = request.files.get('image_file')
+    image_url = None
 
-    if not name or not content:
-        flash('Nama dan Isi Template wajib diisi.', 'warning')
+    if image_file and allowed_file(image_file.filename):
+        filename = secure_filename(f"template_{user_id}_{int(time.time())}_{image_file.filename}")
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        image_file.save(save_path)
+        # Simpan path relatif biar bisa diakses via static
+        image_url = f"/static/uploads/{filename}"
+
+    if not msg and not image_url: 
+        msg = request.form.get('content') # Fallback
+
+    if not name:
+        flash('Nama Template wajib diisi.', 'warning')
         return redirect(url_for('dashboard_templates'))
-        
-    # Panggil fungsi manager yang sudah diperbaiki di langkah 1
-    success = MessageTemplateManager.create_template(session['user_id'], name, content)
-    if success:
-        flash('Template berhasil disimpan!', 'success')
-    else:
-        flash('Gagal menyimpan template. Cek log.', 'danger')
-        
+    
+    if MessageTemplateManager.create_template(user_id, name, msg, image_url):
+        flash('Template tersimpan!', 'success')
+    else: flash('Gagal simpan.', 'danger')
+    
     return redirect(url_for('dashboard_templates'))
 
 @app.route('/delete_template/<int:id>')
