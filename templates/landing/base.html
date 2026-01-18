@@ -38,6 +38,8 @@
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script>
         AOS.init({ duration: 800, once: true });
+
+        // Navbar Scroll Effect
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('navbar');
             if (window.scrollY > 50) {
@@ -48,8 +50,41 @@
                 nav.classList.add('bg-white/80');
             }
         });
-        function toggleFaq(el) { el.parentElement.classList.toggle('active'); }
+
+        // --- INI SCRIPT FAQ YANG BENER (SUPORT ANIMASI) ---
+        function toggleFaq(button) {
+            // 1. Ambil konten jawaban (elemen sibling setelah button)
+            const content = button.nextElementSibling;
+            const icon = button.querySelector('i');
+
+            // 2. Cek apakah lagi kebuka?
+            // (Kalau max-height ada isinya, berarti lagi kebuka)
+            const isOpen = content.style.maxHeight;
+
+            // 3. Reset semua FAQ lain biar nutup (Auto-Close Other)
+            document.querySelectorAll('.faq-content').forEach(el => {
+                el.style.maxHeight = null; // Tutup
+                // Reset icon panah tetangga
+                if(el.previousElementSibling) {
+                    const otherIcon = el.previousElementSibling.querySelector('i');
+                    if(otherIcon) otherIcon.classList.remove('rotate-180');
+                    el.parentElement.classList.remove('border-indigo-500', 'ring-1', 'ring-indigo-100');
+                }
+            });
+
+            // 4. Kalau tadi posisinya nutup, sekarang kita BUKA
+            if (!isOpen) {
+                // Set tinggi sesuai isi konten (pixel exact) biar animasi jalan
+                content.style.maxHeight = content.scrollHeight + "px";
+                
+                // Puter panahnya
+                if(icon) icon.classList.add('rotate-180');
+                
+                // Kasih highlight ungu biar user fokus
+                button.parentElement.classList.add('border-indigo-500', 'ring-1', 'ring-indigo-100');
+            } 
+        }
     </script>
     
-    </body>
+</body>
 </html>
