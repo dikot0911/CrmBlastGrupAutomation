@@ -1,40 +1,93 @@
-<section id="faq" class="py-20 bg-white">
+<section id="faq" class="py-20 bg-gray-50">
     <div class="container mx-auto px-6 max-w-3xl">
-        <h2 class="text-3xl font-bold text-center mb-12" data-aos="fade-up">Pertanyaan Umum</h2>
+        <div class="text-center mb-12" data-aos="fade-up">
+            <h2 class="text-3xl font-extrabold text-gray-900">Pertanyaan Umum</h2>
+            <p class="mt-4 text-gray-500">Hal yang sering ditanyakan para pebisnis online di Kamboja.</p>
+        </div>
         
         <div class="space-y-4" data-aos="fade-up">
-            <!-- Item 1 -->
-            <div class="faq-item border border-gray-200 rounded-2xl p-5 cursor-pointer hover:bg-gray-50 transition bg-white" onclick="toggleFaq(this)">
-                <div class="flex justify-between items-center font-bold text-gray-800">
-                    <span>Apakah aman dari Banned Telegram?</span>
-                    <i class="fa-solid fa-chevron-down faq-icon text-gray-400 transition-transform duration-300"></i>
-                </div>
-                <div class="faq-answer text-gray-500 text-sm leading-relaxed">
-                    Sangat aman jika digunakan dengan bijak. Kami menggunakan algoritma "Human Behavior" yang memberikan jeda acak antar pesan, sehingga aktivitas bot terlihat natural. Kami juga menyarankan penggunaan akun kedua (secondary account).
-                </div>
-            </div>
-
-            <!-- Item 2 -->
-            <div class="faq-item border border-gray-200 rounded-2xl p-5 cursor-pointer hover:bg-gray-50 transition bg-white" onclick="toggleFaq(this)">
-                <div class="flex justify-between items-center font-bold text-gray-800">
-                    <span>Apakah perlu sewa VPS / Server sendiri?</span>
-                    <i class="fa-solid fa-chevron-down faq-icon text-gray-400 transition-transform duration-300"></i>
-                </div>
-                <div class="faq-answer text-gray-500 text-sm leading-relaxed">
-                    Tidak perlu! BlastPro adalah layanan berbasis Cloud (SaaS). Semua infrastruktur server kami yang kelola. Anda cukup login, atur jadwal, dan bisa matikan perangkat Anda. Bot tetap jalan 24 jam.
+            
+            <div class="faq-item group border border-indigo-100 rounded-2xl bg-white overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-indigo-300">
+                <button class="w-full flex justify-between items-center p-5 text-left focus:outline-none" onclick="toggleFaq(this)">
+                    <span class="font-bold text-indigo-900 text-lg">Kenapa BlastPro jauh lebih hemat dibanding Paid Promote Group?</span>
+                    <i class="fa-solid fa-chevron-down text-indigo-400 transition-transform duration-300 group-hover:text-indigo-600"></i>
+                </button>
+                <div class="faq-content max-h-0 overflow-hidden transition-all duration-500 ease-in-out">
+                    <div class="p-5 pt-0 text-gray-600 text-sm leading-relaxed border-t border-dashed border-indigo-100 mt-2">
+                        <p class="mb-3"><strong class="text-indigo-600">Ini hitungan matematisnya:</strong></p>
+                        <ul class="list-disc pl-5 space-y-2 mb-3">
+                            <li>Biasanya Anda sewa/pin post di <strong>1 Grup FJB</strong> biayanya <strong>$35 - $50</strong>, jangkauannya hanya 20.000 - 50.000 member di grup itu saja.</li>
+                            <li>Dengan <strong>BlastPro ($45)</strong>, Anda bisa kirim iklan ke <strong>PULUHAN GRUP</strong> sekaligus secara otomatis.</li>
+                        </ul>
+                        <p class="bg-indigo-50 p-3 rounded-lg text-indigo-800 font-semibold">
+                            🔥 Hasilnya: Dengan modal sama ($45), BlastPro bisa menjangkau 100.000+ calon pembeli di seluruh Kamboja, bukan cuma satu kolam!
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Item 3 -->
-            <div class="faq-item border border-gray-200 rounded-2xl p-5 cursor-pointer hover:bg-gray-50 transition bg-white" onclick="toggleFaq(this)">
-                <div class="flex justify-between items-center font-bold text-gray-800">
-                    <span>Bagaimana cara import data pelanggan?</span>
-                    <i class="fa-solid fa-chevron-down faq-icon text-gray-400 transition-transform duration-300"></i>
-                </div>
-                <div class="faq-answer text-gray-500 text-sm leading-relaxed">
-                    Fitur Import CRM kami bekerja dengan memindai riwayat chat pribadi (DM) di akun Telegram Anda. Sistem akan otomatis menyimpan Username dan Nama orang yang pernah berinteraksi dengan Anda ke database.
+            <div class="faq-item group border border-gray-200 rounded-2xl bg-white overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-gray-300">
+                <button class="w-full flex justify-between items-center p-5 text-left focus:outline-none" onclick="toggleFaq(this)">
+                    <span class="font-bold text-gray-800">Apakah aman dari Banned Telegram?</span>
+                    <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+                </button>
+                <div class="faq-content max-h-0 overflow-hidden transition-all duration-500 ease-in-out">
+                    <div class="p-5 pt-0 text-gray-500 text-sm leading-relaxed">
+                        Sangat aman jika digunakan sesuai panduan. Kami tidak menggunakan sistem "Spam Brutal". BlastPro dilengkapi algoritma <strong>"Human Behavior"</strong> yang memberikan jeda acak antar pesan, sehingga aktivitas bot terlihat natural seperti manusia mengetik. Kami tetap menyarankan penggunaan akun kedua (secondary account) untuk keamanan maksimal.
+                    </div>
                 </div>
             </div>
+
+            <div class="faq-item group border border-gray-200 rounded-2xl bg-white overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-gray-300">
+                <button class="w-full flex justify-between items-center p-5 text-left focus:outline-none" onclick="toggleFaq(this)">
+                    <span class="font-bold text-gray-800">Apakah HP/Laptop harus nyala terus (Perlu VPS)?</span>
+                    <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+                </button>
+                <div class="faq-content max-h-0 overflow-hidden transition-all duration-500 ease-in-out">
+                    <div class="p-5 pt-0 text-gray-500 text-sm leading-relaxed">
+                        <strong>TIDAK PERLU!</strong> BlastPro berbasis Cloud Server. Anda cukup Login, Setting Jadwal Iklan, lalu silakan matikan HP atau Laptop Anda. Robot kami yang bekerja 24 jam di server awan untuk mempromosikan produk Anda ke pasar Kamboja. Hemat kuota, hemat baterai.
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-item group border border-gray-200 rounded-2xl bg-white overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-gray-300">
+                <button class="w-full flex justify-between items-center p-5 text-left focus:outline-none" onclick="toggleFaq(this)">
+                    <span class="font-bold text-gray-800">Bagaimana cara kerja Import Data Pelanggan?</span>
+                    <i class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300"></i>
+                </button>
+                <div class="faq-content max-h-0 overflow-hidden transition-all duration-500 ease-in-out">
+                    <div class="p-5 pt-0 text-gray-500 text-sm leading-relaxed">
+                        Anda tidak perlu input manual satu per satu. Fitur <strong>Smart CRM</strong> kami akan otomatis memindai riwayat chat (DM) di akun Telegram jualan Anda. Sistem akan menarik data Username & Nama orang yang pernah chat dengan Anda, lalu menyimpannya menjadi Database Pelanggan siap Blast (Broadcast) untuk promo berikutnya.
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </section>
+
+<script>
+    function toggleFaq(button) {
+        // Ambil elemen konten jawaban (div di bawah button)
+        const content = button.nextElementSibling;
+        const icon = button.querySelector('i');
+
+        // Cek apakah sedang terbuka
+        const isOpen = content.style.maxHeight;
+
+        // Tutup semua FAQ lain dulu (biar rapi, cuma 1 yg kebuka)
+        document.querySelectorAll('.faq-content').forEach(el => {
+            el.style.maxHeight = null;
+            el.previousElementSibling.querySelector('i').classList.remove('rotate-180');
+            el.parentElement.classList.remove('border-indigo-500', 'ring-1', 'ring-indigo-100'); // Hapus highlight
+        });
+
+        // Jika tadi tertutup, maka sekarang BUKA
+        if (!isOpen) {
+            content.style.maxHeight = content.scrollHeight + "px";
+            icon.classList.add('rotate-180');
+            // Kasih highlight biar user fokus
+            button.parentElement.classList.add('border-indigo-500', 'ring-1', 'ring-indigo-100');
+        } 
+    }
+</script>
