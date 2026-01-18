@@ -1002,10 +1002,13 @@ def verify_code():
 # SECTION 10: BOT FEATURES API (SCAN, TARGETS, IMPORT)
 # ==============================================================================
 
+# Pastikan import functions ada di paling atas (baris 13-an). 
+# Kalau belum ada, tambahkan: from telethon import functions
+
 @app.route('/scan_groups_api')
 @login_required
 def scan_groups_api():
-    """Scan Groups/Channels/Forums"""
+    """Scan Groups/Channels/Forums (UPGRADED: RAW API FOR TOPICS)"""
     user_id = session['user_id']
     
     async def _scan():
@@ -1014,8 +1017,8 @@ def scan_groups_api():
         
         groups = []
         try:
-            # Scan limit 300 dialogs
-            async for dialog in client.iter_dialogs(limit=300):
+            # Scan limit 200 dialogs biar ga kelamaan
+            async for dialog in client.iter_dialogs(limit=200):
                 if dialog.is_group:
                     is_forum = getattr(dialog.entity, 'forum', False)
                     real_id = utils.get_peer_id(dialog.entity)
@@ -1027,14 +1030,33 @@ def scan_groups_api():
                         'topics': []
                     }
                     
-                    # Scan Topics if Forum
+                    # --- LOGIC KHUSUS FORUM (RAW API) ---
                     if is_forum:
                         try:
-                            topics = await client.get_forum_topics(dialog.entity, limit=10)
-                            if topics and topics.topics:
-                                for t in topics.topics:
-                                    g_data['topics'].append({'id': t.id, 'title': t.title})
-                        except: pass
+                            # Kita pake Request RAW biar lebih powerful
+                            from telethon import functions
+                            
+                            # Ambil Topik (Max 100)
+                            forum_res = await client(functions.channels.GetForumTopicsRequest(
+                                channel=dialog.entity,
+                                offset_date=0,
+                                offset_id=0,
+                                offset_topic=0,
+                                limit=100 
+                            ))
+
+                            if forum_res and forum_res.topics:
+                                for t in forum_res.topics:
+                                    # t adalah object ForumTopic
+                                    # Kadang title kosong, kita kasih fallback
+                                    t_title = getattr(t, 'title', '')
+                                    if not t_title: t_title = f"Topic #{t.id}"
+                                    
+                                    g_data['topics'].append({'id': t.id, 'title': t_title})
+                                    
+                        except Exception as e:
+                            # Log error ke console render biar tau kenapa gagal
+                            print(f"⚠️ Gagal scan topik grup {dialog.name}: {str(e)}")
                     
                     groups.append(g_data)
         except Exception as e:
