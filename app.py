@@ -1006,17 +1006,14 @@ def verify_code():
 # Pastikan import functions ada di paling atas (baris 13-an). 
 # Kalau belum ada, tambahkan: from telethon import functions
 
-# Pastikan import ini ada di paling atas
-from telethon import functions, types, utils
-
 @app.route('/scan_groups_api')
 @login_required
 def scan_groups_api():
-    """Scan Groups & Topics (FIXED: RAW API MANUAL LOOP v1.42)"""
+    """Scan Groups & Topics (NUCLEAR IMPORT METHOD)"""
     user_id = session['user_id']
     
     async def _scan():
-        # Cek versi lagi buat konfirmasi
+        # Cek versi lagi (sekedar info)
         import telethon
         print(f"✅ [INFO] Telethon Version: {telethon.__version__}")
 
@@ -1025,7 +1022,17 @@ def scan_groups_api():
         
         groups = []
         try:
-            # 1. Scan Grup (Limit 200)
+            # Import Paksa dari TL (Type Language) Schema
+            # Ini lokasi 'asli' fungsi tersebut berada
+            try:
+                from telethon.tl.functions.channels import GetForumTopicsRequest
+                from telethon.tl.types import ForumTopicDeleted, ForumTopic
+                HAS_RAW_API = True
+            except ImportError:
+                print("❌ FATAL: Telethon tidak punya GetForumTopicsRequest. Cek instalasi!")
+                HAS_RAW_API = False
+
+            # Scan Grup
             async for dialog in client.iter_dialogs(limit=200):
                 if dialog.is_group:
                     is_forum = getattr(dialog.entity, 'forum', False)
@@ -1038,23 +1045,21 @@ def scan_groups_api():
                         'topics': []
                     }
                     
-                    # 2. Logic Forum (RAW REQUEST MANUAL)
-                    if is_forum:
+                    if is_forum and HAS_RAW_API:
                         print(f"🔍 [SCAN] Forum: {dialog.name}")
                         try:
-                            # A. Resolve Entity (Wajib)
                             input_channel = await client.get_input_entity(real_id)
-                            
-                            # B. Loop Manual (Pake functions.channels.GetForumTopicsRequest)
-                            # Karena versi lu udah 1.42.0, fungsi ini SEKARANG ADA.
                             all_topics = []
+                            
+                            # Loop Manual
                             offset_id = 0
                             offset_date = 0
                             offset_topic = 0
                             
-                            for i in range(10): # Max 10 page (1000 topik)
+                            for i in range(10): 
                                 try:
-                                    req = functions.channels.GetForumTopicsRequest(
+                                    # PANGGIL RAW REQUEST LANGSUNG
+                                    req = GetForumTopicsRequest(
                                         channel=input_channel,
                                         offset_date=offset_date,
                                         offset_id=offset_id,
@@ -1064,48 +1069,47 @@ def scan_groups_api():
                                     )
                                     res = await client(req)
                                     
-                                    if not res.topics:
-                                        break # Data abis
+                                    if not res.topics: break
                                     
                                     for t in res.topics:
                                         t_id = getattr(t, 'id', None)
                                         if t_id:
-                                            # Handle Judul
                                             t_title = getattr(t, 'title', '')
-                                            # HandleDeleted
-                                            if isinstance(t, types.ForumTopicDeleted):
-                                                t_title = f"(Deleted) #{t_id}"
                                             
-                                            # Fallback Title
-                                            if not t_title: t_title = f"Topic #{t_id}"
+                                            # Cek Tipe
+                                            if isinstance(t, ForumTopicDeleted):
+                                                t_title = f"(Deleted) #{t_id}"
+                                            elif not t_title:
+                                                t_title = f"Topic #{t_id}"
+                                                
                                             if t_id == 1 and "Topic #1" in t_title: t_title = "General"
                                             
                                             all_topics.append({'id': t_id, 'title': t_title})
                                     
-                                    # Update Offset untuk next loop
+                                    # Update Offset
                                     last = res.topics[-1]
                                     offset_id = getattr(last, 'id', 0)
-                                    # Di raw object kadang gak ada date, kasih 0 aman
-                                    offset_date = getattr(last, 'date', 0) 
+                                    offset_date = getattr(last, 'date', 0)
                                     
-                                except Exception as loop_err:
-                                    print(f"   ⚠️ Loop error {i}: {loop_err}")
+                                except Exception as loop_e:
+                                    print(f"   ⚠️ Loop error: {loop_e}")
                                     break
 
-                            # C. Finalisasi
+                            # Sort & Fallback
                             all_topics.sort(key=lambda x: x['id'])
-                            
-                            # Paksa General Topic
                             if not any(t['id'] == 1 for t in all_topics):
                                 all_topics.insert(0, {'id': 1, 'title': 'General (Topik Utama) 📌'})
                                 
                             g_data['topics'] = all_topics
-                            print(f"   ✅ Dapet {len(all_topics)} topik")
+                            print(f"   ✅ Sukses: {len(all_topics)} topik")
 
                         except Exception as e:
-                            print(f"   🔥 Gagal total {dialog.name}: {e}")
+                            print(f"   🔥 Gagal Forum: {e}")
                             g_data['topics'].append({'id': 1, 'title': 'General (Fallback)'})
                     
+                    elif is_forum and not HAS_RAW_API:
+                         g_data['topics'].append({'id': 1, 'title': 'General (Fallback - Library Error)'})
+
                     groups.append(g_data)
                     
         except Exception as e:
