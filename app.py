@@ -13,7 +13,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_from_directory
 
 # --- TELETHON & SUPABASE ---
-from telethon import TelegramClient, errors, functions, utils
+from telethon import TelegramClient, errors, functions, types, utils
 from telethon.sessions import StringSession
 from supabase import create_client, Client
 
@@ -1008,7 +1008,7 @@ def verify_code():
 @app.route('/scan_groups_api')
 @login_required
 def scan_groups_api():
-    """Scan Groups/Channels/Forums (UPGRADED: RAW API FOR TOPICS)"""
+    """Scan Groups/Channels/Forums (ULTIMATE VERSION: AUTO-DETECT + GENERAL TOPIC)"""
     user_id = session['user_id']
     
     async def _scan():
@@ -1017,7 +1017,7 @@ def scan_groups_api():
         
         groups = []
         try:
-            # Scan limit 200 dialogs biar ga kelamaan
+            # Scan limit 200 dialogs
             async for dialog in client.iter_dialogs(limit=200):
                 if dialog.is_group:
                     is_forum = getattr(dialog.entity, 'forum', False)
@@ -1030,36 +1030,48 @@ def scan_groups_api():
                         'topics': []
                     }
                     
-                    # --- LOGIC KHUSUS FORUM (RAW API) ---
+                    # --- LOGIC KHUSUS FORUM ---
                     if is_forum:
+                        logger.info(f"🔍 Scanning topics for: {dialog.name} ({real_id})")
+                        found_topics = []
+                        
                         try:
-                            # Kita pake Request RAW biar lebih powerful
-                            from telethon import functions
-                            
-                            # Ambil Topik (Max 100)
-                            forum_res = await client(functions.channels.GetForumTopicsRequest(
-                                channel=dialog.entity,
-                                offset_date=0,
-                                offset_id=0,
-                                offset_topic=0,
-                                limit=100 
-                            ))
-
-                            if forum_res and forum_res.topics:
-                                for t in forum_res.topics:
-                                    # t adalah object ForumTopic
-                                    # Kadang title kosong, kita kasih fallback
-                                    t_title = getattr(t, 'title', '')
-                                    if not t_title: t_title = f"Topic #{t.id}"
-                                    
-                                    g_data['topics'].append({'id': t.id, 'title': t_title})
-                                    
+                            # STEP 1: Coba cara halus (High Level API)
+                            # iter_forum_topics kadang lebih stabil daripada GetForumTopicsRequest langsung
+                            async for t in client.iter_forum_topics(dialog.entity, limit=50):
+                                t_title = getattr(t, 'title', '') or f"Topic #{t.id}"
+                                found_topics.append({'id': t.id, 'title': t_title})
+                                
                         except Exception as e:
-                            # Log error ke console render biar tau kenapa gagal
-                            print(f"⚠️ Gagal scan topik grup {dialog.name}: {str(e)}")
+                            logger.warning(f"⚠️ Scan Method 1 failed for {dialog.name}: {e}")
+                            
+                            # STEP 2: Coba cara kasar (RAW API) jika cara halus gagal
+                            try:
+                                input_peer = utils.get_input_channel(dialog.entity)
+                                res = await client(functions.channels.GetForumTopicsRequest(
+                                    channel=input_peer,
+                                    offset_date=0, offset_id=0, offset_topic=0, limit=50
+                                ))
+                                if res.topics:
+                                    for t in res.topics:
+                                        t_title = getattr(t, 'title', '') or f"Topic #{t.id}"
+                                        found_topics.append({'id': t.id, 'title': t_title})
+                            except Exception as e2:
+                                logger.error(f"❌ Scan Method 2 also failed: {e2}")
+
+                        # STEP 3: Pastikan General Topic selalu ada
+                        # Cek apakah ID 1 (General) udah keambil? Kalau belum, masukin manual.
+                        has_general = any(t['id'] == 1 for t in found_topics)
+                        if not has_general:
+                            # Masukkan Topik General di paling atas
+                            found_topics.insert(0, {'id': 1, 'title': 'General / Topik Utama 📌'})
+
+                        g_data['topics'] = found_topics
                     
                     groups.append(g_data)
+                    
         except Exception as e:
+            logger.error(f"Global Scan Error: {e}")
             return jsonify({'status': 'error', 'message': f"Scan Failed: {str(e)}"})
         finally:
             await client.disconnect()
