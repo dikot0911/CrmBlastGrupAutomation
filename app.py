@@ -219,43 +219,61 @@ class MessageTemplateManager:
     @staticmethod
     def delete_template(user_id, template_id):
         """
-        Menghapus template dengan Pengecekan Jadwal.
+        Menghapus template dengan Validasi Ketat, Cek Jadwal & Anti-Crash.
         Returns: (Success: bool, Message: str)
         """
-        if not supabase: return False, "Database Error"
+        # 1. Cek Koneksi Database
+        if not supabase: 
+            return False, "❌ Database Terputus (Disconnected)"
         
         try:
-            # 1. CEK DULU: Apakah template ini dipake di jadwal?
-            # Kita cari di tabel blast_schedules
-            usage_check = supabase.table('blast_schedules')\
-                .select("run_hour, run_minute")\
-                .eq('template_id', template_id)\
-                .eq('is_active', True)\
+            # 2. Validasi Tipe Data (Biar gak error konversi)
+            try:
+                t_id = int(template_id)
+            except ValueError:
+                return False, "❌ ID Template tidak valid."
+
+            # 3. CEK PENGGUNAAN (Safety Check Level 1)
+            # Cek apakah template lagi dipake di jadwal aktif?
+            try:
+                usage_check = supabase.table('blast_schedules')\
+                    .select("run_hour, run_minute")\
+                    .eq('template_id', t_id)\
+                    .eq('is_active', True)\
+                    .execute()
+                
+                # Kalau ketemu jadwal yang pake template ini -> TOLAK HAPUS
+                if usage_check.data and len(usage_check.data) > 0:
+                    times = [f"{s['run_hour']:02d}:{s['run_minute']:02d}" for s in usage_check.data]
+                    time_str = ", ".join(times)
+                    return False, f"⚠️ Gagal Hapus! Template ini sedang AKTIF digunakan pada Jadwal Pukul: {time_str} WIB. Harap hapus atau ganti jadwalnya terlebih dahulu."
+            except Exception as e:
+                # Kalau gagal cek jadwal (misal tabel belum sync), log aja dan lanjut ke step delete (biar database yang nahan)
+                logger.warning(f"Usage Check Warning: {e}")
+
+            # 4. EKSEKUSI HAPUS (Safety Check Level 2)
+            # Hapus hanya jika ID cocok DAN User ID cocok (Security Isolation)
+            res = supabase.table('message_templates').delete()\
+                .eq('id', t_id)\
+                .eq('user_id', user_id)\
                 .execute()
             
-            # Kalau ada isinya, berarti LAGI DIPAKE
-            if usage_check.data and len(usage_check.data) > 0:
-                # Ambil jam-jam jadwalnya buat laporan ke user
-                used_at = [f"{s['run_hour']:02d}:{s['run_minute']:02d}" for s in usage_check.data]
-                time_list = ", ".join(used_at)
-                return False, f"⚠️ Gagal Hapus! Template ini sedang aktif untuk Jadwal Pukul: {time_list} WIB. Hapus/Ganti jadwal dulu."
-
-            # 2. Kalau aman (ga dipake), baru HAPUS
-            res = supabase.table('message_templates').delete().eq('id', template_id).eq('user_id', user_id).execute()
-            
-            if res.data:
-                return True, "✅ Template berhasil dihapus."
+            # 5. VERIFIKASI HASIL
+            if res.data and len(res.data) > 0:
+                return True, "✅ Template berhasil dihapus permanen."
             else:
-                return False, "Template tidak ditemukan atau bukan milik Anda."
+                return False, "❌ Template tidak ditemukan atau sudah dihapus."
                 
         except Exception as e:
-            # Tangkap error database (misal constraint violation)
-            if "violates foreign key constraint" in str(e):
-                return False, "Template sedang digunakan di sistem dan tidak bisa dihapus."
-            
+            err_msg = str(e).lower()
             logger.error(f"Template Delete Error: {e}")
-            return False, f"Error sistem: {str(e)}"
-
+            
+            # Tangkap Error Constraint (Foreign Key) dari Database
+            if "foreign key" in err_msg or "constraint" in err_msg:
+                return False, "🔒 Tidak bisa dihapus: Template ini terkunci karena masih terhubung dengan riwayat broadcast atau jadwal."
+            
+            # Tangkap Error Lainnya
+            return False, f"⚠️ System Error: {str(e)}"
 # ==============================================================================
 # SECTION 4.6: SCHEDULER & AUTO-BLAST WORKER (NEW FEATURE)
 # ==============================================================================
