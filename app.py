@@ -1156,36 +1156,6 @@ def parse_telegram_link(link):
         logger.error(f"Link Parse Error: {e}")
         return None, None
 
-# --- UPDATE MANAGER (User Isolation) ---
-class MessageTemplateManager:
-    @staticmethod
-    def get_templates(user_id):
-        if not supabase: return []
-        try:
-            # FILTER user_id DI SINI BIAR AMAN
-            res = supabase.table('message_templates').select("*").eq('user_id', user_id).order('created_at', desc=True).execute()
-            return res.data if res.data else []
-        except: return []
-
-    @staticmethod
-    def create_template(user_id, name, content, image_url=None):
-        if not supabase: return False
-        try:
-            data = {
-                'user_id': user_id,  # Menandai template milik user ini
-                'name': name, 
-                'message_text': content, 
-                'image_url': image_url,
-                'created_at': datetime.utcnow().isoformat()
-            }
-            supabase.table('message_templates').insert(data).execute()
-            return True
-        except Exception as e:
-            logger.error(f"Template Create Error: {e}")
-            return False
-    
-    # ... (method delete dll biarin sama, pastikan ada .eq('user_id', user_id) juga)
-
 # --- UPDATE API FETCH ---
 @app.route('/api/fetch_message', methods=['POST'])
 @login_required
