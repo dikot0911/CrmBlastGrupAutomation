@@ -2,189 +2,257 @@
 {% block title %}Koneksi Telegram{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto animate-enter">
-    <div class="text-center mb-10">
-        <h1 class="text-3xl font-bold text-gray-800">Hubungkan Telegram</h1>
-        <p class="text-gray-500 mt-2">Agar bot bisa berjalan, Anda perlu menghubungkan akun Telegram Anda.</p>
+<div class="max-w-7xl mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8">
+    
+    <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Manajer Akun</h1>
+            <p class="text-gray-500 mt-1 text-sm">Hubungkan nomor Telegram untuk digunakan sebagai pengirim broadcast.</p>
+        </div>
+        
+        <button onclick="openConnectModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition transform hover:-translate-y-1 flex items-center gap-2">
+            <i class="fa-solid fa-plus"></i> Tambah Akun
+        </button>
     </div>
 
-    {% if user.telegram_account and user.telegram_account.is_active %}
-    <!-- SUDAH LOGIN -->
-    <div class="bg-white rounded-3xl shadow-xl border border-green-100 p-10 text-center relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-green-400 to-emerald-600"></div>
-        <div class="absolute -top-10 -right-10 w-32 h-32 bg-green-50 rounded-full opacity-50 blur-xl"></div>
-        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-emerald-50 rounded-full opacity-50 blur-xl"></div>
-
-        <div class="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 relative shadow-inner">
-            <div class="absolute w-full h-full rounded-full border-4 border-green-100 animate-ping opacity-20"></div>
-            <i class="fa-brands fa-telegram text-5xl text-green-500"></i>
-            <div class="absolute bottom-1 right-1 w-6 h-6 bg-green-500 border-4 border-white rounded-full shadow-sm" title="Online"></div>
-        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        <h2 class="text-2xl font-bold text-gray-800 mb-2">Terhubung Sempurna!</h2>
-        <p class="text-gray-500 mb-8 max-w-md mx-auto">Akun <strong>{{ user.telegram_account.phone_number }}</strong> sedang aktif.</p>
-        
-        <div class="bg-gray-50 rounded-2xl p-6 inline-flex flex-col gap-4 text-left border border-gray-100 min-w-[280px]">
-            <div class="flex justify-between items-center border-b border-gray-200 pb-3">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Nomor</span>
-                <span class="font-mono font-bold text-gray-800 text-lg">{{ user.telegram_account.phone_number }}</span>
-            </div>
-            <div class="flex justify-between items-center pt-1">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Status</span>
-                <span class="px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full font-bold shadow-sm border border-green-200">ONLINE</span>
-            </div>
-        </div>
-        
-        <div class="mt-8">
-            <button onclick="if(confirm('Yakin ingin memutus koneksi?')) alert('Hubungi admin untuk reset sesi demi keamanan.')" class="text-red-500 hover:text-red-700 text-sm font-bold hover:underline transition flex items-center justify-center gap-2 mx-auto">
-                <i class="fa-solid fa-power-off"></i> Putuskan Koneksi
-            </button>
-        </div>
-    </div>
-
-    {% else %}
-    <!-- FORM LOGIN -->
-    <div class="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10 relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full -mr-32 -mt-32 opacity-50 blur-2xl"></div>
-        
-        <!-- STEP 1: NOMOR HP -->
-        <div id="step1" class="relative z-10">
-            <div class="flex items-center gap-4 mb-6">
-                <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 text-xl">
-                    <i class="fa-solid fa-mobile-screen-button"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-lg text-gray-800">Langkah 1</h3>
-                    <p class="text-sm text-gray-500">Masukkan nomor Telegram Anda.</p>
-                </div>
-            </div>
-
-            <div class="mb-6">
-                <label class="block text-sm font-bold text-gray-700 mb-2">Nomor HP Telegram</label>
-                <div class="relative">
-                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fa-solid fa-phone"></i></span>
-                    <input type="text" id="phone" placeholder="+628123456789" class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition font-mono text-gray-800 placeholder-gray-400">
-                </div>
-                <p class="text-xs text-gray-400 mt-2 flex items-center gap-1"><i class="fa-solid fa-circle-info text-indigo-400"></i> Gunakan kode negara (contoh: +62).</p>
-            </div>
-            <button onclick="sendOTP()" id="btnSend" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 transform hover:-translate-y-0.5 active:scale-95">
-                Kirim Kode OTP <i class="fa-solid fa-arrow-right ml-2"></i>
-            </button>
-        </div>
-
-        <!-- STEP 2: OTP -->
-        <div id="step2" class="hidden relative z-10">
-            <div class="flex items-center gap-4 mb-6">
-                <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-yellow-600 text-xl">
-                    <i class="fa-solid fa-shield-halved"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-lg text-gray-800">Langkah 2</h3>
-                    <p class="text-sm text-gray-500">Verifikasi identitas Anda.</p>
-                </div>
-            </div>
-
-            <div class="mb-5">
-                <label class="block text-sm font-bold text-gray-700 mb-2">Kode OTP (Cek Telegram App)</label>
-                <input type="text" id="otp" placeholder="1 2 3 4 5" class="w-full p-4 border-2 border-indigo-100 rounded-xl focus:ring-0 focus:border-indigo-500 outline-none font-mono text-center text-2xl tracking-[0.5em] text-indigo-600 font-bold bg-indigo-50/30">
-            </div>
-            <div class="mb-8">
-                <label class="block text-sm font-bold text-gray-700 mb-2 flex justify-between">
-                    <span>Password 2FA</span>
-                    <span class="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Opsional</span>
-                </label>
-                <div class="relative">
-                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fa-solid fa-lock"></i></span>
-                    <input type="password" id="pw" placeholder="Isi hanya jika akun pakai password" class="w-full pl-11 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition text-sm">
-                </div>
-            </div>
+        {% for acc in accounts %}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition relative group overflow-hidden">
+            <div class="h-1.5 w-full {{ 'bg-green-500' if acc.is_active else 'bg-yellow-500' }}"></div>
             
-            <div class="flex gap-3">
-                <button onclick="location.reload()" class="px-6 py-3.5 border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition">
-                    Batal
-                </button>
-                <button onclick="verifyOTP()" id="btnVerify" class="flex-1 bg-green-600 text-white font-bold py-3.5 rounded-xl hover:bg-green-700 transition shadow-lg shadow-green-200 transform hover:-translate-y-0.5 active:scale-95">
-                    Masuk Sekarang <i class="fa-solid fa-check ml-2"></i>
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl">
+                        <i class="fa-brands fa-telegram"></i>
+                    </div>
+                    {% if acc.is_active %}
+                    <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide border border-green-200">
+                        Aktif
+                    </span>
+                    {% else %}
+                    <span class="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide border border-yellow-200">
+                        Pending
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <h3 class="text-lg font-bold text-gray-800 mb-1">{{ acc.phone_number }}</h3>
+                <p class="text-xs text-gray-400 font-mono">Added: {{ acc.created_at[:10] }}</p>
+                
+                <div class="mt-6 pt-4 border-t border-gray-50 flex justify-between items-center">
+                    <span class="text-xs text-gray-400">ID: ...{{ acc.id|string|slice(-4) }}</span>
+                    <button onclick="disconnectAccount('{{ acc.phone_number }}')" class="text-red-400 hover:text-red-600 text-sm font-bold flex items-center gap-1 transition">
+                        <i class="fa-solid fa-trash-can"></i> Hapus
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full py-16 text-center bg-white rounded-2xl border-2 border-dashed border-gray-200">
+            <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
+                <i class="fa-solid fa-plug-circle-xmark text-4xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-700">Belum Ada Akun</h3>
+            <p class="text-gray-500 text-sm mt-1">Klik tombol "Tambah Akun" untuk mulai menghubungkan.</p>
+        </div>
+        {% endfor %}
+
+    </div>
+    
+    <div class="mt-8 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex gap-3 items-center max-w-2xl">
+        <i class="fa-solid fa-circle-info text-indigo-500 text-xl"></i>
+        <div>
+            <h4 class="text-sm font-bold text-indigo-900">Informasi Paket</h4>
+            <p class="text-xs text-indigo-700 mt-0.5">
+                Paket Free/Basic saat ini mendukung maksimal <b>3 Akun Telegram</b>. Hubungi Admin untuk Enterprise.
+            </p>
+        </div>
+    </div>
+
+</div>
+
+<div id="connectModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+    <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-95 opacity-0" id="modalPanel">
+            
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
+                <h3 class="text-white font-bold text-lg"><i class="fa-solid fa-link mr-2"></i> Tambah Akun</h3>
+                <button onclick="closeModal()" class="text-indigo-200 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="p-6">
+                <div id="step1">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Nomor Telegram</label>
+                    <div class="relative mb-4">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 font-bold text-sm">🇮🇩</span>
+                        </div>
+                        <input type="text" id="phoneInput" placeholder="+628xxx" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-mono">
+                    </div>
+                    <button onclick="sendOtp()" id="btnSendOtp" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-indigo-200">
+                        Kirim Kode OTP
+                    </button>
+                </div>
+
+                <div id="step2" class="hidden">
+                    <div class="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-4 text-xs text-blue-700 flex gap-2">
+                        <i class="fa-solid fa-paper-plane mt-0.5"></i>
+                        <span>Kode dikirim ke aplikasi Telegram di HP Anda (Bukan SMS).</span>
+                    </div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Kode OTP</label>
+                    <input type="text" id="otpInput" placeholder="12345" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition text-center font-bold text-lg tracking-widest mb-4">
+                    
+                    <div id="passField" class="hidden mb-4 animate-enter">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Password 2FA (Jika ada)</label>
+                        <input type="password" id="pwInput" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+
+                    <button onclick="verifyOtp()" id="btnVerify" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-green-200">
+                        Verifikasi & Login
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="limitModal" class="fixed inset-0 z-[60] hidden">
+    <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" onclick="closeLimitModal()"></div>
+    <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center transform scale-100 transition-all">
+            <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 class="text-xl font-extrabold text-gray-900 mb-2">Limit Tercapai!</h3>
+            <p class="text-sm text-gray-500 mb-6">
+                Anda telah mencapai batas maksimal <b>3 Akun Telegram</b>. Untuk menambah lebih banyak, silakan hubungi admin untuk upgrade ke paket <b>Enterprise</b>.
+            </p>
+            <div class="space-y-3">
+                <a href="https://wa.me/628972996650?text=Halo%20Admin%2C%20saya%20mau%20upgrade%20slot%20akun%20Telegram%20dong!" target="_blank" class="block w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition">
+                    <i class="fa-brands fa-whatsapp mr-1"></i> Hubungi Admin
+                </a>
+                <button onclick="closeLimitModal()" class="block w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 transition">
+                    Nanti Saja
                 </button>
             </div>
         </div>
-        
-        <!-- Loading Overlay -->
-        <div id="auth-loading" class="hidden absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-20 rounded-3xl backdrop-blur-sm">
-            <div class="loader-spinner w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-            <p class="text-indigo-900 font-bold">Memproses...</p>
-        </div>
     </div>
-    {% endif %}
 </div>
-{% endblock %}
 
-{% block scripts %}
 <script>
-    async function sendOTP() {
-        const phone = document.getElementById('phone').value;
-        const btn = document.getElementById('btnSend');
-        
-        if(!phone) return alert("Masukkan nomor HP!");
+    const modal = document.getElementById('connectModal');
+    const panel = document.getElementById('modalPanel');
+    const limitModal = document.getElementById('limitModal');
 
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Mengirim...';
+    function openConnectModal() {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            panel.classList.remove('scale-95', 'opacity-0');
+            panel.classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+
+    function closeModal() {
+        panel.classList.remove('scale-100', 'opacity-100');
+        panel.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            // Reset Steps
+            document.getElementById('step1').classList.remove('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('passField').classList.add('hidden');
+        }, 300);
+    }
+
+    function closeLimitModal() {
+        limitModal.classList.add('hidden');
+    }
+
+    async function sendOtp() {
+        const phone = document.getElementById('phoneInput').value;
+        const btn = document.getElementById('btnSendOtp');
+        
+        if(!phone) return alert("Isi nomor dulu!");
+        
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending...';
         btn.disabled = true;
-        btn.classList.add('opacity-75', 'cursor-not-allowed');
 
         try {
-            const res = await apiRequest('/api/connect/send_code', 'POST', {phone});
-            document.getElementById('auth-loading').classList.add('hidden');
-            
-            if (res.status === 'success') {
+            const res = await fetch('/api/connect/send_code', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({phone: phone})
+            });
+            const data = await res.json();
+
+            if(data.status === 'success') {
                 document.getElementById('step1').classList.add('hidden');
                 document.getElementById('step2').classList.remove('hidden');
-            } else if (res.status === 'cooldown') {
-                alert(res.message);
+            } else if (data.status === 'limit_reached') {
+                closeModal();
+                limitModal.classList.remove('hidden'); // Show Upselling Modal
             } else {
-                alert(res.message);
+                alert("Gagal: " + data.message);
             }
         } catch(e) {
-            document.getElementById('auth-loading').classList.add('hidden');
-            alert("Gagal menghubungi server.");
+            alert("Error koneksi.");
         } finally {
-            if(document.getElementById('step1').classList.contains('hidden')) return;
-            btn.innerHTML = 'Kirim Kode OTP <i class="fa-solid fa-arrow-right ml-2"></i>';
+            btn.innerHTML = 'Kirim Kode OTP';
             btn.disabled = false;
-            btn.classList.remove('opacity-75', 'cursor-not-allowed');
         }
     }
 
-    async function verifyOTP() {
-        const otp = document.getElementById('otp').value;
-        const pw = document.getElementById('pw').value;
+    async function verifyOtp() {
+        const otp = document.getElementById('otpInput').value;
+        const pw = document.getElementById('pwInput').value;
         const btn = document.getElementById('btnVerify');
 
-        if(!otp) return alert("Masukkan kode OTP!");
-
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Verifikasi...';
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verifying...';
         btn.disabled = true;
-        btn.classList.add('opacity-75', 'cursor-not-allowed');
 
         try {
-            const res = await apiRequest('/api/connect/verify_code', 'POST', {otp, password: pw});
+            const res = await fetch('/api/connect/verify_code', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({otp: otp, password: pw})
+            });
+            const data = await res.json();
 
-            if (res.status === 'success') {
-                // Show success visual
-                btn.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Berhasil!';
-                btn.classList.remove('bg-green-600', 'hover:bg-green-700');
-                btn.classList.add('bg-emerald-500');
-                setTimeout(() => location.reload(), 1000);
+            if(data.status === 'success') {
+                location.reload();
+            } else if (data.status === '2fa') {
+                document.getElementById('passField').classList.remove('hidden');
+                alert("Akun ini pakai password 2FA. Masukkan password.");
             } else {
-                alert(res.message);
-                btn.innerHTML = 'Masuk Sekarang <i class="fa-solid fa-check ml-2"></i>';
-                btn.disabled = false;
-                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                alert("Gagal: " + data.message);
             }
         } catch(e) {
-            alert("Gagal verifikasi.");
-            btn.innerHTML = 'Masuk Sekarang <i class="fa-solid fa-check ml-2"></i>';
+            alert("Error koneksi.");
+        } finally {
+            btn.innerHTML = 'Verifikasi & Login';
             btn.disabled = false;
-            btn.classList.remove('opacity-75', 'cursor-not-allowed');
+        }
+    }
+
+    async function disconnectAccount(phone) {
+        if(!confirm(`Yakin mau menghapus akun ${phone}?`)) return;
+        
+        try {
+            const res = await fetch('/api/connect/disconnect', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({phone: phone})
+            });
+            const data = await res.json();
+            if(data.status === 'success') {
+                location.reload();
+            } else {
+                alert("Gagal hapus: " + data.message);
+            }
+        } catch(e) {
+            alert("Error koneksi.");
         }
     }
 </script>
