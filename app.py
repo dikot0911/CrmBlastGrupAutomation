@@ -350,31 +350,59 @@ class SchedulerWorker:
 
     @staticmethod
     def _execute_task(task):
-        """Eksekusi satu task jadwal (Support Forum Topic)"""
+        """
+        Eksekusi satu task jadwal dengan dukungan Multi-Account & Forum Topic.
+        Logika: Cek dulu sender_phone, kalau ada pakai itu. Kalau mati/gak ada, pakai akun default.
+        """
         user_id = task['user_id']
         template_id = task.get('template_id') 
         target_group_id = task.get('target_group_id') 
+        sender_phone = task.get('sender_phone') # [NEW] Ambil preferensi akun pengirim
         
-        # 1. Siapkan Pesan
+        # 1. Siapkan Pesan & Media
         message_content = "Halo! Ini pesan terjadwal otomatis."
         source_media = None
         
-        # Logic Template & Media Source (Copy Media)
         if template_id:
             tmpl = MessageTemplateManager.get_template_by_id(template_id)
             if tmpl:
                 message_content = tmpl['message_text']
-                # Cek Reference Media
+                # Cek Reference Media (Untuk forward media dari cloud)
                 if tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
                     source_media = {'chat': int(tmpl['source_chat_id']), 'id': int(tmpl['source_message_id'])}
 
-        # 2. Worker Async
+        # 2. Worker Async (Core Logic)
         async def _async_send():
-            client = await get_active_client(user_id)
-            if not client: return
+            client = None
+            
+            # [LOGIC BARU: PILIH AKUN PENGIRIM]
+            # Jika user memilih nomor spesifik di jadwal, kita coba connect pakai nomor itu
+            if sender_phone and sender_phone != 'auto':
+                try:
+                    # Ambil session string khusus akun tersebut dari database
+                    res = supabase.table('telegram_accounts').select("session_string")\
+                        .eq('user_id', user_id)\
+                        .eq('phone_number', sender_phone)\
+                        .eq('is_active', True)\
+                        .execute()
+                    
+                    if res.data:
+                        # Connect manual pakai session string akun tsb
+                        session_str = res.data[0]['session_string']
+                        client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
+                        await client.connect()
+                except Exception as e:
+                    print(f"⚠️ Gagal switch ke akun {sender_phone}: {e}")
+
+            # Fallback: Kalau akun spesifik mati atau user pilih 'Auto', pakai akun default (yg pertama aktif)
+            if not client or not await client.is_user_authorized():
+                client = await get_active_client(user_id)
+            
+            # Kalau semua akun mati, nyerah.
+            if not client: return 
             
             try:
-                # Load Media jika ada
+                # Load Media dari Cloud Telegram (jika ada di template)
                 media_obj = None
                 if source_media:
                     try:
@@ -382,54 +410,64 @@ class SchedulerWorker:
                         if src_msg and src_msg.media: media_obj = src_msg.media
                     except: pass
 
-                # Ambil Target
+                # Ambil Target Audience
                 targets_query = supabase.table('blast_targets').select("*").eq('user_id', user_id)
+                # Filter jika user memilih grup target spesifik
                 if target_group_id: targets_query = targets_query.eq('id', target_group_id)
                 targets = targets_query.execute().data
                 
+                # Loop kirim ke setiap target
                 for tg in targets:
                     try:
                         entity = await client.get_entity(int(tg['group_id']))
                         
-                        # --- LOGIC BARU: HANDLING TOPIK ---
-                        # Cek apakah ada topic_ids yang disimpan
+                        # Handling Topik Forum
                         topic_ids = []
                         if tg.get('topic_ids'):
-                            # Convert string "123,456" jadi list [123, 456]
                             try: topic_ids = [int(x.strip()) for x in str(tg['topic_ids']).split(',') if x.strip().isdigit()]
                             except: pass
                         
-                        # Tentukan Destinasi (List of 'reply_to')
-                        # Kalau gak ada topik, kirim sekali (reply_to=None)
+                        # Jika ada topik, kirim ke masing-masing topik. Jika tidak, kirim ke General (None)
                         destinations = topic_ids if topic_ids else [None]
                         
                         for top_id in destinations:
                             final_msg = message_content.replace("{name}", tg.get('group_name') or "Kak")
                             
-                            # Kirim (Pake reply_to buat nembak Topik)
+                            # Eksekusi Kirim
                             if media_obj:
                                 await client.send_file(entity, media_obj, caption=final_msg, reply_to=top_id)
                             else:
                                 await client.send_message(entity, final_msg, reply_to=top_id)
                             
-                            # Log Sukses
+                            # Catat Log Sukses
+                            # Info sender dicatat biar user tau "Oh ini dikirim sama akun B"
+                            sender_info = f"via {sender_phone}" if sender_phone else "via Default"
                             topik_info = f" (Topic: {top_id})" if top_id else ""
+                            
                             supabase.table('blast_logs').insert({
-                                "user_id": user_id, "group_name": f"{tg['group_name']}{topik_info}",
-                                "group_id": tg['group_id'], "status": "SUCCESS", 
+                                "user_id": user_id, 
+                                "group_name": f"{tg['group_name']}{topik_info} ({sender_info})",
+                                "group_id": tg['group_id'], 
+                                "status": "SUCCESS", 
                                 "created_at": datetime.utcnow().isoformat()
                             }).execute()
                             
-                            await asyncio.sleep(3) # Delay antar topik/grup
+                            # Jeda random biar aman (Anti-Flood)
+                            await asyncio.sleep(random.randint(5, 10)) 
 
                     except Exception as e:
+                        # Log Gagal
                         supabase.table('blast_logs').insert({
-                            "user_id": user_id, "group_name": tg.get('group_name', '?'),
-                            "status": "FAILED", "error_message": str(e), 
+                            "user_id": user_id, 
+                            "group_name": tg.get('group_name', '?'),
+                            "status": "FAILED", 
+                            "error_message": str(e), 
                             "created_at": datetime.utcnow().isoformat()
                         }).execute()
-            finally: await client.disconnect()
+            finally: 
+                await client.disconnect()
         
+        # Jalankan worker async di event loop baru
         run_async(_async_send())
 
 
@@ -775,32 +813,34 @@ def dashboard_targets():
 @app.route('/dashboard/schedule')
 @login_required
 def dashboard_schedule():
-    """Halaman Manajemen Jadwal Blast"""
+    """Halaman Manajemen Jadwal Blast (Multi-Account Support)"""
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
     schedules = []
-    templates = [] # Variable baru untuk dropdown
-    targets = []   # Variable baru untuk dropdown target grup
+    templates = [] 
+    targets = []   
+    accounts = []  # List akun aktif
     
     try:
         # Ambil jadwal lama
         schedules = supabase.table('blast_schedules').select("*").eq('user_id', user.id).order('run_hour', desc=False).execute().data
         
-        # UPGRADE: Fetch Templates & Targets untuk form "Add Schedule"
+        # Fetch Data Pendukung
         templates = MessageTemplateManager.get_templates(user.id)
         targets = supabase.table('blast_targets').select("*").eq('user_id', user.id).execute().data
         
-        # Enrich schedule data with template names (Manual Join)
-        # Agar di UI tampil nama templatenya, bukan cuma ID
+        # [UPGRADE] Ambil akun yang AKTIF saja buat dropdown
+        acc_res = supabase.table('telegram_accounts').select("phone_number").eq('user_id', user.id).eq('is_active', True).execute()
+        accounts = acc_res.data if acc_res.data else []
+        
+        # Enrich schedule data with template names
         for s in schedules:
             t_id = s.get('template_id')
             s['template_name'] = 'Custom / No Template'
             if t_id:
-                # Cari nama template di list templates (in-memory search biar cepat)
                 found = next((t for t in templates if t['id'] == t_id), None)
-                if found:
-                    s['template_name'] = found['name']
+                if found: s['template_name'] = found['name']
         
     except Exception as e:
         logger.error(f"Schedule Page Error: {e}")
@@ -808,8 +848,9 @@ def dashboard_schedule():
     return render_template('dashboard/schedule.html', 
                            user=user, 
                            schedules=schedules, 
-                           templates=templates, # Kirim ke UI
-                           targets=targets,     # Kirim ke UI
+                           templates=templates, 
+                           targets=targets,     
+                           accounts=accounts,   # Kirim ke HTML
                            active_page='schedule')
 
 @app.route('/dashboard/templates')
