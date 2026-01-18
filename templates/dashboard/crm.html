@@ -1,47 +1,128 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Database CRM{% endblock %}
+{% block title %}Database CRM & Pelanggan{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-20">
+<div class="max-w-7xl mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-24">
     
-    <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
-        <div>
-            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Database Pelanggan</h1>
-            <p class="text-gray-500 mt-1 text-sm">Kelola data kontak dari riwayat chat (Sync) atau file eksternal (Import).</p>
+    <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-6">
+        <div class="flex-1">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="px-2.5 py-0.5 rounded-md bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-200">
+                    CRM SYSTEM v2.0
+                </span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Database Pelanggan</h1>
+            <p class="text-gray-500 mt-2 text-sm max-w-2xl">
+                Pusat data kontak Telegram. Kelola, filter, dan lakukan follow-up massal kepada pelanggan Anda dari satu tempat.
+            </p>
         </div>
         
-        <div class="flex gap-3">
-            <a href="/export_crm_csv" target="_blank" class="bg-white text-gray-700 hover:text-indigo-600 border border-gray-200 hover:border-indigo-200 px-5 py-2.5 rounded-xl font-bold shadow-sm transition flex items-center gap-2">
-                <i class="fa-solid fa-download text-green-600"></i> Export CSV
+        <div class="flex gap-3 w-full md:w-auto">
+            <a href="/export_crm_csv" target="_blank" class="group flex items-center justify-center gap-2 bg-white text-gray-700 hover:text-green-600 border border-gray-200 hover:border-green-200 px-5 py-3 rounded-xl font-bold shadow-sm hover:shadow-md transition-all duration-200 w-full md:w-auto">
+                <div class="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center group-hover:scale-110 transition">
+                    <i class="fa-solid fa-file-csv"></i>
+                </div>
+                <span>Export CSV</span>
             </a>
 
-            <button onclick="openImportModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-200 transition transform hover:-translate-y-1 flex items-center gap-2">
-                <i class="fa-solid fa-cloud-arrow-up"></i> Import / Sync Data
+            <button onclick="openImportModal()" class="group flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-gray-200 transition-all duration-200 transform hover:-translate-y-1 w-full md:w-auto">
+                <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                </div>
+                <span>Import / Sync</span>
             </button>
         </div>
     </div>
 
-    <div class="bg-white rounded-[1.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden">
+    <div class="bg-white rounded-[1.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden flex flex-col min-h-[600px]">
         
-        <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:border-indigo-300 transition">
-                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
-                    <label for="selectAll" class="text-xs font-bold text-gray-500 uppercase cursor-pointer select-none">Pilih Semua</label>
-                </div>
-                <span class="text-xs text-gray-400 font-mono font-bold border-l border-gray-300 pl-3">{{ user_count }} Kontak Total</span>
-            </div>
+        <div class="p-5 border-b border-gray-100 bg-gray-50/30 flex flex-col xl:flex-row justify-between items-center gap-4">
             
-            <button id="btnBlast" onclick="blastSelected()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-5 py-2.5 rounded-lg font-bold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" disabled>
-                <i class="fa-solid fa-paper-plane"></i> Follow Up Terpilih (<span id="countSelected">0</span>)
-            </button>
+            <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+                <form action="{{ url_for('dashboard_crm') }}" method="GET" class="relative group w-full sm:w-72">
+                    <input type="hidden" name="per_page" value="{{ per_page }}">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400 group-focus-within:text-indigo-500 transition"></i>
+                    </div>
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="Cari username..." 
+                           class="block w-full pl-10 pr-20 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm">
+                    
+                    {% if search_query %}
+                    <a href="{{ url_for('dashboard_crm') }}" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-gray-400 hover:text-red-500">
+                        <i class="fa-solid fa-xmark"></i>
+                    </a>
+                    {% else %}
+                    <button type="submit" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-gray-400 hover:text-indigo-600">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    {% endif %}
+                </form>
+
+                <div id="bulkActionContainer" class="hidden animate-fade-in-up">
+                    <button onclick="blastSelected()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2.5 rounded-xl font-bold shadow-md transition flex items-center gap-2 h-full whitespace-nowrap">
+                        <i class="fa-solid fa-paper-plane"></i> 
+                        Follow Up (<span id="countSelected">0</span>)
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full xl:w-auto justify-between xl:justify-end">
+                
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 font-medium hidden sm:block">Baris:</span>
+                    <div class="relative">
+                        <select onchange="changePerPage(this.value)" class="appearance-none bg-white border border-gray-200 text-gray-700 text-xs font-bold py-2 pl-3 pr-8 rounded-lg cursor-pointer focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm hover:border-gray-300 transition">
+                            <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                            <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                            <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                            <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                            <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500">
+                        Hal <span class="font-bold text-gray-800">{{ current_page }}</span> dari <span class="font-bold text-gray-800">{{ total_pages }}</span>
+                    </span>
+                    
+                    <div class="flex rounded-md shadow-sm">
+                        {% if current_page > 1 %}
+                        <a href="{{ url_for('dashboard_crm', page=current_page-1, per_page=per_page, q=search_query) }}" 
+                           class="relative inline-flex items-center px-3 py-2 rounded-l-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </a>
+                        {% else %}
+                        <button disabled class="relative inline-flex items-center px-3 py-2 rounded-l-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-300 cursor-not-allowed">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        {% endif %}
+
+                        {% if current_page < total_pages %}
+                        <a href="{{ url_for('dashboard_crm', page=current_page+1, per_page=per_page, q=search_query) }}" 
+                           class="relative inline-flex items-center px-3 py-2 rounded-r-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition -ml-px">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                        {% else %}
+                        <button disabled class="relative inline-flex items-center px-3 py-2 rounded-r-lg border border-gray-200 bg-gray-50 text-sm font-medium text-gray-300 cursor-not-allowed -ml-px">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="flex-1 overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
-                        <th class="p-5 font-bold w-10">#</th>
+                    <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+                        <th class="p-5 font-extrabold w-16 text-center">No</th>
+                        <th class="p-5 w-10 text-center">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer">
+                        </th>
                         <th class="p-5 font-bold">Nama Depan</th>
                         <th class="p-5 font-bold">Username</th>
                         <th class="p-5 font-bold">ID User</th>
@@ -49,46 +130,77 @@
                         <th class="p-5 font-bold text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-50">
+                <tbody class="divide-y divide-gray-50 bg-white">
                     {% for u in crm_users %}
-                    <tr class="hover:bg-indigo-50/30 transition group">
-                        <td class="p-5">
-                            <input type="checkbox" class="user-check rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" value="{{ u.user_id }}" onchange="updateSelection()">
+                    <tr class="hover:bg-indigo-50/40 transition duration-150 group">
+                        <td class="p-5 text-center text-xs font-mono text-gray-400">
+                            {{ ((current_page - 1) * per_page) + loop.index }}
                         </td>
-                        <td class="p-5">
-                            <div class="font-bold text-gray-800">{{ u.first_name or 'Tanpa Nama' }}</div>
+                        
+                        <td class="p-5 text-center">
+                            <input type="checkbox" class="user-check rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer transition" value="{{ u.user_id }}" onchange="updateSelection()">
                         </td>
+                        
                         <td class="p-5">
-                            {% if u.username %}
-                            <a href="https://t.me/{{ u.username }}" target="_blank" class="text-indigo-600 hover:underline flex items-center gap-1">
-                                @{{ u.username }} <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                            </a>
-                            {% else %}
-                            <span class="text-gray-400 italic text-xs">Tanpa Username</span>
-                            {% endif %}
-                        </td>
-                        <td class="p-5">
-                            <span class="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded select-all">{{ u.user_id }}</span>
-                        </td>
-                        <td class="p-5">
-                            <div class="flex items-center gap-2 text-xs text-gray-500">
-                                <i class="fa-regular fa-clock"></i>
-                                {{ u.last_interaction[:10] }}
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-100 to-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold border border-indigo-50">
+                                    {{ u.first_name[:1]|upper if u.first_name else '?' }}
+                                </div>
+                                <div class="font-bold text-gray-700 text-sm">{{ u.first_name or 'Tanpa Nama' }}</div>
                             </div>
                         </td>
+                        
+                        <td class="p-5">
+                            {% if u.username %}
+                            <a href="https://t.me/{{ u.username }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition text-xs font-medium border border-blue-100">
+                                <i class="fa-brands fa-telegram"></i> @{{ u.username }}
+                            </a>
+                            {% else %}
+                            <span class="text-gray-400 text-xs italic px-2">n/a</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="p-5">
+                            <button onclick="copyToClipboard('{{ u.user_id }}')" class="group/id flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-100 transition cursor-pointer" title="Klik untuk copy">
+                                <span class="font-mono text-xs text-gray-500 font-bold">{{ u.user_id }}</span>
+                                <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/id:text-indigo-500 transition"></i>
+                            </button>
+                        </td>
+                        
+                        <td class="p-5">
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2 text-xs text-gray-600 font-medium">
+                                    <i class="fa-regular fa-calendar-days text-gray-400"></i>
+                                    {{ u.last_interaction[:10] }}
+                                </div>
+                                <span class="text-[10px] text-gray-400 ml-5">{{ u.last_interaction[11:16] }} WIB</span>
+                            </div>
+                        </td>
+                        
                         <td class="p-5 text-right">
-                            <a href="/dashboard/broadcast?ids={{ u.user_id }}" class="text-xs bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-200 px-3 py-1.5 rounded-lg shadow-sm transition font-bold">
-                                Chat
+                            <a href="/dashboard/broadcast?ids={{ u.user_id }}" class="inline-flex items-center gap-1 bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-200 px-3 py-1.5 rounded-lg shadow-sm hover:shadow transition text-xs font-bold">
+                                Chat <i class="fa-solid fa-angle-right text-[10px]"></i>
                             </a>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="p-10 text-center text-gray-400">
-                            <div class="flex flex-col items-center">
-                                <i class="fa-solid fa-folder-open text-4xl mb-3 text-gray-200"></i>
-                                <p>Belum ada data pelanggan.</p>
-                                <p class="text-xs mt-1">Klik tombol Import/Sync di atas.</p>
+                        <td colspan="7" class="py-20 text-center">
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-300">
+                                    <i class="fa-solid fa-database text-3xl"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-700">Data Tidak Ditemukan</h3>
+                                <p class="text-gray-500 text-sm mt-1 max-w-xs mx-auto">
+                                    {% if search_query %}
+                                    Tidak ada user dengan nama/username "{{ search_query }}".
+                                    {% else %}
+                                    Database masih kosong. Silakan import atau sync data.
+                                    {% endif %}
+                                </p>
+                                {% if search_query %}
+                                <a href="{{ url_for('dashboard_crm') }}" class="mt-4 text-indigo-600 hover:underline text-sm font-bold">Reset Pencarian</a>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -97,83 +209,68 @@
             </table>
         </div>
         
-        <div class="p-4 border-t border-gray-100 bg-gray-50 text-center text-xs text-gray-400">
-            Menampilkan 50 data terbaru. Gunakan fitur Export CSV untuk melihat semua data.
+        <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+            <span>Total Database: <b class="text-gray-800">{{ total_users }}</b> Users</span>
+            <div class="flex gap-4">
+                <span>Page {{ current_page }} of {{ total_pages }}</span>
+            </div>
         </div>
     </div>
 </div>
 
 <div id="importModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop"></div>
-    
     <div class="fixed inset-0 z-10 overflow-y-auto">
         <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg opacity-0 scale-95" id="modalPanel">
+            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg opacity-0 scale-95" id="modalPanel">
                 
-                <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-                    <div class="flex items-center justify-between mb-5">
-                        <h3 class="text-lg font-bold text-gray-900" id="modal-title">Metode Penambahan Data</h3>
-                        <button onclick="closeImportModal()" class="text-gray-400 hover:text-gray-600 transition">
-                            <i class="fa-solid fa-xmark text-xl"></i>
-                        </button>
+                <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-5 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-database"></i> Tambah Data Pelanggan
+                    </h3>
+                    <button onclick="closeImportModal()" class="text-indigo-200 hover:text-white transition">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="p-6 space-y-4">
+                    <div onclick="runTelegramSync()" class="group flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition relative overflow-hidden">
+                        <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-xl">
+                            <i class="fa-brands fa-telegram"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-800 group-hover:text-blue-700">Sync Telegram</h4>
+                            <p class="text-xs text-gray-500 mt-0.5">Scan otomatis history chat akun Anda.</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-blue-500 transition"></i>
                     </div>
-                    
-                    <div class="space-y-4">
-                        <div onclick="runTelegramSync()" class="group flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-all duration-200 relative overflow-hidden">
-                            <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition">
-                                <i class="fa-brands fa-telegram text-2xl"></i>
-                            </div>
-                            <div class="flex-1">
-                                <h4 class="font-bold text-gray-800 group-hover:text-blue-700">Sync dari Telegram</h4>
-                                <p class="text-xs text-gray-500 mt-0.5">Scan otomatis riwayat chat pribadi Anda.</p>
-                            </div>
-                            <div class="absolute right-4 text-blue-400 opacity-0 group-hover:opacity-100 transition">
-                                <i class="fa-solid fa-rotate"></i>
-                            </div>
-                        </div>
 
-                        <div onclick="toggleCsvForm()" class="group flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-green-400 hover:bg-green-50 cursor-pointer transition-all duration-200 relative overflow-hidden">
-                            <div class="bg-green-100 text-green-600 w-12 h-12 rounded-full flex items-center justify-center shrink-0 group-hover:scale-110 transition">
-                                <i class="fa-solid fa-file-csv text-2xl"></i>
-                            </div>
-                            <div class="flex-1">
-                                <h4 class="font-bold text-gray-800 group-hover:text-green-700">Upload File CSV</h4>
-                                <p class="text-xs text-gray-500 mt-0.5">Import database dari file Excel (.csv).</p>
-                            </div>
-                            <div class="absolute right-4 text-green-400 opacity-0 group-hover:opacity-100 transition">
-                                <i class="fa-solid fa-chevron-down"></i>
-                            </div>
+                    <div onclick="toggleCsvForm()" class="group flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-green-500 hover:bg-green-50 cursor-pointer transition relative overflow-hidden">
+                        <div class="bg-green-100 text-green-600 w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-xl">
+                            <i class="fa-solid fa-file-csv"></i>
                         </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-800 group-hover:text-green-700">Upload CSV</h4>
+                            <p class="text-xs text-gray-500 mt-0.5">Import file database eksternal.</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-300 group-hover:text-green-500 transition"></i>
+                    </div>
 
-                        <div id="csvForm" class="hidden bg-gray-50 p-4 rounded-xl border border-gray-200 animate-enter">
-                            <p class="text-xs text-gray-500 mb-3 font-medium">
-                                <i class="fa-solid fa-circle-info text-blue-500 mr-1"></i> 
-                                Syarat file CSV:
-                                <ul class="list-disc list-inside text-[10px] text-gray-400 mt-1 ml-1">
-                                    <li>Header wajib: <code>user_id</code> (Isinya harus angka)</li>
-                                    <li>Header opsional: <code>username</code>, <code>first_name</code></li>
-                                    <li>Pemisah koma (Comma delimited)</li>
-                                </ul>
-                            </p>
-                            
-                            <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-xs text-gray-500
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-xs file:font-semibold
-                                file:bg-indigo-50 file:text-indigo-700
-                                hover:file:bg-indigo-100 transition mb-3
-                            "/>
-                            
-                            <button onclick="uploadCsv()" id="btnUploadCsv" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-sm shadow-md transition flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-upload"></i> Mulai Upload
-                            </button>
+                    <div id="csvForm" class="hidden bg-gray-50 p-4 rounded-xl border border-gray-200 animate-enter">
+                        <div class="text-xs text-gray-500 mb-3 bg-white p-3 rounded border border-gray-200">
+                            <b>Format Wajib:</b> Header <code>user_id</code>.<br>
+                            Opsional: <code>username</code>, <code>first_name</code>.
                         </div>
+                        <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-xs text-gray-500 mb-3 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200"/>
+                        <button onclick="uploadCsv()" id="btnUploadCsv" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg text-sm shadow transition">
+                            <i class="fa-solid fa-upload mr-1"></i> Upload Sekarang
+                        </button>
                     </div>
                 </div>
                 
-                <div id="loadingOverlay" class="hidden absolute inset-0 bg-white/95 z-20 flex flex-col items-center justify-center rounded-2xl">
-                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-600 mb-3"></i>
-                    <p class="text-sm font-bold text-gray-800 animate-pulse" id="loadingText">Memproses...</p>
+                <div id="loadingOverlay" class="hidden absolute inset-0 bg-white/95 z-20 flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+                    <p class="text-sm font-bold text-gray-800 animate-pulse" id="loadingText">Processing...</p>
                 </div>
             </div>
         </div>
@@ -181,7 +278,16 @@
 </div>
 
 <script>
-    // --- 1. CHECKBOX LOGIC (INI YANG KEMARIN ILANG) ---
+    // --- 1. PAGINATION & FILTER LOGIC ---
+    function changePerPage(val) {
+        // Reload halaman dengan parameter per_page baru, reset page ke 1
+        const url = new URL(window.location.href);
+        url.searchParams.set('per_page', val);
+        url.searchParams.set('page', 1); // Reset ke halaman 1
+        window.location.href = url.toString();
+    }
+
+    // --- 2. CHECKBOX LOGIC (BULK ACTION) ---
     function toggleSelectAll() {
         const master = document.getElementById('selectAll');
         const checkboxes = document.querySelectorAll('.user-check');
@@ -192,21 +298,21 @@
     function updateSelection() {
         const selected = document.querySelectorAll('.user-check:checked');
         const count = selected.length;
-        const btn = document.getElementById('btnBlast');
+        const container = document.getElementById('bulkActionContainer');
         const label = document.getElementById('countSelected');
         
         label.innerText = count;
         
-        // Cek Select All master checkbox
+        // Logic Master Checkbox
         const total = document.querySelectorAll('.user-check').length;
-        document.getElementById('selectAll').checked = (count > 0 && count === total);
+        const master = document.getElementById('selectAll');
+        if(total > 0) master.checked = (count === total);
 
+        // Show/Hide Blast Button
         if (count > 0) {
-            btn.disabled = false;
-            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            container.classList.remove('hidden');
         } else {
-            btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            container.classList.add('hidden');
         }
     }
 
@@ -214,14 +320,26 @@
         const selected = document.querySelectorAll('.user-check:checked');
         if (selected.length === 0) return alert("Pilih minimal satu user!");
         
-        // Ambil semua ID yang dicentang
+        // Ambil ID
         const ids = Array.from(selected).map(cb => cb.value).join(',');
         
-        // Redirect ke halaman Broadcast dengan membawa ID tersebut
+        // Redirect
         window.location.href = `/dashboard/broadcast?ids=${ids}`;
     }
 
-    // --- 2. MODAL & IMPORT LOGIC (TETAP ADA) ---
+    // --- 3. COPY CLIPBOARD ---
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Visual feedback kecil (Toast simpel)
+            const el = document.createElement('div');
+            el.className = 'fixed bottom-4 right-4 bg-gray-800 text-white text-xs px-4 py-2 rounded-lg shadow-lg animate-bounce z-50';
+            el.innerText = 'ID Copied: ' + text;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+        });
+    }
+
+    // --- 4. IMPORT MODAL UTILS ---
     const modal = document.getElementById('importModal');
     const backdrop = document.getElementById('modalBackdrop');
     const panel = document.getElementById('modalPanel');
@@ -258,55 +376,41 @@
         document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
+    // --- 5. API CALLS ---
     async function runTelegramSync() {
-        showLoading("Menghubungkan ke Telegram & Scanning Chat...");
+        showLoading("Scanning Telegram Chat...");
         try {
             const res = await fetch('/import_crm_api', {method: 'POST'});
             const data = await res.json();
-            
             if(data.status === 'success') {
                 alert("✅ " + data.message);
                 location.reload();
             } else {
-                alert("❌ Gagal Sync: " + data.message);
+                alert("❌ Error: " + data.message);
                 hideLoading();
             }
-        } catch(e) {
-            alert("⚠️ Error Koneksi: " + e);
-            hideLoading();
-        }
+        } catch(e) { alert("⚠️ Koneksi Error"); hideLoading(); }
     }
 
     async function uploadCsv() {
         const fileInput = document.getElementById('csvFileInput');
-        if(fileInput.files.length === 0) {
-            alert("⚠️ Pilih file CSV dulu bre!");
-            return;
-        }
+        if(fileInput.files.length === 0) return alert("Pilih file CSV dulu!");
 
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
 
-        showLoading("Membaca & Memvalidasi File CSV...");
-        
+        showLoading("Importing CSV...");
         try {
-            const res = await fetch('/import_crm_csv', {
-                method: 'POST',
-                body: formData
-            });
+            const res = await fetch('/import_crm_csv', {method: 'POST', body: formData});
             const data = await res.json();
-            
             if(data.status === 'success') {
                 alert("✅ " + data.message);
                 location.reload();
             } else {
-                alert("❌ Gagal Import: " + data.message);
+                alert("❌ Error: " + data.message);
                 hideLoading();
             }
-        } catch(e) {
-            alert("⚠️ Error Upload: " + e);
-            hideLoading();
-        }
+        } catch(e) { alert("⚠️ Upload Error"); hideLoading(); }
     }
 </script>
 {% endblock %}
