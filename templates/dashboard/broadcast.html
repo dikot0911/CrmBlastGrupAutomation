@@ -30,12 +30,9 @@
                         <i class="fa-solid fa-cloud-arrow-down"></i> Load
                     </button>
                 </div>
-                <p class="text-[10px] text-blue-600 mt-2 opacity-80">
-                    *Teks dan Media (Foto/Video) akan otomatis terambil.
-                </p>
             </div>
 
-            <form id="broadcastForm" class="bg-white rounded-[1.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-6">
+            <form id="broadcastForm" class="bg-white rounded-[1.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-6 relative overflow-hidden">
                 
                 <div class="mb-4 flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
                     <div>
@@ -57,7 +54,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Gunakan Template (Opsional)</label>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Template (Opsional)</label>
                     <select name="template_id" id="templateSelect" onchange="loadTemplate()" class="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500 transition">
                         <option value="">-- Tulis Manual --</option>
                         {% for t in templates %}
@@ -71,7 +68,7 @@
                         Editor Pesan
                         <span class="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500">Markdown Support</span>
                     </label>
-                    <textarea name="message" id="messageInput" rows="8" placeholder="Halo {name}, ada promo gila nih! **Diskon 50%** cuma hari ini..." 
+                    <textarea name="message" id="messageInput" rows="6" placeholder="Halo {name}, tulis pesanmu disini..." 
                               class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition font-mono leading-relaxed"></textarea>
                     
                     <div class="flex gap-2 mt-2">
@@ -90,7 +87,6 @@
                         <div class="flex flex-col items-center justify-center pt-2 pb-3" id="uploadPlaceholder">
                             <i class="fa-regular fa-image text-2xl text-gray-300 group-hover:text-indigo-400 mb-2 transition"></i>
                             <p class="text-xs text-gray-500 font-medium">Upload Gambar (Optional)</p>
-                            <p class="text-[10px] text-gray-400">Format JPG, PNG max 2MB</p>
                         </div>
                         <div id="imagePreviewContainer" class="hidden relative w-full h-32">
                             <img id="imagePreview" src="" class="w-full h-full object-cover rounded-lg opacity-80">
@@ -101,10 +97,49 @@
                     </label>
                 </div>
 
-                <button type="button" onclick="startBroadcast()" class="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/30 transition transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                <button type="button" id="btnSend" onclick="startBroadcast()" class="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/30 transition transform hover:-translate-y-1 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-paper-plane"></i> Kirim Broadcast Sekarang
                 </button>
             </form>
+
+            <div id="consoleContainer" class="hidden bg-[#0F172A] rounded-[1.5rem] border border-gray-800 shadow-2xl p-6 relative overflow-hidden animate-fade-in-up">
+                <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex gap-1.5">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        </div>
+                        <span class="text-gray-400 text-xs font-mono ml-2">root@blastpro:~# ./broadcast.sh</span>
+                    </div>
+                    <span id="statusBadge" class="bg-indigo-900/50 text-indigo-300 text-[10px] px-2 py-1 rounded border border-indigo-700/50 animate-pulse">Processing...</span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="bg-gray-800/50 p-3 rounded-xl border border-gray-700 text-center">
+                        <div class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Progress</div>
+                        <div class="text-xl font-black text-white" id="progressPercentage">0%</div>
+                    </div>
+                    <div class="bg-gray-800/50 p-3 rounded-xl border border-gray-700 text-center">
+                        <div class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Sukses</div>
+                        <div class="text-xl font-black text-green-400" id="successCount">0</div>
+                    </div>
+                    <div class="bg-gray-800/50 p-3 rounded-xl border border-gray-700 text-center">
+                        <div class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Gagal</div>
+                        <div class="text-xl font-black text-red-400" id="failCount">0</div>
+                    </div>
+                </div>
+
+                <div class="w-full bg-gray-800 rounded-full h-2 mb-4 overflow-hidden">
+                    <div id="progressBar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style="width: 0%"></div>
+                </div>
+
+                <div id="logContainer" class="h-64 overflow-y-auto custom-scrollbar font-mono text-xs space-y-1.5 p-2">
+                    <p class="text-gray-500 italic">> Initializing system...</p>
+                    <p class="text-gray-500 italic">> Connecting to Telegram API...</p>
+                </div>
+            </div>
+
         </div>
 
         <div class="lg:col-span-5 hidden lg:block">
@@ -123,70 +158,22 @@
                     </div>
 
                     <div class="bg-[#86A6C3] h-full p-4 overflow-y-auto bg-opacity-20" style="background-image: radial-gradient(#86A6C3 1px, transparent 1px); background-size: 20px 20px;">
-                        
                         <div class="text-center my-4">
                             <span class="bg-black/20 text-white text-[10px] px-2 py-1 rounded-full">Today</span>
                         </div>
-
                         <div class="bg-white rounded-tr-xl rounded-bl-xl rounded-br-xl p-3 shadow-sm max-w-[85%] ml-auto relative animate-enter">
                             <div id="bubbleImage" class="hidden mb-2 rounded-lg overflow-hidden">
                                 <img src="" class="w-full h-32 object-cover">
                             </div>
-                            
                             <p id="bubbleText" class="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap">Pratinjau pesan Anda...</p>
-                            
                             <div class="flex justify-end items-center gap-1 mt-1">
-                                <span class="text-[9px] text-gray-400">10:30 PM</span>
+                                <span class="text-[9px] text-gray-400">Now</span>
                                 <i class="fa-solid fa-check-double text-[9px] text-blue-500"></i>
                             </div>
                         </div>
-
                     </div>
                 </div>
                 <p class="text-center text-xs text-gray-400 mt-4 uppercase tracking-widest font-bold">Live Preview</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="progressModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-md transition-opacity"></div>
-    
-    <div class="fixed inset-0 z-10 overflow-y-auto">
-        <div class="flex min-h-full items-center justify-center p-4">
-            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all w-full max-w-lg">
-                
-                <div class="p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <span class="relative flex h-3 w-3">
-                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                              <span class="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
-                            </span>
-                            Sedang Mengirim...
-                        </h3>
-                        <span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600" id="progressPercentage">0%</span>
-                    </div>
-
-                    <div class="w-full bg-gray-100 rounded-full h-4 mb-2 overflow-hidden">
-                        <div id="progressBar" class="bg-indigo-600 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
-                    </div>
-                    <div class="flex justify-between text-xs text-gray-500 mb-6">
-                        <span id="progressCount">0 / 0</span>
-                        <span class="text-green-600 font-bold" id="successCount">Sukses: 0</span>
-                        <span class="text-red-500 font-bold" id="failCount">Gagal: 0</span>
-                    </div>
-
-                    <div class="bg-gray-900 rounded-xl p-4 h-48 overflow-y-auto custom-scrollbar font-mono text-xs space-y-1" id="logContainer">
-                        <p class="text-gray-500 italic">> Menunggu inisialisasi...</p>
-                    </div>
-                </div>
-
-                <div class="bg-gray-50 px-6 py-4 flex justify-end">
-                    <button type="button" id="btnCloseModal" onclick="closeProgressModal()" class="hidden bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition">
-                        Tutup
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -201,7 +188,6 @@
         if(this.value.trim() === '') {
             bubbleText.innerText = 'Pratinjau pesan Anda...';
         } else {
-            // Simple markdown parsing for preview
             let text = this.value
                 .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
                 .replace(/__(.*?)__/g, '<i>$1</i>')
@@ -228,8 +214,6 @@
                 document.getElementById('imagePreview').src = e.target.result;
                 document.getElementById('imagePreviewContainer').classList.remove('hidden');
                 document.getElementById('uploadPlaceholder').classList.add('hidden');
-                
-                // Update Phone Preview
                 document.querySelector('#bubbleImage img').src = e.target.result;
                 document.getElementById('bubbleImage').classList.remove('hidden');
             }
@@ -245,14 +229,14 @@
         document.getElementById('bubbleImage').classList.add('hidden');
     }
 
-    // --- 3. FETCH TELEGRAM MESSAGE (IMPORT LINK) ---
+    // --- 3. FETCH TELEGRAM MESSAGE ---
     async function fetchTelegramMessage() {
         const link = document.getElementById('teleLinkInput').value;
         const btn = document.getElementById('btnFetch');
         
         if(!link) return alert("Masukkan link dulu bre!");
         
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Loading...';
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
         btn.disabled = true;
 
         try {
@@ -266,27 +250,14 @@
             if(data.status === 'success') {
                 msgInput.value = data.text;
                 msgInput.dispatchEvent(new Event('input'));
-                
-                if(data.has_media) {
-                    alert("✅ Teks berhasil diambil! Media (Gambar/Video) akan otomatis terkirim saat broadcast.");
-                    // Simpan source ID di form (buat backend tau)
-                    // Kita bisa pake hidden input, tapi karena logika di backend udah handle template,
-                    // Kita bisa akalin dengan bikin "Temporary Template" atau simple flag.
-                    // TAPI: Cara paling gampang adalah simpan link-nya di hidden input kalau backend support parsing link langsung.
-                    // UNTUK SAAT INI: Kita asumsikan user simpan sebagai template dulu kalau mau pake media cloud.
-                    // ATAU: Kita update backend start_broadcast buat nerima source_link.
-                    
-                    // Simple fix: Teks udah masuk, user seneng.
-                } else {
-                    alert("✅ Teks berhasil diambil!");
-                }
+                if(data.has_media) alert("✅ Teks diambil! Media akan otomatis terkirim.");
             } else {
                 alert("❌ Gagal: " + data.message);
             }
         } catch(e) {
             alert("⚠️ Error koneksi.");
         } finally {
-            btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Load';
+            btn.innerHTML = 'Load';
             btn.disabled = false;
         }
     }
@@ -300,26 +271,36 @@
         }
     }
 
-    // --- 4. REAL-TIME BROADCAST (STREAMING) ---
+    // --- 4. REAL-TIME CONSOLE LOGIC (UPDATED) ---
     async function startBroadcast() {
         if(!msgInput.value) return alert("Isi pesan dulu dong!");
         if(!confirm("Yakin mau kirim pesan massal ini?")) return;
 
-        // Show Modal
-        const modal = document.getElementById('progressModal');
+        // UI Prep
+        const consoleDiv = document.getElementById('consoleContainer');
         const logBox = document.getElementById('logContainer');
         const pBar = document.getElementById('progressBar');
         const pText = document.getElementById('progressPercentage');
-        const pCount = document.getElementById('progressCount');
         const sCount = document.getElementById('successCount');
         const fCount = document.getElementById('failCount');
-        const btnClose = document.getElementById('btnCloseModal');
+        const btnSend = document.getElementById('btnSend');
+        const statusBadge = document.getElementById('statusBadge');
 
-        modal.classList.remove('hidden');
-        logBox.innerHTML = '';
-        btnClose.classList.add('hidden');
-        pBar.style.width = '0%';
+        // Show Console, Hide Button (Sementara)
+        consoleDiv.classList.remove('hidden');
+        btnSend.classList.add('opacity-50', 'cursor-not-allowed');
+        btnSend.disabled = true;
+        btnSend.innerText = "Sedang Mengirim...";
         
+        // Reset States
+        logBox.innerHTML = '';
+        pBar.style.width = '0%';
+        pText.innerText = "0%";
+        sCount.innerText = "0";
+        fCount.innerText = "0";
+        statusBadge.innerText = "Initializing...";
+        statusBadge.className = "bg-indigo-900/50 text-indigo-300 text-[10px] px-2 py-1 rounded border border-indigo-700/50 animate-pulse";
+
         const formData = new FormData(document.getElementById('broadcastForm'));
 
         try {
@@ -344,9 +325,17 @@
                         const data = JSON.parse(line);
                         
                         if(data.error) {
-                            logBox.innerHTML += `<p class="text-red-400">❌ Error: ${data.error}</p>`;
-                            btnClose.classList.remove('hidden');
+                            logBox.innerHTML += `<p class="text-red-500 font-bold">❌ Error: ${data.error}</p>`;
+                            statusBadge.innerText = "Error";
+                            statusBadge.className = "bg-red-900/50 text-red-300 text-[10px] px-2 py-1 rounded border border-red-700/50";
+                            btnSend.disabled = false;
+                            btnSend.classList.remove('opacity-50', 'cursor-not-allowed');
+                            btnSend.innerText = "Coba Lagi";
                             return;
+                        }
+
+                        if(data.type === 'start') {
+                            statusBadge.innerText = `Sending to ${data.total} targets`;
                         }
 
                         if(data.type === 'progress') {
@@ -354,39 +343,45 @@
                             const percent = Math.round((data.current / data.total) * 100);
                             pBar.style.width = `${percent}%`;
                             pText.innerText = `${percent}%`;
-                            pCount.innerText = `${data.current} / ${data.total}`;
-                            
-                            sCount.innerText = `Sukses: ${data.success}`;
-                            fCount.innerText = `Gagal: ${data.failed}`;
+                            sCount.innerText = data.success;
+                            fCount.innerText = data.failed;
 
-                            // Append Log
-                            const color = data.status === 'success' ? 'text-green-400' : 'text-red-400';
-                            const icon = data.status === 'success' ? '✓' : '✗';
-                            logBox.innerHTML += `<p class="${color}">[${icon}] ${data.log}</p>`;
-                            logBox.scrollTop = logBox.scrollHeight; // Auto scroll
+                            // Custom Log Style
+                            let logHtml = "";
+                            if(data.status === 'warning') {
+                                logHtml = `<p class="text-yellow-400 bg-yellow-900/20 p-1 rounded">⚠️ ${data.log}</p>`;
+                            } else {
+                                const color = data.status === 'success' ? 'text-green-400' : 'text-red-400';
+                                const icon = data.status === 'success' ? '➜' : '✖';
+                                logHtml = `<p class="${color}"><span class="opacity-50">${icon}</span> ${data.log}</p>`;
+                            }
+                            
+                            logBox.innerHTML += logHtml;
+                            logBox.scrollTop = logBox.scrollHeight;
                         }
 
                         if(data.type === 'done') {
-                            logBox.innerHTML += `<p class="text-blue-400 mt-2">=== SELESAI ===</p>`;
-                            logBox.innerHTML += `<p class="text-white">Total Sukses: ${data.success}, Gagal: ${data.failed}</p>`;
-                            btnClose.classList.remove('hidden');
+                            logBox.innerHTML += `<p class="text-blue-400 mt-2 font-bold border-t border-gray-700 pt-2">=== TASK COMPLETED ===</p>`;
+                            statusBadge.innerText = "Completed";
+                            statusBadge.className = "bg-green-900/50 text-green-300 text-[10px] px-2 py-1 rounded border border-green-700/50";
+                            pBar.classList.remove('from-indigo-500', 'to-purple-500');
+                            pBar.classList.add('bg-green-500');
+                            
+                            btnSend.innerText = "Kirim Broadcast Selesai";
+                            // Biarkan tombol disabled biar ga spam klik, user harus refresh kalau mau kirim ulang
                         }
 
                     } catch (e) {
-                        console.log("JSON Parse error", e);
+                        console.log("Stream parse error", e);
                     }
                 }
             }
 
         } catch (e) {
-            logBox.innerHTML += `<p class="text-red-500">🔥 Fatal Error: ${e}</p>`;
-            btnClose.classList.remove('hidden');
+            logBox.innerHTML += `<p class="text-red-500 font-bold bg-red-900/20 p-2 rounded">🔥 Fatal Network Error: ${e}</p>`;
+            btnSend.disabled = false;
+            btnSend.innerText = "Retry Connection";
         }
-    }
-
-    function closeProgressModal() {
-        document.getElementById('progressModal').classList.add('hidden');
-        location.reload(); // Refresh buat update history log
     }
 </script>
 {% endblock %}
