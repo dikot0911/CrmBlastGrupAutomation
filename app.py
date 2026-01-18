@@ -889,9 +889,39 @@ def dashboard_crm():
 @app.route('/dashboard/connection')
 @login_required
 def dashboard_connection():
-    user = get_user_data(session['user_id'])
+    user = get_user_data(session['user_id']) # User data basic
     if not user: return redirect(url_for('login'))
-    return render_template('dashboard/connection.html', user=user, active_page='connection')
+    
+    # [UPGRADE] Ambil SEMUA akun telegram milik user ini
+    accounts = []
+    try:
+        res = supabase.table('telegram_accounts').select("*").eq('user_id', user.id).order('created_at', desc=True).execute()
+        accounts = res.data if res.data else []
+    except Exception as e:
+        logger.error(f"Fetch Accounts Error: {e}")
+
+    return render_template('dashboard/connection.html', 
+                           user=user, 
+                           accounts=accounts, # Kirim list akun ke HTML
+                           active_page='connection')
+
+@app.route('/api/connect/disconnect', methods=['POST'])
+@login_required
+def disconnect_account():
+    """Putuskan sambungan salah satu akun spesifik"""
+    phone = request.json.get('phone')
+    user_id = session['user_id']
+    
+    try:
+        # Hapus baris berdasarkan user_id DAN nomor hp
+        supabase.table('telegram_accounts').delete().eq('user_id', user_id).eq('phone_number', phone).execute()
+        
+        # Hapus session file/cache memory jika ada
+        # (Opsional: tambahkan logic cleanup telethon session string)
+        
+        return jsonify({'status': 'success', 'message': f'Akun {phone} berhasil dihapus.'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/dashboard/profile')
 @login_required
@@ -913,66 +943,68 @@ def send_code():
     phone = request.json.get('phone')
     user_id = session['user_id']
     
-    if not phone:
-        return jsonify({'status': 'error', 'message': 'Nomor HP wajib diisi.'})
+    if not phone: return jsonify({'status': 'error', 'message': 'Nomor HP wajib diisi.'})
 
-    # Rate Limiting Logic (60s Cooldown)
+    # [UPGRADE] CEK LIMIT AKUN (MAX 3)
+    try:
+        res = supabase.table('telegram_accounts').select("id", count='exact', head=True).eq('user_id', user_id).execute()
+        current_count = res.count if res.count else 0
+        
+        # Cek apakah nomor ini sudah ada (Re-login) atau nomor baru (New Add)
+        check_exist = supabase.table('telegram_accounts').select("id").eq('user_id', user_id).eq('phone_number', phone).execute()
+        is_existing_number = True if check_exist.data else False
+        
+        # Logic Limit: Kalau nomor baru DAN jumlah udah 3 -> TOLAK
+        if not is_existing_number and current_count >= 3:
+            return jsonify({
+                'status': 'limit_reached', 
+                'message': 'Batas Maksimal 3 Akun Tercapai! Hubungi Admin untuk upgrade.'
+            })
+            
+    except Exception as e:
+        logger.error(f"Limit Check Error: {e}")
+
+    # Rate Limiting (Sama kayak sebelumnya)
     current_time = time.time()
     if user_id in login_states:
         last_req = login_states[user_id].get('last_otp_req', 0)
         if current_time - last_req < 60:
             remaining = int(60 - (current_time - last_req))
-            return jsonify({'status': 'cooldown', 'message': f'Mohon tunggu {remaining} detik lagi.', 'remaining': remaining})
+            return jsonify({'status': 'cooldown', 'message': f'Tunggu {remaining} detik lagi.'})
     
     async def _process_send_code():
-        # Create FRESH Session for OTP Request
         client = TelegramClient(StringSession(), API_ID, API_HASH)
         await client.connect()
-        
         try:
-            # Check if phone is authorized (should be false for login flow)
             if not await client.is_user_authorized():
                 req = await client.send_code_request(phone)
-                
-                # --- STATELESS MECHANISM START ---
-                # Capture session state containing the Auth Key (Session A)
                 temp_session_str = client.session.save()
                 
-                # Save to DB (Temporary Storage)
-                # 'session_string' stores the session state
-                # 'targets' column borrows the phone_code_hash
+                # [UPGRADE] Simpan Data (Upsert berdasarkan User + Phone)
+                # Kita pake trik: Coba delete dulu row "pending" lama kalau ada, lalu insert baru
+                # Atau gunakan UPSERT dengan constraint (user_id, phone_number)
+                
                 data = {
                     'user_id': user_id,
                     'phone_number': phone,
                     'session_string': temp_session_str,
-                    'targets': req.phone_code_hash, # Using targets col for Hash
-                    'is_active': False,
+                    'targets': req.phone_code_hash, # Hash OTP sementara
+                    'is_active': False, # Belum aktif sampai verifikasi
                     'created_at': datetime.utcnow().isoformat()
                 }
-                supabase.table('telegram_accounts').upsert(data, on_conflict="user_id").execute()
-                # --- STATELESS MECHANISM END ---
                 
-                # Update RAM State for Rate Limiting Only
-                login_states[user_id] = {'last_otp_req': current_time}
+                # Upsert ke Supabase
+                supabase.table('telegram_accounts').upsert(data, on_conflict="user_id, phone_number").execute()
                 
-                return jsonify({'status': 'success', 'message': 'Kode OTP terkirim ke Telegram Anda!'})
+                login_states[user_id] = {'last_otp_req': current_time, 'pending_phone': phone} # Simpan phone yg lagi login di RAM
+                return jsonify({'status': 'success', 'message': 'Kode OTP terkirim!'})
             else:
-                return jsonify({'status': 'error', 'message': 'Nomor ini sudah login aktif.'})
-                
-        except errors.FloodWaitError as e:
-            return jsonify({'status': 'error', 'message': f'Terlalu banyak percobaan. Tunggu {e.seconds} detik.'})
-        except errors.PhoneNumberInvalidError:
-            return jsonify({'status': 'error', 'message': 'Format nomor salah. Gunakan +62...'})
+                return jsonify({'status': 'error', 'message': 'Nomor ini aneh (Authorized but not local).'})
         except Exception as e:
-            logger.error(f"OTP System Error: {e}")
             return jsonify({'status': 'error', 'message': f'Telegram Error: {str(e)}'})
-        finally:
-            await client.disconnect()
+        finally: await client.disconnect()
 
-    try:
-        return run_async(_process_send_code())
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Internal Server Error: {str(e)}'})
+    return run_async(_process_send_code())
 
 @app.route('/api/connect/verify_code', methods=['POST'])
 @login_required
@@ -981,47 +1013,51 @@ def verify_code():
     otp = request.json.get('otp')
     pw = request.json.get('password')
     
-    # 1. Retrieve Stored Session & Hash from DB
-    db_session = None
-    db_hash = None
-    db_phone = None
+    # Ambil nomor HP yang lagi proses login dari RAM (Session Context)
+    # Atau ambil row di DB yang statusnya 'is_active': False dan punya hash
+    pending_phone = login_states.get(user_id, {}).get('pending_phone')
     
+    if not pending_phone:
+        # Fallback: Cari di DB akun mana yang punya hash (targets tidak kosong) dan belum aktif
+        # Ini logic darurat kalau server restart pas lagi login
+        try:
+            res = supabase.table('telegram_accounts').select("*").eq('user_id', user_id).eq('is_active', False).neq('targets', '[]').limit(1).execute()
+            if res.data:
+                pending_phone = res.data[0]['phone_number']
+            else:
+                return jsonify({'status': 'error', 'message': 'Sesi kadaluarsa. Kirim ulang OTP.'})
+        except:
+            return jsonify({'status': 'error', 'message': 'Error database.'})
+
+    # Ambil data session
     try:
-        res = supabase.table('telegram_accounts').select("session_string, phone_number, targets").eq('user_id', user_id).execute()
-        if not res.data:
-            return jsonify({'status': 'error', 'message': 'Sesi tidak ditemukan. Silakan kirim ulang OTP.'})
+        res = supabase.table('telegram_accounts').select("*").eq('user_id', user_id).eq('phone_number', pending_phone).execute()
+        if not res.data: return jsonify({'status': 'error', 'message': 'Data sesi hilang.'})
         
-        db_session = res.data[0]['session_string']
-        db_phone = res.data[0]['phone_number']
-        db_hash = res.data[0]['targets'] # Hash OTP disimpan disini
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Database Read Error: {str(e)}'})
+        row = res.data[0]
+        db_session = row['session_string']
+        db_hash = row['targets']
+    except: return jsonify({'status': 'error', 'message': 'Gagal baca sesi.'})
 
     async def _process_verify():
-        # 2. Resume Session from DB String (Session A)
         client = TelegramClient(StringSession(db_session), API_ID, API_HASH)
         await client.connect()
-        
         try:
-            # 3. Perform Sign In using existing session context
             try:
-                await client.sign_in(db_phone, otp, phone_code_hash=db_hash)
+                await client.sign_in(pending_phone, otp, phone_code_hash=db_hash)
             except errors.SessionPasswordNeededError:
-                if not pw:
-                    return jsonify({'status': '2fa', 'message': 'Akun dilindungi 2FA. Masukkan Password.'})
+                if not pw: return jsonify({'status': '2fa', 'message': 'Masukkan Password 2FA.'})
                 await client.sign_in(password=pw)
             
-            # 4. Success Handling
-            # Save the Final Authenticated Session
+            # Sukses! Simpan permanen
             final_session = client.session.save()
             
-            # Update DB to Active State
             supabase.table('telegram_accounts').update({
                 'session_string': final_session,
                 'is_active': True,
-                'targets': '[]', # Clear temp hash
+                'targets': '[]', # Clear hash
                 'created_at': datetime.utcnow().isoformat()
-            }).eq('user_id', user_id).execute()
+            }).eq('user_id', user_id).eq('phone_number', pending_phone).execute()
             
             return jsonify({'status': 'success', 'message': 'Login Berhasil! Mengalihkan...'})
             
