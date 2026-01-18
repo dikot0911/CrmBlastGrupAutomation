@@ -9,6 +9,7 @@ import pytz
 import telethon
 import csv
 import io
+import random
 from functools import wraps 
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
@@ -1324,91 +1325,155 @@ def fetch_telegram_message():
     return run_async(_fetch())
 
 # ==============================================================================
-# SECTION 11: BROADCAST SYSTEM (TEXT + IMAGE)
+# SECTION 11: BROADCAST SYSTEM (REAL-TIME STREAMING & HUMAN MODE)
 # ==============================================================================
 
 @app.route('/start_broadcast', methods=['POST'])
 @login_required
 def start_broadcast():
-        user_id = session['user_id']
-        message = request.form.get('message')
-        template_id = request.form.get('template_id')
-        selected_ids_str = request.form.get('selected_ids') # Tangkap ID
-        image_file = request.files.get('image')
-        
-        # Logic Template
-        if not message and template_id:
-            tmpl = MessageTemplateManager.get_template_by_id(template_id)
-            if tmpl: message = tmpl['content']
-                
-        if not message:
-            return jsonify({"status": "error", "message": "Pesan wajib diisi."})
+    """
+    Broadcast dengan Real-time Streaming Response + Human Behavior Logic.
+    Fitur Anti-Ban: Random Delay & Batch Pausing.
+    """
+    user_id = session['user_id']
+    message = request.form.get('message')
+    template_id = request.form.get('template_id')
+    selected_ids_str = request.form.get('selected_ids') 
+    target_option = request.form.get('target_option')
+    image_file = request.files.get('image')
     
-        # Upload Image
-        image_path = None
-        if image_file and allowed_file(image_file.filename):
-            filename = secure_filename(f"broadcast_{user_id}_{int(time.time())}_{image_file.filename}")
-            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            image_file.save(image_path)
+    # 1. Logic Content (Template vs Manual)
+    source_media = None
+    if template_id:
+        tmpl = MessageTemplateManager.get_template_by_id(template_id)
+        if tmpl:
+            if not message: message = tmpl['message_text']
+            # Cek Media dari "Database Telegram"
+            if tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
+                source_media = {'chat': int(tmpl['source_chat_id']), 'id': int(tmpl['source_message_id'])}
 
-# --- WORKER BARU (SUPPORT CLOUD MEDIA) ---
-def _broadcast_worker(uid, msg, img_path, target_ids, template_id=None):
-    async def _logic():
-        client = await get_active_client(uid)
-        if not client: return
-            
-        # Pemanasan
-        try: await client.get_dialogs(limit=None)
-        except: pass
+    if not message:
+        return jsonify({"error": "Pesan konten wajib diisi."})
 
-            # Cek Template Source (Kalau pakai template)
-        source_media = None
-        if template_id:
-            tmpl = MessageTemplateManager.get_template_by_id(template_id)
-            # Cek apakah template punya referensi media (Database Mandiri)
-            if tmpl and tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
-                try:
-                    # Ambil pesan aslinya dari "Database Mandiri" user
-                    src_chat = int(tmpl['source_chat_id'])
-                    src_id = int(tmpl['source_message_id'])
-                    original_msg = await client.get_messages(src_chat, ids=src_id)
-                    if original_msg and original_msg.media:
-                        source_media = original_msg.media
-                except: 
-                    print("Gagal load media source")
+    # 2. Handle Upload Gambar Manual (Lokal)
+    manual_image_path = None
+    if image_file and allowed_file(image_file.filename):
+        filename = secure_filename(f"broadcast_{user_id}_{int(time.time())}_{image_file.filename}")
+        manual_image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        image_file.save(manual_image_path)
 
-        try:
-            # ... (query user crm sama kayak sebelumnya) ...
-                
-            for u in crm_users:
-                try:
-                    user_tele_id = int(u['user_id'])
-                    target = await client.get_input_entity(user_tele_id)
-                    final_msg = msg.replace("{name}", u.get('first_name') or "Kak")
-                        
-                    # LOGIC PENGIRIMAN SAKTI
-                    if source_media:
-                        # 1. Prioritas: Kirim Media dari Telegram Database (TANPA FORWARD LABEL)
-                        await client.send_file(target, source_media, caption=final_msg)
-                    elif img_path: 
-                        # 2. Upload manual (file lokal)
-                        await client.send_file(target, img_path, caption=final_msg)
-                    else: 
-                        # 3. Teks doang
-                        await client.send_message(target, final_msg)
-                        
-                    await asyncio.sleep(2)
-                except: pass
-        finally:
-            await client.disconnect()
-            if img_path: os.remove(img_path)
+    # 3. Tentukan Target Audience
+    targets = []
+    if selected_ids_str and target_option == 'selected':
+        target_ids = [int(x) for x in selected_ids_str.split(',') if x.isdigit()]
+        if target_ids:
+            res = supabase.table('tele_users').select("*").in_('user_id', target_ids).eq('owner_id', user_id).execute()
+            targets = res.data
+    else:
+        # Kirim ke SEMUA (Safety Limit 5000 dulu biar aman)
+        res = supabase.table('tele_users').select("*").eq('owner_id', user_id).limit(5000).execute()
+        targets = res.data
+
+    if not targets:
+        return jsonify({"error": "Tidak ada target penerima."})
+
+    # 4. GENERATOR FUNCTION (Logika Inti)
+    def generate():
+        yield json.dumps({"type": "start", "total": len(targets)}) + "\n"
         
-    run_async(_logic())
+        async def _process():
+            client = await get_active_client(user_id)
+            if not client:
+                yield json.dumps({"type": "error", "msg": "Telegram Disconnected"}) + "\n"
+                return
 
-    # Panggil worker (tambah parameter template_id)
-    # Pastikan template_id di-pass ke worker
-    t_id_int = int(template_id) if template_id else None
-    threading.Thread(target=_broadcast_worker, args=(user_id, message, image_path, selected_ids_str, t_id_int)).start()
+            # Load Cloud Media (Sekali di awal biar hemat request)
+            cloud_media_obj = None
+            if source_media:
+                try:
+                    src_msg = await client.get_messages(source_media['chat'], ids=source_media['id'])
+                    if src_msg and src_msg.media: cloud_media_obj = src_msg.media
+                except: pass
+
+            success_count = 0
+            fail_count = 0
+
+            # --- LOOP PENGIRIMAN ---
+            for idx, user in enumerate(targets):
+                
+                # [SAFETY LOGIC 1]: Batch Pause (Istirahat Panjang)
+                # Setiap kelipatan 25 pesan, istirahat 3-5 menit
+                if idx > 0 and idx % 25 == 0:
+                    long_pause = random.randint(180, 300) # 3 s.d 5 Menit
+                    yield json.dumps({
+                        "type": "progress",
+                        "current": idx,
+                        "total": len(targets),
+                        "status": "warning", # Warna kuning di log
+                        "log": f"☕ SAFETY BREAK: Istirahat {long_pause} detik (Anti-Ban)...",
+                        "success": success_count,
+                        "failed": fail_count
+                    }) + "\n"
+                    await asyncio.sleep(long_pause)
+
+                # [PROSES KIRIM]
+                try:
+                    final_msg = message.replace("{name}", user.get('first_name') or "Kak")
+                    entity = await client.get_input_entity(int(user['user_id']))
+                    
+                    if cloud_media_obj:
+                        await client.send_file(entity, cloud_media_obj, caption=final_msg)
+                    elif manual_image_path:
+                        await client.send_file(entity, manual_image_path, caption=final_msg)
+                    else:
+                        await client.send_message(entity, final_msg)
+                    
+                    success_count += 1
+                    status = "success"
+                    log_msg = f"Terkirim ke {user.get('first_name') or user.get('user_id')}"
+
+                except Exception as e:
+                    fail_count += 1
+                    status = "failed"
+                    log_msg = f"Gagal ke {user.get('user_id')}: {str(e)[:15]}..."
+                
+                # Update Progress UI
+                yield json.dumps({
+                    "type": "progress",
+                    "current": idx + 1,
+                    "total": len(targets),
+                    "status": status,
+                    "log": log_msg,
+                    "success": success_count,
+                    "failed": fail_count
+                }) + "\n"
+                
+                # [SAFETY LOGIC 2]: Random Delay Antar Pesan
+                # Acak antara 1.5 sampai 3.0 detik (step 0.1)
+                step_delay = random.randrange(15, 31) / 10.0
+                await asyncio.sleep(step_delay)
+
+            await client.disconnect()
+            
+            if manual_image_path and os.path.exists(manual_image_path):
+                os.remove(manual_image_path)
+                
+            yield json.dumps({"type": "done", "success": success_count, "failed": fail_count}) + "\n"
+
+        # Bridge Async
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            runner = _process()
+            while True:
+                try:
+                    yield loop.run_until_complete(runner.__anext__())
+                except StopAsyncIteration:
+                    break
+        finally:
+            loop.close()
+
+    return Response(stream_with_context(generate()), mimetype='application/json')
 
 # ==============================================================================
 # SECTION 12: CRUD ROUTES (SCHEDULE, TARGETS, & TEMPLATES)
