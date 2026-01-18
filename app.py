@@ -1009,34 +1009,40 @@ def verify_code():
 @app.route('/scan_groups_api')
 @login_required
 def scan_groups_api():
-    """Scan Groups & Topics (Robust version with detailed logging)"""
+    """Scan Groups & Topics (FINAL HARD IMPORT VERSION)"""
     user_id = session.get('user_id')
     if user_id is None:
         return jsonify({"status": "error", "message": "User not authenticated."}), 401
 
     async def _scan():
+        # 1. Cek Versi (Buat kepastian di log)
         import telethon
-        logger.info(f"✅ [INFO] Telethon Version: {telethon.__version__}")
+        from telethon import utils, types
+        
+        # --- [CRITICAL FIX] ---
+        # Kita import PAKSA sub-modulnya agar Python sadar kalau ini ada.
+        # Jangan cuma 'import telethon.tl.functions', tapi harus spesifik ke 'channels'
+        try:
+            from telethon.tl.functions.channels import GetForumTopicsRequest
+            HAS_RAW_API = True
+            logger.info(f"✅ [SYSTEM] Class GetForumTopicsRequest BERHASIL di-load dari Telethon {telethon.__version__}")
+        except ImportError as e:
+            HAS_RAW_API = False
+            logger.critical(f"❌ [SYSTEM] FATAL: GetForumTopicsRequest hilang! Error: {e}")
 
         client = await get_active_client(user_id)
         if not client:
             return jsonify({"status": "error", "message": "Telegram disconnected."})
 
         groups = []
-        # Cek availability raw API secara lebih eksplisit
-        HAS_RAW_API = False
-        try:
-            _ = functions.channels.GetForumTopicsRequest
-            HAS_RAW_API = True
-        except Exception:
-            HAS_RAW_API = False
-            logger.info("🔧 GetForumTopicsRequest not available in current Telethon wrapper (fallback to General)")
 
         try:
             async for dialog in client.iter_dialogs(limit=200):
-                if not getattr(dialog, "is_group", False):
+                # Filter hanya grup
+                if not dialog.is_group:
                     continue
 
+                # Cek atribut forum
                 is_forum = getattr(dialog.entity, 'forum', False)
                 real_id = utils.get_peer_id(dialog.entity)
 
@@ -1048,18 +1054,22 @@ def scan_groups_api():
                 }
 
                 if is_forum:
-                    logger.info(f"🔍 [SCAN] Forum: {dialog.name} (ID={real_id})")
+                    logger.info(f"🔍 [SCAN] Forum Detected: {dialog.name}")
+                    
                     if HAS_RAW_API:
                         try:
                             input_channel = await client.get_input_entity(real_id)
                             all_topics = []
+                            
+                            # Pagination Variables
                             offset_id = 0
                             offset_date = 0
                             offset_topic = 0
 
-                            for page in range(10):  # batasi 10 page
+                            for page in range(10):  # Limit 10 halaman
                                 try:
-                                    req = functions.channels.GetForumTopicsRequest(
+                                    # [CRITICAL FIX] Panggil Class Langsung (Bukan via wrapper functions.channels)
+                                    req = GetForumTopicsRequest(
                                         channel=input_channel,
                                         offset_date=offset_date,
                                         offset_id=offset_id,
@@ -1069,51 +1079,51 @@ def scan_groups_api():
                                     )
                                     res = await client(req)
 
-                                    topics = getattr(res, 'topics', None) or []
+                                    topics = getattr(res, 'topics', [])
                                     if not topics:
-                                        logger.info(f"   ⏭ No more topics on page {page} for {dialog.name}")
                                         break
 
                                     for t in topics:
                                         t_id = getattr(t, 'id', None)
                                         t_title = getattr(t, 'title', '')
 
+                                        # Handle Deleted Topics
                                         if isinstance(t, types.ForumTopicDeleted):
-                                            t_title = f"(Deleted) #{t_id}"
+                                            t_title = f"(Deleted Topic) #{t_id}"
+                                        
+                                        # Handle Blank Title
                                         if not t_title:
                                             t_title = f"Topic #{t_id}"
 
-                                        # Normalisasi General jika diperlukan
-                                        if t_id == 1 or t_title.strip() == "Topic #1":
-                                            t_title = "General"
+                                        # Normalisasi General
+                                        if t_id == 1 or "Topic #1" in t_title:
+                                            t_title = "General 📌"
 
                                         if t_id is not None:
                                             all_topics.append({"id": t_id, "title": t_title})
 
-                                    # Update offset dari item terakhir jika ada
-                                    if topics:
-                                        last = topics[-1]
-                                        offset_id = getattr(last, 'id', 0)
-                                        offset_date = getattr(last, 'date', 0)
+                                    # Update Offset untuk loop berikutnya
+                                    last = topics[-1]
+                                    offset_id = getattr(last, 'id', 0)
+                                    offset_date = getattr(last, 'date', 0)
 
                                 except Exception as loop_e:
-                                    logger.exception(f"   ⚠️ Loop error di {dialog.name}: {loop_e}")
+                                    logger.warning(f"   ⚠️ Page {page} error: {loop_e}")
                                     break
 
-                            # Sort & Fallback
+                            # Sortir & Pastikan General Ada
                             all_topics.sort(key=lambda x: x['id'])
                             if not any(t['id'] == 1 for t in all_topics):
                                 all_topics.insert(0, {'id': 1, 'title': 'General (Topik Utama)'})
 
                             g_data['topics'] = all_topics
-                            logger.info(f"   ✅ Sukses: {len(all_topics)} topik ditemukan untuk {dialog.name}")
+                            logger.info(f"   ✅ Sukses: {len(all_topics)} topik diambil.")
 
                         except Exception as e:
-                            logger.exception(f"   🔥 Gagal Forum {dialog.name}: {e}")
-                            # Fallback yang lebih informatif
-                            g_data['topics'] = [{'id': 1, 'title': 'General (Fallback - Request Error)'}]
+                            logger.exception(f"   🔥 Gagal Request ke Telegram: {e}")
+                            g_data['topics'] = [{'id': 1, 'title': 'General (API Error)'}]
                     else:
-                        g_data['topics'] = [{'id': 1, 'title': 'General (Fallback - Library Old)'}]
+                        g_data['topics'] = [{'id': 1, 'title': 'General (Library Import Failed)'}]
 
                 groups.append(g_data)
 
@@ -1122,15 +1132,11 @@ def scan_groups_api():
             return jsonify({'status': 'error', 'message': str(e)})
 
         finally:
-            # Pastikan selalu disconnect meski ada error
-            try:
-                await client.disconnect()
-            except Exception:
-                logger.exception("Error during client.disconnect()")
+            try: await client.disconnect()
+            except: pass
 
         return jsonify({'status': 'success', 'data': groups})
 
-    # Jalankan dengan helper run_async seperti sebelumnya
     return run_async(_scan())
     
 @app.route('/save_bulk_targets', methods=['POST'])
