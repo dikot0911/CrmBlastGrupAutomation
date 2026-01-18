@@ -831,21 +831,59 @@ def dashboard_templates():
 @app.route('/dashboard/crm')
 @login_required
 def dashboard_crm():
-    """Halaman Database Pelanggan (CRM)"""
+    """Halaman Database Pelanggan (CRM) dengan Server-Side Pagination"""
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
-    crm_count = 0
-    crm_users = [] # Optional: Load some users if needed
-    try:
-        # Get Count
-        crm_res = supabase.table('tele_users').select("id", count='exact', head=True).eq('owner_id', user.id).execute()
-        crm_count = crm_res.count if crm_res.count else 0
-        # Get latest 50 contacts
-        crm_users = supabase.table('tele_users').select("*").eq('owner_id', user.id).order('last_interaction', desc=True).limit(50).execute().data
-    except: pass
+    # --- LOGIC PAGINATION & SEARCH (Update Ini!) ---
+    # 1. Ambil parameter dari URL (default page 1, 50 baris per halaman)
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    search_query = request.args.get('q', '').strip()
     
-    return render_template('dashboard/crm.html', user=user, user_count=crm_count, crm_users=crm_users, active_page='crm')
+    # 2. Hitung Offset Database (Start - End)
+    start = (page - 1) * per_page
+    end = start + per_page - 1
+    
+    crm_users = []
+    total_users = 0
+    total_pages = 0
+    
+    if supabase:
+        try:
+            # Base Query
+            query = supabase.table('tele_users').select("*", count='exact').eq('owner_id', user.id)
+            
+            # Filter Pencarian (Jika ada)
+            if search_query:
+                # Cari berdasarkan username (Case Insensitive)
+                query = query.ilike('username', f'%{search_query}%') 
+            
+            # Eksekusi Query dengan Range (Halaman)
+            res = query.order('last_interaction', desc=True).range(start, end).execute()
+            
+            crm_users = res.data if res.data else []
+            total_users = res.count if res.count else 0
+            
+            # Hitung Total Halaman (Matematika)
+            import math
+            total_pages = math.ceil(total_users / per_page) if per_page > 0 else 0
+            
+        except Exception as e:
+            logger.error(f"CRM Pagination Error: {e}")
+    
+    # 3. Kirim SEMUA variabel ini ke HTML (PENTING!)
+    return render_template('dashboard/crm.html', 
+                           user=user, 
+                           crm_users=crm_users, 
+                           user_count=total_users, # Update variable count
+                           # Variabel Pagination Wajib:
+                           current_page=page,
+                           total_pages=total_pages,
+                           per_page=per_page,
+                           total_users=total_users,
+                           search_query=search_query,
+                           active_page='crm')
 
 @app.route('/dashboard/connection')
 @login_required
