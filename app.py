@@ -1008,7 +1008,7 @@ def verify_code():
 @app.route('/scan_groups_api')
 @login_required
 def scan_groups_api():
-    """Scan Groups & Force Fetch Topics"""
+    """Scan Groups & Force Fetch ALL Topics (No Limit)"""
     user_id = session['user_id']
     
     async def _scan():
@@ -1017,11 +1017,10 @@ def scan_groups_api():
         
         groups = []
         try:
-            # 1. Ambil Dialog (Limit 200 biar cepet)
-            async for dialog in client.iter_dialogs(limit=200):
+            # 1. Ambil Dialog (Limit dinaikin jadi 300 grup)
+            async for dialog in client.iter_dialogs(limit=300):
                 if dialog.is_group:
                     is_forum = getattr(dialog.entity, 'forum', False)
-                    # Pastikan ID integer
                     real_id = utils.get_peer_id(dialog.entity)
                     
                     g_data = {
@@ -1031,47 +1030,36 @@ def scan_groups_api():
                         'topics': []
                     }
                     
-                    # 2. Logic Khusus Forum (PAKSA BACA)
+                    # 2. Logic Forum (UNLIMITED FETCH)
                     if is_forum:
                         try:
-                            # A. RESOLVE ENTITY (Ini Kuncinya!)
-                            # Jangan pake dialog.entity mentah, kita minta InputChannel yang valid
+                            # A. Kunci Validasi (Wajib)
                             input_channel = await client.get_input_entity(real_id)
                             
-                            # B. TEMBAK RAW API
-                            from telethon import functions
+                            # B. Ambil SEMUA Topik (Pake iter_forum_topics lebih stabil buat pagination)
+                            # limit=None artinya sikat habis semua topik yang ada
+                            topics_list = []
+                            async for t in client.iter_forum_topics(input_channel, limit=None):
+                                t_id = getattr(t, 'id', None)
+                                if t_id:
+                                    t_title = getattr(t, 'title', '') or f"Topic #{t_id}"
+                                    if t_id == 1 and not t_title: t_title = "General 📌"
+                                    topics_list.append({'id': t_id, 'title': t_title})
                             
-                            # Ambil 100 topik teratas (Active Topics)
-                            res = await client(functions.channels.GetForumTopicsRequest(
-                                channel=input_channel,
-                                offset_date=0,
-                                offset_id=0,
-                                offset_topic=0,
-                                limit=100,
-                                q='' # Query kosong = ambil semua
-                            ))
+                            # C. Sorting biar rapi (Dari ID Kecil ke Gede)
+                            # Biar user enak liatnya urut
+                            topics_list.sort(key=lambda x: x['id'])
                             
-                            found_ids = set()
-                            if res and res.topics:
-                                for t in res.topics:
-                                    # t bisa 'ForumTopic' atau 'ForumTopicDeleted'
-                                    t_id = getattr(t, 'id', None)
-                                    if t_id:
-                                        t_title = getattr(t, 'title', '') or f"Topic #{t_id}"
-                                        # Filter topik 'General' (biasanya ID 1) biar namanya rapi
-                                        if t_id == 1 and not t_title: t_title = "General 📌"
-                                        
-                                        g_data['topics'].append({'id': t_id, 'title': t_title})
-                                        found_ids.add(t_id)
-                            
-                            # C. FALLBACK GENERAL
-                            # Kalau ID 1 gak ketangkep API (sering terjadi), kita paksa masukin
-                            if 1 not in found_ids:
-                                g_data['topics'].insert(0, {'id': 1, 'title': 'General / Topik Utama 📌'})
+                            # D. Cek General Topic (Fallback)
+                            has_general = any(t['id'] == 1 for t in topics_list)
+                            if not has_general:
+                                topics_list.insert(0, {'id': 1, 'title': 'General (Auto-Add) 📌'})
                                 
+                            g_data['topics'] = topics_list
+                            
                         except Exception as e:
-                            # Kalau error, minimal balikin General biar bisa dipake
-                            print(f"⚠️ Gagal scan topik {dialog.name}: {e}")
+                            print(f"⚠️ Error fetch topics {dialog.name}: {e}")
+                            # Fallback minimal
                             g_data['topics'].append({'id': 1, 'title': 'General (Fallback)'})
                     
                     groups.append(g_data)
