@@ -18,12 +18,12 @@
                 Jadwal Share <span class="text-indigo-600">Otomatis</span>
             </h1>
             <p class="text-gray-500 mt-3 text-sm md:text-base max-w-2xl leading-relaxed">
-                Biarkan bot bekerja untuk Anda. Atur waktu pengiriman pesan promosi secara otomatis ke berbagai grup target tanpa perlu stand-by 24 jam. Sistem menggunakan zona waktu <b>WIB (Asia/Jakarta)</b>.
+                Biarkan bot bekerja untuk Anda. Atur waktu pengiriman pesan promosi secara otomatis ke berbagai grup target tanpa perlu stand-by 24 jam.
             </p>
         </div>
         
         <div class="flex items-center gap-4">
-            <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center min-w-[100px] hover:shadow-md transition">
+            <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center min-w-[100px]">
                 <div class="text-3xl font-black text-gray-800">{{ schedules|length }}</div>
                 <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">Antrian Aktif</div>
             </div>
@@ -50,7 +50,7 @@
                         Buat Jadwal Baru
                     </h3>
                     <p class="text-gray-400 text-xs mt-2 relative z-10 leading-relaxed pl-11">
-                        Tentukan jam eksekusi dan pilih target audiens untuk broadcast otomatis.
+                        Tentukan jam eksekusi, akun pengirim, dan target audiens.
                     </p>
                 </div>
 
@@ -70,20 +70,38 @@
                                     </select>
                                     <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 pointer-events-none">JAM</span>
                                 </div>
-                                
                                 <span class="text-2xl font-black text-indigo-300 pb-1">:</span>
-                                
                                 <div class="relative flex-1">
                                     <input type="number" name="minute" min="0" max="59" placeholder="00" class="w-full bg-white border border-gray-200 text-gray-800 text-lg font-bold rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block p-3 shadow-sm text-center hover:border-indigo-300 transition" required>
                                     <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 pointer-events-none">MENIT</span>
                                 </div>
                             </div>
-                            <p class="text-[10px] text-gray-500 mt-2 text-center">
-                                <i class="fa-solid fa-info-circle mr-1"></i> Format 24 Jam (00:00 - 23:59)
-                            </p>
                         </div>
 
                         <hr class="border-gray-100 border-dashed">
+
+                        <div class="group">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                <i class="fa-brands fa-telegram mr-1.5 text-gray-400"></i> Akun Pengirim
+                            </label>
+                            <div class="relative">
+                                <select name="sender_phone" class="w-full pl-11 pr-10 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-medium text-gray-700 cursor-pointer appearance-none hover:border-gray-300 group-hover:shadow-sm">
+                                    <option value="auto">⚡ Otomatis (Akun Utama)</option>
+                                    {% for acc in accounts %}
+                                        <option value="{{ acc.phone_number }}">{{ acc.phone_number }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition group-hover:text-indigo-500">
+                                    <i class="fa-solid fa-user-gear"></i>
+                                </div>
+                                <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs">
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-gray-400 mt-1.5 ml-1">
+                                *Pilih nomor spesifik untuk membagi beban pengiriman.
+                            </p>
+                        </div>
 
                         <div class="group">
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-2 flex justify-between items-center">
@@ -94,7 +112,7 @@
                             </label>
                             <div class="relative">
                                 <select name="template_id" class="w-full pl-11 pr-10 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-medium text-gray-700 cursor-pointer appearance-none hover:border-gray-300 group-hover:shadow-sm">
-                                    <option value="">-- Kirim Pesan Random/Default --</option>
+                                    <option value="">-- Kirim Pesan Default --</option>
                                     {% for t in templates %}
                                         <option value="{{ t.id }}">{{ t.name }}</option>
                                     {% endfor %}
@@ -106,9 +124,6 @@
                                     <i class="fa-solid fa-chevron-down"></i>
                                 </div>
                             </div>
-                            <p class="text-[10px] text-gray-400 mt-1.5 ml-1">
-                                *Jika kosong, bot akan mengirim sapaan default sistem.
-                            </p>
                         </div>
 
                         <div class="group">
@@ -141,16 +156,6 @@
                     </form>
                 </div>
             </div>
-            
-            <div class="mt-6 bg-blue-50 border border-blue-100 rounded-2xl p-4 flex gap-3 items-start">
-                <i class="fa-solid fa-lightbulb text-blue-500 mt-1"></i>
-                <div>
-                    <h4 class="text-sm font-bold text-blue-800">Tips Pro</h4>
-                    <p class="text-xs text-blue-600 mt-1 leading-relaxed">
-                        Atur jadwal di jam-jam <i>prime time</i> (11:00 - 13:00 atau 19:00 - 21:00) untuk jangkauan maksimal audiens.
-                    </p>
-                </div>
-            </div>
         </div>
 
         <div class="lg:col-span-8">
@@ -158,14 +163,13 @@
                 <h3 class="font-bold text-xl text-gray-800 flex items-center gap-2">
                     <i class="fa-solid fa-list-check text-indigo-500"></i> Daftar Antrian Aktif
                 </h3>
-                
                 {% if schedules %}
                 <div class="flex items-center gap-2">
                     <span class="relative flex h-3 w-3">
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                       <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
                     </span>
-                    <span class="text-xs font-bold text-green-600 uppercase tracking-wide">System Running</span>
+                    <span class="text-xs font-bold text-green-600 uppercase tracking-wide">Running</span>
                 </div>
                 {% endif %}
             </div>
@@ -177,7 +181,6 @@
                         
                         <div class="flex flex-col items-center justify-center min-w-[110px] bg-gray-900 rounded-[1.2rem] text-white p-4 relative overflow-hidden group-hover:scale-105 transition-transform duration-300">
                             <div class="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl -mr-5 -mt-5"></div>
-                            
                             <span class="text-3xl font-black font-mono tracking-tighter relative z-10">
                                 {{ '%02d' % s.run_hour }}<span class="animate-pulse text-indigo-400">:</span>{{ '%02d' % s.run_minute }}
                             </span>
@@ -188,32 +191,35 @@
                         </div>
 
                         <div class="flex-1 w-full text-center sm:text-left py-1">
-                            
                             <div class="mb-4">
                                 <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1.5 flex items-center justify-center sm:justify-start gap-1.5">
-                                    <i class="fa-solid fa-envelope-open-text"></i> Pesan yang dikirim
+                                    <i class="fa-solid fa-envelope-open-text"></i> Pesan
                                 </p>
                                 <h4 class="font-bold text-gray-800 text-base line-clamp-1 group-hover:text-indigo-600 transition">
-                                    {{ s.template_name if s.template_name else 'Random / System Default Message' }}
+                                    {{ s.template_name if s.template_name else 'Custom / No Template' }}
                                 </h4>
                             </div>
 
                             <div class="w-full h-px bg-gray-100 my-3"></div>
 
-                            <div>
-                                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1.5 flex items-center justify-center sm:justify-start gap-1.5">
-                                    <i class="fa-solid fa-crosshairs"></i> Target Sasaran
-                                </p>
-                                <div class="flex justify-center sm:justify-start">
+                            <div class="flex flex-wrap gap-4 justify-center sm:justify-start">
+                                <div>
+                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Pengirim</p>
+                                    <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-bold border border-blue-100">
+                                        <i class="fa-brands fa-telegram"></i> 
+                                        {{ s.sender_phone if s.sender_phone else 'Auto (Default)' }}
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Target</p>
                                     {% if s.target_group_id %}
-                                        <span class="inline-flex items-center gap-1.5 bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-purple-100 transition hover:bg-purple-100">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                                            Grup Spesifik (ID: {{ s.target_group_id }})
+                                        <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-bold border border-purple-100">
+                                            <i class="fa-solid fa-crosshairs"></i> Spesifik (ID: {{ s.target_group_id }})
                                         </span>
                                     {% else %}
-                                        <span class="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-green-100 transition hover:bg-green-100">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                            Broadcast ke Semua Grup
+                                        <span class="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-bold border border-green-100">
+                                            <i class="fa-solid fa-globe"></i> Semua Grup
                                         </span>
                                     {% endif %}
                                 </div>
@@ -221,8 +227,8 @@
                         </div>
 
                         <div class="flex items-center pl-4 sm:border-l sm:border-gray-100">
-                            <a href="/delete_schedule/{{ s.id }}" onclick="return confirm('Apakah Anda yakin ingin menghapus jadwal ini?')" 
-                               class="w-12 h-12 rounded-2xl bg-white border-2 border-red-50 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-300 shadow-sm hover:shadow-red-200 group/btn" 
+                            <a href="/delete_schedule/{{ s.id }}" onclick="return confirm('Hapus jadwal ini?')" 
+                               class="w-12 h-12 rounded-2xl bg-white border-2 border-red-50 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-300 shadow-sm group/btn" 
                                title="Hapus Jadwal">
                                 <i class="fa-regular fa-trash-can text-lg group-hover/btn:scale-110 transition-transform"></i>
                             </a>
@@ -232,17 +238,16 @@
                     <div class="absolute left-0 top-8 bottom-8 w-1 bg-gradient-to-b from-indigo-400 to-purple-500 rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </div>
                 {% else %}
-                
-                <div class="text-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-gray-200 hover:border-indigo-200 transition duration-300 group">
+                <div class="text-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-gray-200">
                     <div class="relative w-24 h-24 mx-auto mb-6">
                         <div class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20"></div>
-                        <div class="relative w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-300 group-hover:text-indigo-500 group-hover:scale-110 transition duration-300">
+                        <div class="relative w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-300">
                             <i class="fa-solid fa-stopwatch text-4xl"></i>
                         </div>
                     </div>
                     <h3 class="text-xl font-bold text-gray-800">Antrian Jadwal Kosong</h3>
-                    <p class="text-gray-500 text-sm mt-2 max-w-sm mx-auto leading-relaxed">
-                        Bot sedang beristirahat. Tambahkan jadwal blast di formulir sebelah kiri agar promosi Anda berjalan otomatis.
+                    <p class="text-gray-500 text-sm mt-2 max-w-sm mx-auto">
+                        Bot sedang beristirahat. Tambahkan jadwal blast di formulir sebelah kiri.
                     </p>
                 </div>
                 {% endfor %}
