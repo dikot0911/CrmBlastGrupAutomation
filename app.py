@@ -1008,7 +1008,7 @@ def verify_code():
 @app.route('/scan_groups_api')
 @login_required
 def scan_groups_api():
-    """Scan Groups & Manual Loop Fetch Topics (Debug Mode)"""
+    """Scan Groups & Topics (Safe Mode + Debug Logging)"""
     user_id = session['user_id']
     
     async def _scan():
@@ -1031,50 +1031,61 @@ def scan_groups_api():
                     }
                     
                     if is_forum:
+                        print(f"🔍 [DEBUG] Scanning Forum: {dialog.name} ({real_id})") # Debug Log
                         try:
-                            # A. Resolve InputChannel (Wajib)
+                            # A. Resolve InputChannel (Kunci Utama)
                             input_channel = await client.get_input_entity(real_id)
                             
-                            # B. MANUAL LOOPING (RAW API)
-                            # Kita tarik per 100 biji, maksimal 10x putaran (1000 topik)
-                            # Ini lebih stabil daripada iter_forum_topics
-                            from telethon import functions
-                            
+                            # B. MANUAL LOOPING (Safe Version)
                             all_topics = []
                             offset_id = 0
                             offset_date = 0
                             offset_topic = 0
                             
-                            for _ in range(10): # Max 1000 topik
-                                res = await client(functions.channels.GetForumTopicsRequest(
-                                    channel=input_channel,
-                                    offset_date=offset_date,
-                                    offset_id=offset_id,
-                                    offset_topic=offset_topic,
-                                    limit=100, # Tarik 100 per request
-                                    q=''
-                                ))
-                                
-                                if not res.topics:
-                                    break # Stop kalau data habis
-                                
-                                for t in res.topics:
-                                    # Handle topicDeleted atau topic biasa
-                                    if hasattr(t, 'id'):
-                                        t_title = getattr(t, 'title', '') or f"Topic #{t.id}"
-                                        # Rapihkan nama General
-                                        if t.id == 1 and not t_title: t_title = "General"
-                                        all_topics.append({'id': t.id, 'title': t_title})
-                                
-                                # Siapkan offset buat putaran selanjutnya
-                                last_item = res.topics[-1]
-                                offset_id = last_item.id
-                                # offset_date = last_item.date (opsional, kadang bikin bug)
+                            # Loop max 20 kali (2000 topik) biar ga infinite loop
+                            for i in range(20): 
+                                try:
+                                    res = await client(functions.channels.GetForumTopicsRequest(
+                                        channel=input_channel,
+                                        offset_date=offset_date,
+                                        offset_id=offset_id,
+                                        offset_topic=offset_topic,
+                                        limit=100, 
+                                        q=''
+                                    ))
+                                    
+                                    if not res.topics:
+                                        print(f"   ✅ [DEBUG] Selesai scan. Total: {len(all_topics)}")
+                                        break 
+                                    
+                                    for t in res.topics:
+                                        # Handle Topics (Normal & Deleted)
+                                        # Pastikan objek punya attribute 'id'
+                                        t_id = getattr(t, 'id', None)
+                                        if t_id:
+                                            t_title = getattr(t, 'title', '') or f"Topic #{t_id}"
+                                            if t_id == 1 and not t_title: t_title = "General"
+                                            
+                                            # Cek apakah tipe-nya Deleted?
+                                            if isinstance(t, types.ForumTopicDeleted):
+                                                t_title = f"{t_title} (Deleted)"
+                                            
+                                            all_topics.append({'id': t_id, 'title': t_title})
+                                    
+                                    # Update Offset untuk halaman berikutnya
+                                    last_item = res.topics[-1]
+                                    offset_id = getattr(last_item, 'id', 0)
+                                    offset_date = getattr(last_item, 'date', 0)
+                                    # offset_topic untuk filter pinned, biarin 0 kalau runut waktu
+                                    
+                                except Exception as inner_e:
+                                    print(f"   ⚠️ [DEBUG] Skip page {i}: {inner_e}")
+                                    break # Stop loop kalau ada error aneh di tengah
 
-                            # C. Sorting & Fallback Check
+                            # C. Sorting & Fallback
                             all_topics.sort(key=lambda x: x['id'])
                             
-                            # Cek General Topic
+                            # Cek General
                             has_general = any(t['id'] == 1 for t in all_topics)
                             if not has_general:
                                 all_topics.insert(0, {'id': 1, 'title': 'General (Topik Utama) 📌'})
@@ -1082,13 +1093,10 @@ def scan_groups_api():
                             g_data['topics'] = all_topics
 
                         except Exception as e:
-                            # --- ERROR TRAP ---
-                            # Kalau gagal, pesan errornya bakal muncul jadi nama topik!
-                            # Jadi kita tau salahnya dimana.
                             err_msg = str(e)
-                            print(f"🔥 Error fetch {dialog.name}: {err_msg}")
-                            g_data['topics'].append({'id': 0, 'title': f"⚠️ Gagal: {err_msg[:40]}..."})
-                            g_data['topics'].append({'id': 1, 'title': 'General (Fallback)'})
+                            print(f"🔥 [DEBUG] Error Fatal di {dialog.name}: {err_msg}")
+                            # Tampilkan error di UI biar ketahuan
+                            g_data['topics'].append({'id': 1, 'title': f'Error: {err_msg[:30]}...'})
                     
                     groups.append(g_data)
                     
