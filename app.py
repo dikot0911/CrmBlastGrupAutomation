@@ -7,11 +7,13 @@ import time
 import httpx
 import pytz
 import telethon
+import csv
+import io
 from functools import wraps 
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_from_directory, Response, stream_with_context
 
 # --- TELETHON & SUPABASE ---
 from telethon import TelegramClient, errors, functions, types, utils
@@ -1560,8 +1562,129 @@ def ban_user(user_id):
 def ping():
     return jsonify({"status": "alive", "timestamp": datetime.utcnow().isoformat()}), 200
 
+# ==========================================
+# SECTION 14 : IMPORT & EXPORT CSV
+# ==========================================
+
+@app.route('/import_crm_csv', methods=['POST'])
+@login_required
+def import_crm_csv():
+    """
+    Import Database Pelanggan via CSV.
+    Validasi: Header wajib 'user_id', 'username' (opsional), 'first_name' (opsional).
+    """
+    user_id = session['user_id']
+    
+    if 'file' not in request.files:
+        return jsonify({"status": "error", "message": "Tidak ada file yang diunggah."})
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"status": "error", "message": "Nama file kosong."})
+    
+    if not file.filename.endswith('.csv'):
+        return jsonify({"status": "error", "message": "Format file harus .csv"})
+
+    try:
+        # Baca file di memori (Stream) biar cepet
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_input = csv.DictReader(stream)
+        
+        # Validasi Header Minimal
+        if 'user_id' not in csv_input.fieldnames:
+            return jsonify({
+                "status": "error", 
+                "message": "Format CSV Salah! Wajib ada kolom header: 'user_id'."
+            })
+
+        valid_rows = []
+        errors = 0
+        
+        for row in csv_input:
+            try:
+                # Validasi User ID harus Angka
+                uid_raw = row.get('user_id', '').strip()
+                if not uid_raw.isdigit():
+                    errors += 1
+                    continue 
+                
+                # Rapihkan data
+                clean_data = {
+                    "owner_id": user_id,
+                    "user_id": int(uid_raw),
+                    "username": row.get('username', '').strip() or None,
+                    "first_name": row.get('first_name', 'Imported Contact').strip(),
+                    "last_interaction": datetime.utcnow().isoformat(),
+                    "created_at": datetime.utcnow().isoformat()
+                }
+                valid_rows.append(clean_data)
+                
+            except Exception:
+                errors += 1
+                continue
+
+        if not valid_rows:
+            return jsonify({"status": "error", "message": "File kosong atau data user_id tidak valid."})
+
+        # Batch Insert ke Supabase (Biar aman kalau data ribuan)
+        batch_size = 1000
+        for i in range(0, len(valid_rows), batch_size):
+            batch = valid_rows[i:i + batch_size]
+            supabase.table('tele_users').upsert(batch, on_conflict="owner_id, user_id").execute()
+
+        msg = f"Sukses import {len(valid_rows)} kontak."
+        if errors > 0:
+            msg += f" ({errors} baris dilewati karena format salah)"
+            
+        return jsonify({"status": "success", "message": msg})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Gagal proses file: {str(e)}"})
+
+@app.route('/export_crm_csv')
+@login_required
+def export_crm_csv():
+    """Download Database Pelanggan jadi file CSV"""
+    user_id = session['user_id']
+    
+    try:
+        # Ambil data user dari DB
+        res = supabase.table('tele_users').select("user_id, username, first_name, last_interaction")\
+            .eq('owner_id', user_id).execute()
+        
+        data = res.data if res.data else []
+        
+        # Bikin CSV di memori
+        si = io.StringIO()
+        cw = csv.writer(si)
+        
+        # Header CSV
+        cw.writerow(['user_id', 'username', 'first_name', 'last_interaction'])
+        
+        # Isi Data
+        for row in data:
+            cw.writerow([
+                row.get('user_id'),
+                row.get('username') or '',
+                row.get('first_name') or '',
+                row.get('last_interaction')
+            ])
+            
+        output = si.getvalue()
+        
+        return Response(
+            output,
+            mimetype="text/csv",
+            headers={"Content-disposition": f"attachment; filename=database_pelanggan_{datetime.now().strftime('%Y%m%d')}.csv"}
+        )
+        
+    except Exception as e:
+        flash(f"Gagal export: {e}", "danger")
+        return redirect(url_for('dashboard_crm'))
+
+
 # ==============================================================================
-# SECTION 14: INITIALIZATION ROUTINE
+# SECTION 15: INITIALIZATION ROUTINE
 # ==============================================================================
 
 def init_system_check():
