@@ -22,13 +22,19 @@
     </div>
 
     <div class="bg-white rounded-[1.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 overflow-hidden">
+        
         <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
             <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
-                    <span class="text-xs font-bold text-gray-500 uppercase">Total User</span>
+                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:border-indigo-300 transition">
+                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                    <label for="selectAll" class="text-xs font-bold text-gray-500 uppercase cursor-pointer select-none">Pilih Semua</label>
                 </div>
-                <span class="text-xs text-gray-400 font-mono font-bold">{{ user_count }} Kontak</span>
+                <span class="text-xs text-gray-400 font-mono font-bold border-l border-gray-300 pl-3">{{ user_count }} Kontak Total</span>
             </div>
+            
+            <button id="btnBlast" onclick="blastSelected()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-5 py-2.5 rounded-lg font-bold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2" disabled>
+                <i class="fa-solid fa-paper-plane"></i> Follow Up Terpilih (<span id="countSelected">0</span>)
+            </button>
         </div>
 
         <div class="overflow-x-auto">
@@ -40,12 +46,15 @@
                         <th class="p-5 font-bold">Username</th>
                         <th class="p-5 font-bold">ID User</th>
                         <th class="p-5 font-bold">Terakhir Interaksi</th>
+                        <th class="p-5 font-bold text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
                     {% for u in crm_users %}
                     <tr class="hover:bg-indigo-50/30 transition group">
-                        <td class="p-5 text-gray-300 text-xs">{{ loop.index }}</td>
+                        <td class="p-5">
+                            <input type="checkbox" class="user-check rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" value="{{ u.user_id }}" onchange="updateSelection()">
+                        </td>
                         <td class="p-5">
                             <div class="font-bold text-gray-800">{{ u.first_name or 'Tanpa Nama' }}</div>
                         </td>
@@ -67,10 +76,15 @@
                                 {{ u.last_interaction[:10] }}
                             </div>
                         </td>
+                        <td class="p-5 text-right">
+                            <a href="/dashboard/broadcast?ids={{ u.user_id }}" class="text-xs bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-200 px-3 py-1.5 rounded-lg shadow-sm transition font-bold">
+                                Chat
+                            </a>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="p-10 text-center text-gray-400">
+                        <td colspan="6" class="p-10 text-center text-gray-400">
                             <div class="flex flex-col items-center">
                                 <i class="fa-solid fa-folder-open text-4xl mb-3 text-gray-200"></i>
                                 <p>Belum ada data pelanggan.</p>
@@ -81,6 +95,10 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+        
+        <div class="p-4 border-t border-gray-100 bg-gray-50 text-center text-xs text-gray-400">
+            Menampilkan 50 data terbaru. Gunakan fitur Export CSV untuk melihat semua data.
         </div>
     </div>
 </div>
@@ -120,7 +138,7 @@
                             </div>
                             <div class="flex-1">
                                 <h4 class="font-bold text-gray-800 group-hover:text-green-700">Upload File CSV</h4>
-                                <p class="text-xs text-gray-500 mt-0.5">Import database dari file Excel/CSV.</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Import database dari file Excel (.csv).</p>
                             </div>
                             <div class="absolute right-4 text-green-400 opacity-0 group-hover:opacity-100 transition">
                                 <i class="fa-solid fa-chevron-down"></i>
@@ -163,7 +181,47 @@
 </div>
 
 <script>
-    // --- UTILS ---
+    // --- 1. CHECKBOX LOGIC (INI YANG KEMARIN ILANG) ---
+    function toggleSelectAll() {
+        const master = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.user-check');
+        checkboxes.forEach(cb => cb.checked = master.checked);
+        updateSelection();
+    }
+
+    function updateSelection() {
+        const selected = document.querySelectorAll('.user-check:checked');
+        const count = selected.length;
+        const btn = document.getElementById('btnBlast');
+        const label = document.getElementById('countSelected');
+        
+        label.innerText = count;
+        
+        // Cek Select All master checkbox
+        const total = document.querySelectorAll('.user-check').length;
+        document.getElementById('selectAll').checked = (count > 0 && count === total);
+
+        if (count > 0) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    function blastSelected() {
+        const selected = document.querySelectorAll('.user-check:checked');
+        if (selected.length === 0) return alert("Pilih minimal satu user!");
+        
+        // Ambil semua ID yang dicentang
+        const ids = Array.from(selected).map(cb => cb.value).join(',');
+        
+        // Redirect ke halaman Broadcast dengan membawa ID tersebut
+        window.location.href = `/dashboard/broadcast?ids=${ids}`;
+    }
+
+    // --- 2. MODAL & IMPORT LOGIC (TETAP ADA) ---
     const modal = document.getElementById('importModal');
     const backdrop = document.getElementById('modalBackdrop');
     const panel = document.getElementById('modalPanel');
@@ -200,7 +258,6 @@
         document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
-    // --- FUNCTION 1: SYNC TELEGRAM (FITUR LAMA) ---
     async function runTelegramSync() {
         showLoading("Menghubungkan ke Telegram & Scanning Chat...");
         try {
@@ -220,7 +277,6 @@
         }
     }
 
-    // --- FUNCTION 2: UPLOAD CSV (FITUR BARU) ---
     async function uploadCsv() {
         const fileInput = document.getElementById('csvFileInput');
         if(fileInput.files.length === 0) {
