@@ -1008,19 +1008,20 @@ def verify_code():
 @app.route('/scan_groups_api')
 @login_required
 def scan_groups_api():
-    """Scan Groups/Channels/Forums (ULTIMATE VERSION: AUTO-DETECT + GENERAL TOPIC)"""
+    """Scan Groups & Force Fetch Topics"""
     user_id = session['user_id']
     
     async def _scan():
         client = await get_active_client(user_id)
-        if not client: return jsonify({"status": "error", "message": "Telegram tidak terhubung."})
+        if not client: return jsonify({"status": "error", "message": "Telegram disconnected."})
         
         groups = []
         try:
-            # Scan limit 200 dialogs
+            # 1. Ambil Dialog (Limit 200 biar cepet)
             async for dialog in client.iter_dialogs(limit=200):
                 if dialog.is_group:
                     is_forum = getattr(dialog.entity, 'forum', False)
+                    # Pastikan ID integer
                     real_id = utils.get_peer_id(dialog.entity)
                     
                     g_data = {
@@ -1030,49 +1031,53 @@ def scan_groups_api():
                         'topics': []
                     }
                     
-                    # --- LOGIC KHUSUS FORUM ---
+                    # 2. Logic Khusus Forum (PAKSA BACA)
                     if is_forum:
-                        logger.info(f"🔍 Scanning topics for: {dialog.name} ({real_id})")
-                        found_topics = []
-                        
                         try:
-                            # STEP 1: Coba cara halus (High Level API)
-                            # iter_forum_topics kadang lebih stabil daripada GetForumTopicsRequest langsung
-                            async for t in client.iter_forum_topics(dialog.entity, limit=50):
-                                t_title = getattr(t, 'title', '') or f"Topic #{t.id}"
-                                found_topics.append({'id': t.id, 'title': t_title})
+                            # A. RESOLVE ENTITY (Ini Kuncinya!)
+                            # Jangan pake dialog.entity mentah, kita minta InputChannel yang valid
+                            input_channel = await client.get_input_entity(real_id)
+                            
+                            # B. TEMBAK RAW API
+                            from telethon import functions
+                            
+                            # Ambil 100 topik teratas (Active Topics)
+                            res = await client(functions.channels.GetForumTopicsRequest(
+                                channel=input_channel,
+                                offset_date=0,
+                                offset_id=0,
+                                offset_topic=0,
+                                limit=100,
+                                q='' # Query kosong = ambil semua
+                            ))
+                            
+                            found_ids = set()
+                            if res and res.topics:
+                                for t in res.topics:
+                                    # t bisa 'ForumTopic' atau 'ForumTopicDeleted'
+                                    t_id = getattr(t, 'id', None)
+                                    if t_id:
+                                        t_title = getattr(t, 'title', '') or f"Topic #{t_id}"
+                                        # Filter topik 'General' (biasanya ID 1) biar namanya rapi
+                                        if t_id == 1 and not t_title: t_title = "General 📌"
+                                        
+                                        g_data['topics'].append({'id': t_id, 'title': t_title})
+                                        found_ids.add(t_id)
+                            
+                            # C. FALLBACK GENERAL
+                            # Kalau ID 1 gak ketangkep API (sering terjadi), kita paksa masukin
+                            if 1 not in found_ids:
+                                g_data['topics'].insert(0, {'id': 1, 'title': 'General / Topik Utama 📌'})
                                 
                         except Exception as e:
-                            logger.warning(f"⚠️ Scan Method 1 failed for {dialog.name}: {e}")
-                            
-                            # STEP 2: Coba cara kasar (RAW API) jika cara halus gagal
-                            try:
-                                input_peer = utils.get_input_channel(dialog.entity)
-                                res = await client(functions.channels.GetForumTopicsRequest(
-                                    channel=input_peer,
-                                    offset_date=0, offset_id=0, offset_topic=0, limit=50
-                                ))
-                                if res.topics:
-                                    for t in res.topics:
-                                        t_title = getattr(t, 'title', '') or f"Topic #{t.id}"
-                                        found_topics.append({'id': t.id, 'title': t_title})
-                            except Exception as e2:
-                                logger.error(f"❌ Scan Method 2 also failed: {e2}")
-
-                        # STEP 3: Pastikan General Topic selalu ada
-                        # Cek apakah ID 1 (General) udah keambil? Kalau belum, masukin manual.
-                        has_general = any(t['id'] == 1 for t in found_topics)
-                        if not has_general:
-                            # Masukkan Topik General di paling atas
-                            found_topics.insert(0, {'id': 1, 'title': 'General / Topik Utama 📌'})
-
-                        g_data['topics'] = found_topics
+                            # Kalau error, minimal balikin General biar bisa dipake
+                            print(f"⚠️ Gagal scan topik {dialog.name}: {e}")
+                            g_data['topics'].append({'id': 1, 'title': 'General (Fallback)'})
                     
                     groups.append(g_data)
                     
         except Exception as e:
-            logger.error(f"Global Scan Error: {e}")
-            return jsonify({'status': 'error', 'message': f"Scan Failed: {str(e)}"})
+            return jsonify({'status': 'error', 'message': str(e)})
         finally:
             await client.disconnect()
             
