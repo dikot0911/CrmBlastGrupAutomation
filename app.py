@@ -1230,63 +1230,60 @@ def start_broadcast():
             filename = secure_filename(f"broadcast_{user_id}_{int(time.time())}_{image_file.filename}")
             image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             image_file.save(image_path)
-    
-        # --- [INI BAGIAN WORKER YANG GUA PERBAIKI] ---
-# ... (bagian awal fungsi start_broadcast sama) ...
 
-    # --- WORKER BARU (SUPPORT CLOUD MEDIA) ---
-    def _broadcast_worker(uid, msg, img_path, target_ids, template_id=None):
-        async def _logic():
-            client = await get_active_client(uid)
-            if not client: return
+# --- WORKER BARU (SUPPORT CLOUD MEDIA) ---
+def _broadcast_worker(uid, msg, img_path, target_ids, template_id=None):
+    async def _logic():
+        client = await get_active_client(uid)
+        if not client: return
             
-            # Pemanasan
-            try: await client.get_dialogs(limit=None)
-            except: pass
+        # Pemanasan
+        try: await client.get_dialogs(limit=None)
+        except: pass
 
             # Cek Template Source (Kalau pakai template)
-            source_media = None
-            if template_id:
-                tmpl = MessageTemplateManager.get_template_by_id(template_id)
-                # Cek apakah template punya referensi media (Database Mandiri)
-                if tmpl and tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
-                    try:
-                        # Ambil pesan aslinya dari "Database Mandiri" user
-                        src_chat = int(tmpl['source_chat_id'])
-                        src_id = int(tmpl['source_message_id'])
-                        original_msg = await client.get_messages(src_chat, ids=src_id)
-                        if original_msg and original_msg.media:
-                            source_media = original_msg.media
-                    except: 
-                        print("Gagal load media source")
+        source_media = None
+        if template_id:
+            tmpl = MessageTemplateManager.get_template_by_id(template_id)
+            # Cek apakah template punya referensi media (Database Mandiri)
+            if tmpl and tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
+                try:
+                    # Ambil pesan aslinya dari "Database Mandiri" user
+                    src_chat = int(tmpl['source_chat_id'])
+                    src_id = int(tmpl['source_message_id'])
+                    original_msg = await client.get_messages(src_chat, ids=src_id)
+                    if original_msg and original_msg.media:
+                        source_media = original_msg.media
+                except: 
+                    print("Gagal load media source")
 
-            try:
-                # ... (query user crm sama kayak sebelumnya) ...
+        try:
+            # ... (query user crm sama kayak sebelumnya) ...
                 
-                for u in crm_users:
-                    try:
-                        user_tele_id = int(u['user_id'])
-                        target = await client.get_input_entity(user_tele_id)
-                        final_msg = msg.replace("{name}", u.get('first_name') or "Kak")
+            for u in crm_users:
+                try:
+                    user_tele_id = int(u['user_id'])
+                    target = await client.get_input_entity(user_tele_id)
+                    final_msg = msg.replace("{name}", u.get('first_name') or "Kak")
                         
-                        # LOGIC PENGIRIMAN SAKTI
-                        if source_media:
-                            # 1. Prioritas: Kirim Media dari Telegram Database (TANPA FORWARD LABEL)
-                            await client.send_file(target, source_media, caption=final_msg)
-                        elif img_path: 
-                            # 2. Upload manual (file lokal)
-                            await client.send_file(target, img_path, caption=final_msg)
-                        else: 
-                            # 3. Teks doang
-                            await client.send_message(target, final_msg)
+                    # LOGIC PENGIRIMAN SAKTI
+                    if source_media:
+                        # 1. Prioritas: Kirim Media dari Telegram Database (TANPA FORWARD LABEL)
+                        await client.send_file(target, source_media, caption=final_msg)
+                    elif img_path: 
+                        # 2. Upload manual (file lokal)
+                        await client.send_file(target, img_path, caption=final_msg)
+                    else: 
+                        # 3. Teks doang
+                        await client.send_message(target, final_msg)
                         
-                        await asyncio.sleep(2)
-                    except: pass
-            finally:
-                await client.disconnect()
-                if img_path: os.remove(img_path)
+                    await asyncio.sleep(2)
+                except: pass
+        finally:
+            await client.disconnect()
+            if img_path: os.remove(img_path)
         
-        run_async(_logic())
+    run_async(_logic())
 
     # Panggil worker (tambah parameter template_id)
     # Pastikan template_id di-pass ke worker
