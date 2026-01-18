@@ -283,48 +283,49 @@ class MessageTemplateManager:
 
 class SchedulerWorker:
     """
-    Worker cerdas yang berjalan di thread terpisah.
-    Tugasnya mengecek database 'blast_schedules' setiap menit dan
-    mengeksekusi pengiriman pesan jika waktunya cocok.
+    Worker cerdas dengan TIMEZONE WIB (Asia/Jakarta).
+    Anti-Drama UTC. Input jam 7, jalan jam 7 WIB.
     """
     
     @staticmethod
     def start():
         threading.Thread(target=SchedulerWorker._loop, daemon=True, name="SchedulerEngine").start()
-        logger.info("🕒 Scheduler Engine Started (Background Mode)")
+        logger.info("🕒 Scheduler Engine Started (Timezone: Asia/Jakarta)")
 
     @staticmethod
     def _loop():
-        """Main Loop untuk pengecekan jadwal"""
+        """Main Loop: Cek setiap detik ke-00"""
         while True:
             try:
-                # Cek setiap awal menit (detik 00)
-                now = datetime.utcnow() # Gunakan UTC sebagai standar server
-                
-                # Kita bisa menambahkan logika konversi timezone user di sini nantinya.
-                # Untuk saat ini, kita asumsikan server time (UTC) atau disesuaikan +7 manual oleh user.
-                
+                # 1. Ambil Waktu Sekarang tapi PAKSA ke WIB
+                tz_indo = pytz.timezone('Asia/Jakarta')
+                now_indo = datetime.now(tz_indo)
+
+                # 2. Cek Jadwal
                 if supabase:
-                    SchedulerWorker._process_schedules(now)
+                    SchedulerWorker._process_schedules(now_indo)
                 
-                # Sleep selama 60 detik agar tidak spam DB
-                # Hitung sisa detik menuju menit berikutnya agar presisi
+                # 3. Logic Sleep Pintar (Biar pas di detik 00 menit berikutnya)
+                # Biar CPU gak panas ngecek mulu, tapi akurat
                 sleep_time = 60 - datetime.now().second
                 time.sleep(sleep_time)
                 
             except Exception as e:
                 logger.error(f"Scheduler Loop Error: {e}")
-                time.sleep(60) # Sleep aman jika error
+                time.sleep(60)
 
     @staticmethod
-    def _process_schedules(current_time):
-        """Logika inti pengecekan dan eksekusi jadwal"""
+    def _process_schedules(current_time_indo):
+        """Logika inti pengecekan jadwal"""
         try:
-            current_hour = current_time.hour
-            current_minute = current_time.minute
+            # Ambil Jam & Menit versi INDONESIA
+            current_hour = current_time_indo.hour
+            current_minute = current_time_indo.minute
             
-            # Ambil semua jadwal yang AKTIF dan cocok dengan JAM & MENIT sekarang
-            # NOTE: Di production, perlu query yang lebih efisien atau batch processing.
+            # Debug log (biar lu tau server lagi mikir jam berapa)
+            # logger.info(f"Checking Schedule for: {current_hour}:{current_minute} WIB")
+
+            # Query ke Database (Cari yang jam & menitnya SAMA PERSIS)
             res = supabase.table('blast_schedules').select("*")\
                 .eq('is_active', True)\
                 .eq('run_hour', current_hour)\
@@ -334,12 +335,11 @@ class SchedulerWorker:
             schedules = res.data
             
             if not schedules:
-                return # Tidak ada jadwal saat ini
+                return # Gak ada jadwal di menit ini
                 
-            logger.info(f"🕒 Scheduler: Found {len(schedules)} tasks to run at {current_hour}:{current_minute} UTC")
+            logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal untuk jam {current_hour}:{current_minute} WIB")
             
             for task in schedules:
-                # Jalankan blast di thread terpisah agar tidak memblokir loop scheduler
                 threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
                 
         except Exception as e:
