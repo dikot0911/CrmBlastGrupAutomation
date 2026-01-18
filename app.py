@@ -346,87 +346,86 @@ class SchedulerWorker:
 
     @staticmethod
     def _execute_task(task):
-        """Eksekusi satu task jadwal"""
+        """Eksekusi satu task jadwal (Support Forum Topic)"""
         user_id = task['user_id']
-        template_id = task.get('template_id') # Kolom baru (Integrasi Template)
-        target_group_id = task.get('target_group_id') # Opsional: jika jadwal spesifik grup
+        template_id = task.get('template_id') 
+        target_group_id = task.get('target_group_id') 
         
-        # 1. Tentukan Konten Pesan
-        message_content = "Halo! Ini pesan terjadwal otomatis." # Default fallback
+        # 1. Siapkan Pesan
+        message_content = "Halo! Ini pesan terjadwal otomatis."
+        source_media = None
         
+        # Logic Template & Media Source (Copy Media)
         if template_id:
-            # Ambil konten dari Template Manager (Fitur Baru)
             tmpl = MessageTemplateManager.get_template_by_id(template_id)
             if tmpl:
-                message_content = tmpl['content']
-                logger.info(f"✅ Task {task['id']}: Using Template '{tmpl['name']}'")
-            else:
-                logger.warning(f"⚠️ Task {task['id']}: Template ID {template_id} not found. Using default.")
-        
-        # 2. Logic Pengiriman (Mirip dengan Broadcast Manual tapi Otomatis)
-        # Kita gunakan run_async bridge karena Telethon itu async
-        
+                message_content = tmpl['message_text']
+                # Cek Reference Media
+                if tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
+                    source_media = {'chat': int(tmpl['source_chat_id']), 'id': int(tmpl['source_message_id'])}
+
+        # 2. Worker Async
         async def _async_send():
             client = await get_active_client(user_id)
-            if not client:
-                logger.warning(f"❌ Task {task['id']}: Client not connected for User {user_id}")
-                return
+            if not client: return
             
             try:
-                # Logika: Kirim ke Target yang relevan
-                # Jika target_group_id ada, kirim ke sana. Jika tidak, mungkin broadcast ke semua target?
-                # Sesuai 'app.py' lama, logic broadcast agak umum. Kita pertajam di sini.
-                
-                # Ambil daftar target user
+                # Load Media jika ada
+                media_obj = None
+                if source_media:
+                    try:
+                        src_msg = await client.get_messages(source_media['chat'], ids=source_media['id'])
+                        if src_msg and src_msg.media: media_obj = src_msg.media
+                    except: pass
+
+                # Ambil Target
                 targets_query = supabase.table('blast_targets').select("*").eq('user_id', user_id)
-                if target_group_id:
-                    targets_query = targets_query.eq('id', target_group_id)
-                
+                if target_group_id: targets_query = targets_query.eq('id', target_group_id)
                 targets = targets_query.execute().data
                 
-                sent_count = 0
                 for tg in targets:
                     try:
-                        # Resolve Entity
                         entity = await client.get_entity(int(tg['group_id']))
                         
-                        # Kirim Pesan
-                        await client.send_message(entity, message_content)
-                        sent_count += 1
+                        # --- LOGIC BARU: HANDLING TOPIK ---
+                        # Cek apakah ada topic_ids yang disimpan
+                        topic_ids = []
+                        if tg.get('topic_ids'):
+                            # Convert string "123,456" jadi list [123, 456]
+                            try: topic_ids = [int(x.strip()) for x in str(tg['topic_ids']).split(',') if x.strip().isdigit()]
+                            except: pass
                         
-                        # Catat Log
-                        log_data = {
-                            "user_id": user_id,
-                            "group_name": tg['group_name'],
-                            "group_id": tg['group_id'],
-                            "status": "SUCCESS",
-                            "error_message": "Scheduled Broadcast",
-                            "created_at": datetime.utcnow().isoformat()
-                        }
-                        supabase.table('blast_logs').insert(log_data).execute()
+                        # Tentukan Destinasi (List of 'reply_to')
+                        # Kalau gak ada topik, kirim sekali (reply_to=None)
+                        destinations = topic_ids if topic_ids else [None]
                         
-                        # Delay anti-flood
-                        await asyncio.sleep(2)
-                        
+                        for top_id in destinations:
+                            final_msg = message_content.replace("{name}", tg.get('group_name') or "Kak")
+                            
+                            # Kirim (Pake reply_to buat nembak Topik)
+                            if media_obj:
+                                await client.send_file(entity, media_obj, caption=final_msg, reply_to=top_id)
+                            else:
+                                await client.send_message(entity, final_msg, reply_to=top_id)
+                            
+                            # Log Sukses
+                            topik_info = f" (Topic: {top_id})" if top_id else ""
+                            supabase.table('blast_logs').insert({
+                                "user_id": user_id, "group_name": f"{tg['group_name']}{topik_info}",
+                                "group_id": tg['group_id'], "status": "SUCCESS", 
+                                "created_at": datetime.utcnow().isoformat()
+                            }).execute()
+                            
+                            await asyncio.sleep(3) # Delay antar topik/grup
+
                     except Exception as e:
-                        logger.error(f"Task Send Error to {tg.get('group_name')}: {e}")
-                        # Log Failure
                         supabase.table('blast_logs').insert({
-                            "user_id": user_id,
-                            "group_name": tg.get('group_name', 'Unknown'),
-                            "status": "FAILED",
-                            "error_message": str(e),
+                            "user_id": user_id, "group_name": tg.get('group_name', '?'),
+                            "status": "FAILED", "error_message": str(e), 
                             "created_at": datetime.utcnow().isoformat()
                         }).execute()
-
-                logger.info(f"✅ Task {task['id']} Completed. Sent to {sent_count} targets.")
-                
-            except Exception as e:
-                logger.error(f"Task Async Exec Error: {e}")
-            finally:
-                await client.disconnect()
-
-        # Jalankan di event loop baru
+            finally: await client.disconnect()
+        
         run_async(_async_send())
 
 
