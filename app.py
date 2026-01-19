@@ -1172,38 +1172,41 @@ def verify_code():
         return jsonify({'status': 'error', 'message': str(e)})
 
 # ==============================================================================
-# SECTION 9.5: QR CODE LOGIN HANDLER (BACKGROUND THREAD VERSION)
+# SECTION 9.5: QR CODE LOGIN HANDLER (2FA SUPPORT)
 # ==============================================================================
 
-# Global Memory buat nyimpen status QR antar-thread
-# Format: {'uuid': {'status': 'waiting', 'qr_url': None, 'user_data': None}}
+# Global Memory untuk komunikasi antar-thread (Scan QR & Input Password)
 qr_states = {}
 
 def qr_worker(user_id, session_uuid):
     print(f"THREAD [{session_uuid}]: Worker Started", flush=True)
     
     async def _process():
+        # Bikin koneksi baru khusus sesi ini
         client = TelegramClient(StringSession(), API_ID, API_HASH)
         await client.connect()
         
         try:
             if not await client.is_user_authorized():
+                # 1. Request QR Token
                 qr_login = await client.qr_login()
                 qr_states[session_uuid]['qr_url'] = qr_login.url
                 qr_states[session_uuid]['status'] = 'waiting'
                 
                 try:
-                    # TUNGGU SCAN
+                    # 2. TUNGGU USER SCAN DI HP
+                    # Timeout 120 detik biar user gak buru-buru
+                    print(f"THREAD [{session_uuid}]: Waiting scan...", flush=True)
                     await qr_login.wait(timeout=120)
                     
-                    # SCAN BERHASIL -> Cek butuh password gak?
-                    # Telethon otomatis tau kalau butuh password, dia bakal throw SessionPasswordNeededError
-                    # Tapi karena kita pake qr_login.wait(), flow-nya agak beda.
-                    # Kita coba get_me(). Kalau error berarti butuh password.
+                    # 3. SCAN BERHASIL -> Cek apakah butuh password 2FA?
+                    # Kita coba panggil get_me(). 
+                    # Jika user pake 2FA, method ini bakal gagal & melempar error.
                     
                     try:
                         me = await client.get_me()
-                        # Kalau sukses get_me, berarti gak pake 2FA -> LANJUT SIMPAN
+                        
+                        # --- FLOW A: LOGIN LANGSUNG (TANPA 2FA) ---
                         final_session = client.session.save()
                         qr_states[session_uuid]['user_data'] = {
                             'session': final_session,
@@ -1213,21 +1216,29 @@ def qr_worker(user_id, session_uuid):
                             'username': me.username
                         }
                         qr_states[session_uuid]['status'] = 'success'
+                        print(f"THREAD [{session_uuid}]: Login Success (No 2FA)", flush=True)
                         
                     except errors.SessionPasswordNeededError:
-                        # KENA 2FA -> Minta Password ke User
+                        # --- FLOW B: BUTUH PASSWORD (2FA DETECTED) ---
                         print(f"THREAD [{session_uuid}]: 2FA REQUIRED!", flush=True)
+                        
+                        # Update status biar frontend tau harus minta password
                         qr_states[session_uuid]['status'] = '2fa_required'
                         
-                        # Tunggu password dari frontend (maks 60 detik)
-                        for _ in range(120):
+                        # TUNGGU PASSWORD DARI FRONTEND (Maks 120 detik)
+                        password_received = False
+                        for _ in range(240): # 240 x 0.5s = 120 detik
+                            # Cek apakah password udah dikirim via API /submit_2fa
                             if 'password_input' in qr_states[session_uuid]:
                                 pw = qr_states[session_uuid]['password_input']
                                 try:
+                                    # Coba login pake password
                                     await client.sign_in(password=pw)
-                                    # Login Sukses setelah input password
+                                    
+                                    # Kalau tembus sini, berarti password BENAR!
                                     me = await client.get_me()
                                     final_session = client.session.save()
+                                    
                                     qr_states[session_uuid]['user_data'] = {
                                         'session': final_session,
                                         'phone': f"+{me.phone}",
@@ -1236,53 +1247,102 @@ def qr_worker(user_id, session_uuid):
                                         'username': me.username
                                     }
                                     qr_states[session_uuid]['status'] = 'success'
+                                    password_received = True
+                                    print(f"THREAD [{session_uuid}]: Login Success (With 2FA)", flush=True)
                                     break
+                                    
                                 except Exception as pw_e:
+                                    # Password Salah
+                                    print(f"THREAD [{session_uuid}]: Wrong Password: {pw_e}", flush=True)
                                     qr_states[session_uuid]['status'] = 'error'
-                                    qr_states[session_uuid]['error_msg'] = f"Password Salah: {str(pw_e)}"
+                                    qr_states[session_uuid]['error_msg'] = "Password Salah!"
+                                    password_received = True # Biar loop berhenti
                                     break
+                                    
                             await asyncio.sleep(0.5)
+                        
+                        if not password_received:
+                            qr_states[session_uuid]['status'] = 'expired'
                             
                 except asyncio.TimeoutError:
                     qr_states[session_uuid]['status'] = 'expired'
             else:
                 qr_states[session_uuid]['status'] = 'error'
+                qr_states[session_uuid]['error_msg'] = "Client already auth?"
                 
         except Exception as e:
-            # Handle kasus khusus 2FA yang ke-throw di level qr_login
-            if "password is required" in str(e).lower():
-                 print(f"THREAD [{session_uuid}]: 2FA REQUIRED (Catch Block)!", flush=True)
-                 qr_states[session_uuid]['status'] = '2fa_required'
-                 # Re-connect logic for password input (Same as above)
-                 # ... (Simplifikasi: Kalau kena di sini, minta user input password via flow sign_in biasa aja)
-            else:
-                logger.error(f"QR Error: {e}")
-                qr_states[session_uuid]['status'] = 'error'
-                qr_states[session_uuid]['error_msg'] = str(e)
+            # Handle error umum
+            err = str(e)
+            print(f"THREAD [{session_uuid}]: CRITICAL ERROR: {err}", flush=True)
+            qr_states[session_uuid]['status'] = 'error'
+            qr_states[session_uuid]['error_msg'] = err
         finally:
             await client.disconnect()
 
+    # Jalankan Loop
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(_process())
     loop.close()
 
-# ... (Route get_qr_code SAMA SEPERTI SEBELUMNYA) ...
-# ... HANYA GANTI qr_worker di atas ...
+# --- ROUTE 1: MINTA QR (SAMA KAYAK SEBELUMNYA) ---
+@app.route('/api/connect/get_qr', methods=['POST'])
+@login_required
+def get_qr_code():
+    user_id = session['user_id']
+    
+    # Limit Check
+    try:
+        res = supabase.table('telegram_accounts').select("id", count='exact', head=True).eq('user_id', user_id).execute()
+        if (res.count or 0) >= 3:
+            return jsonify({'status': 'limit_reached', 'message': 'Limit 3 Akun Tercapai!'})
+    except: pass
 
+    session_uuid = str(uuid.uuid4())
+    qr_states[session_uuid] = {'status': 'initializing', 'qr_url': None}
+    
+    # Start Background Thread
+    t = threading.Thread(target=qr_worker, args=(user_id, session_uuid))
+    t.daemon = True
+    t.start()
+    
+    # Tunggu sebentar
+    import time
+    for _ in range(50):
+        if qr_states[session_uuid].get('qr_url'): break
+        time.sleep(0.1)
+        
+    if not qr_states[session_uuid].get('qr_url'):
+        return jsonify({'status': 'error', 'message': 'Timeout koneksi Telegram.'})
+        
+    # Generate Image
+    url = qr_states[session_uuid]['qr_url']
+    img = qrcode.make(url)
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    
+    return jsonify({
+        'status': 'success', 
+        'qr_image': f"data:image/png;base64,{img_str}",
+        'session_uuid': session_uuid
+    })
+
+# --- ROUTE 2: KIRIM PASSWORD 2FA (BARU!) ---
 @app.route('/api/connect/submit_2fa', methods=['POST'])
 @login_required
 def submit_2fa_qr():
-    """Route baru buat nerima password 2FA dari UI"""
     session_uuid = request.json.get('session_uuid')
     password = request.json.get('password')
     
     if session_uuid in qr_states:
+        # Masukkan password ke memory agar diambil oleh Thread Worker
         qr_states[session_uuid]['password_input'] = password
         return jsonify({'status': 'success'})
-    return jsonify({'status': 'error', 'message': 'Sesi hilang'})
+    
+    return jsonify({'status': 'error', 'message': 'Sesi QR hilang/kadaluarsa'})
 
-# ... (Route check_qr_status perlu update dikit buat handle status '2fa_required') ...
+# --- ROUTE 3: CEK STATUS (POLLING) ---
 @app.route('/api/connect/check_qr', methods=['POST'])
 @login_required
 def check_qr_status():
@@ -1290,16 +1350,13 @@ def check_qr_status():
     user_id = session['user_id']
     
     if not session_uuid or session_uuid not in qr_states:
-        return jsonify({'status': 'expired'})
+        return jsonify({'status': 'expired', 'message': 'QR Expired.'})
     
     state = qr_states[session_uuid]
     status = state.get('status')
     
-    if status == '2fa_required':
-        return jsonify({'status': '2fa'}) # Kasih tau frontend buat munculin input password
-        
-    elif status == 'success':
-        # ... (Sama kayak sebelumnya: Simpan ke DB) ...
+    if status == 'success':
+        # Login Sukses -> Simpan DB
         u_data = state['user_data']
         db_data = {
             'user_id': user_id,
@@ -1316,9 +1373,16 @@ def check_qr_status():
         del qr_states[session_uuid]
         return jsonify({'status': 'success', 'message': f"Login Berhasil: {u_data['first_name']}"})
         
-    elif status == 'expired': return jsonify({'status': 'expired'})
-    elif status == 'error': return jsonify({'status': 'error', 'message': state.get('error_msg')})
-    else: return jsonify({'status': 'waiting'})
+    elif status == '2fa_required':
+        # Kasih tau frontend buat munculin prompt password
+        return jsonify({'status': '2fa'})
+        
+    elif status == 'expired':
+        return jsonify({'status': 'expired'})
+    elif status == 'error':
+        return jsonify({'status': 'error', 'message': state.get('error_msg', 'Unknown Error')})
+    else:
+        return jsonify({'status': 'waiting'})
 
 # ==============================================================================
 # SECTION 10: BOT FEATURES API (SCAN, TARGETS, IMPORT)
