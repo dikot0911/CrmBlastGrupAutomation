@@ -1054,61 +1054,66 @@ def verify_code():
     otp = request.json.get('otp')
     pw = request.json.get('password')
     
-    # Ambil nomor HP yang lagi proses login dari RAM (Session Context)
-    # Atau ambil row di DB yang statusnya 'is_active': False dan punya hash
-    pending_phone = login_states.get(user_id, {}).get('pending_phone')
+    # 1. Retrieve Stored Session & Hash
+    db_session = None
+    db_hash = None
+    db_phone = None
     
-    if not pending_phone:
-        # Fallback: Cari di DB akun mana yang punya hash (targets tidak kosong) dan belum aktif
-        # Ini logic darurat kalau server restart pas lagi login
-        try:
-            res = supabase.table('telegram_accounts').select("*").eq('user_id', user_id).eq('is_active', False).neq('targets', '[]').limit(1).execute()
-            if res.data:
-                pending_phone = res.data[0]['phone_number']
-            else:
-                return jsonify({'status': 'error', 'message': 'Sesi kadaluarsa. Kirim ulang OTP.'})
-        except:
-            return jsonify({'status': 'error', 'message': 'Error database.'})
-
-    # Ambil data session
     try:
-        res = supabase.table('telegram_accounts').select("*").eq('user_id', user_id).eq('phone_number', pending_phone).execute()
-        if not res.data: return jsonify({'status': 'error', 'message': 'Data sesi hilang.'})
+        # Ambil sesi pending (yang belum aktif atau yang lagi proses)
+        # Prioritaskan cari berdasarkan phone number yang disimpan di RAM/Session jika ada, 
+        # tapi karena stateless, kita cari row yang punya hash tapi belum aktif.
+        res = supabase.table('telegram_accounts').select("*").eq('user_id', user_id).eq('is_active', False).neq('targets', '[]').limit(1).execute()
+        
+        if not res.data:
+            return jsonify({'status': 'error', 'message': 'Sesi kadaluarsa. Kirim ulang OTP.'})
         
         row = res.data[0]
         db_session = row['session_string']
+        db_phone = row['phone_number']
         db_hash = row['targets']
-    except: return jsonify({'status': 'error', 'message': 'Gagal baca sesi.'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': f'Database Error: {str(e)}'})
 
     async def _process_verify():
         client = TelegramClient(StringSession(db_session), API_ID, API_HASH)
         await client.connect()
+        
         try:
+            # 2. Sign In
             try:
-                await client.sign_in(pending_phone, otp, phone_code_hash=db_hash)
+                await client.sign_in(db_phone, otp, phone_code_hash=db_hash)
             except errors.SessionPasswordNeededError:
-                if not pw: return jsonify({'status': '2fa', 'message': 'Masukkan Password 2FA.'})
+                if not pw:
+                    return jsonify({'status': '2fa', 'message': 'Akun dilindungi 2FA. Masukkan Password.'})
                 await client.sign_in(password=pw)
             
-            # Sukses! Simpan permanen
+            # 3. [BARU] AMBIL DATA PROFIL TELEGRAM
+            me = await client.get_me()
+            
+            # 4. Simpan Session & Profil ke DB
             final_session = client.session.save()
             
-            supabase.table('telegram_accounts').update({
+            update_data = {
                 'session_string': final_session,
                 'is_active': True,
                 'targets': '[]', # Clear hash
-                'created_at': datetime.utcnow().isoformat()
-            }).eq('user_id', user_id).eq('phone_number', pending_phone).execute()
+                'created_at': datetime.utcnow().isoformat(),
+                # Simpan Info Profil
+                'first_name': me.first_name or '',
+                'last_name': me.last_name or '',
+                'username': me.username or ''
+            }
             
-            return jsonify({'status': 'success', 'message': 'Login Berhasil! Mengalihkan...'})
+            supabase.table('telegram_accounts').update(update_data).eq('user_id', user_id).eq('phone_number', db_phone).execute()
+            
+            return jsonify({'status': 'success', 'message': f'Berhasil login sebagai {me.first_name}!'})
             
         except errors.PhoneCodeInvalidError:
             return jsonify({'status': 'error', 'message': 'Kode OTP salah.'})
-        except errors.PhoneCodeExpiredError:
-            return jsonify({'status': 'error', 'message': 'Kode OTP kadaluarsa/Sesi berubah. Kirim ulang.'})
         except Exception as e:
-            logger.error(f"Verification Logic Error: {e}")
-            return jsonify({'status': 'error', 'message': f'Gagal Login: {str(e)}'})
+            logger.error(f"Login Failed: {e}")
+            return jsonify({'status': 'error', 'message': f'Gagal: {str(e)}'})
         finally:
             await client.disconnect()
 
