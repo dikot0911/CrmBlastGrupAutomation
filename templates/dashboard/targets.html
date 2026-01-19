@@ -39,7 +39,7 @@
             <div class="p-6 pb-4">
                 <div class="flex justify-between items-start mb-4">
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-black text-lg shadow-inner">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-black text-lg shadow-inner shrink-0">
                             {{ t.group_name[:1]|upper }}
                         </div>
                         
@@ -48,18 +48,19 @@
                                 {{ t.group_name }}
                             </h3>
                             
-                            <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                            <div class="flex flex-wrap items-center gap-2 mt-2">
                                 <span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded border border-blue-200 font-bold flex items-center gap-1" title="Grup ini hasil scan dari akun ini">
-                                    <i class="fa-brands fa-telegram"></i> {{ t.source_phone or 'Default' }}
+                                    <i class="fa-brands fa-telegram"></i> 
+                                    {{ t.source_phone or 'Default' }}
                                 </span>
 
                                 {% if t.topic_ids %}
-                                <span class="bg-yellow-50 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded border border-yellow-200 font-bold">
-                                    Forum
+                                <span class="bg-yellow-50 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded border border-yellow-200 font-bold flex items-center gap-1">
+                                    <i class="fa-solid fa-comments"></i> Forum
                                 </span>
                                 {% else %}
-                                <span class="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded border border-gray-200 font-bold">
-                                    Basic
+                                <span class="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded border border-gray-200 font-bold flex items-center gap-1">
+                                    <i class="fa-solid fa-user-group"></i> Basic
                                 </span>
                                 {% endif %}
                             </div>
@@ -332,7 +333,7 @@
                     </label>`;
                 });
 
-                // Kotak Panduan & Manual Input (Yang udah ada sebelumnya)
+                // Kotak Panduan & Manual Input
                 topicsHtml = `
                 <div class="mt-3 ml-11 hidden transition-all duration-300 ease-in-out" id="topic-box-${index}">
                     <div class="bg-gray-50/80 rounded-xl p-3 border border-gray-200/60">
@@ -364,6 +365,11 @@
             item.className = "scan-group-item bg-white p-4 rounded-2xl border border-gray-200 hover:border-indigo-400 transition group-checked:border-indigo-500";
             item.setAttribute('data-group-name', g.name.toLowerCase());
             
+            // Render Info Tambahan (Member Count & Username)
+            let metaInfo = "";
+            if (g.members) metaInfo += `<span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 rounded">${g.members} Members</span>`;
+            if (g.username) metaInfo += `<a href="https://t.me/${g.username.replace('@','')}" target="_blank" class="text-[10px] text-blue-500 hover:underline ml-1">${g.username}</a>`;
+
             item.innerHTML = `
                 <div class="flex items-start gap-4">
                     <div class="pt-1">
@@ -375,7 +381,10 @@
                             <h4 class="font-bold text-gray-800 text-sm truncate select-text">${g.name}</h4>
                             ${isForum ? '<span class="bg-yellow-100 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded font-bold border border-yellow-200">FORUM</span>' : ''}
                         </div>
-                        <p class="text-xs text-gray-400 font-mono select-all">ID: ${g.id}</p>
+                        <div class="flex items-center gap-2 text-xs text-gray-400 font-mono select-all">
+                            <span>ID: ${g.id}</span>
+                            ${metaInfo}
+                        </div>
                     </div>
                 </div>
                 ${topicsHtml}
