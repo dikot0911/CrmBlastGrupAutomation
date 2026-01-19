@@ -9,34 +9,75 @@
     {% include 'landing/_features.html' %}
 
     <!-- 3. Stats Section -->
-    <section class="py-20 bg-indigo-900 text-white relative overflow-hidden">
-        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-        <div class="container mx-auto px-6 relative z-10">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-indigo-800/50">
-                <div data-aos="zoom-in">
-                    <div class="text-4xl font-bold mb-2 text-yellow-400">10k+</div>
-                    <div class="text-indigo-200 text-xs md:text-sm font-medium uppercase tracking-wider">Grup Terkelola</div>
+    <section id="demo" class="py-20 bg-gray-50 relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-b from-white to-gray-50 pointer-events-none"></div>
+    
+    <div class="container mx-auto px-4 relative z-10">
+        
+        <div class="text-center mb-10" data-aos="fade-up">
+            <span class="bg-red-50 text-red-600 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide border border-red-100 shadow-sm">
+                KH Senjata Rahasia UMKM Indo di Kamboja
+            </span>
+            <h2 class="text-4xl md:text-5xl font-extrabold text-gray-900 mt-6 leading-tight">
+                Banjiri Pasar Kamboja dengan <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Postingan Toko-mu!</span>
+            </h2>
+            <p class="text-gray-500 mt-4 max-w-2xl mx-auto text-lg">
+                Berhenti bayar mahal cuma buat 1 grup. Saatnya <strong>DOMINASI ratusan grup Telegram</strong> jual-beli di Kamboja secara otomatis. Biarkan bot yang kerja, Anda fokus hitung profit.
+            </p>
+            
+            <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#pricing" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3.5 rounded-full font-bold shadow-lg hover:shadow-xl hover:scale-105 transition transform flex items-center justify-center gap-2">
+                    Ambil Slot Dominasi <i class="fa-solid fa-bolt"></i>
+                </a>
+                <a href="#how-it-works" class="bg-white text-gray-700 border border-gray-200 px-8 py-3.5 rounded-full font-bold shadow-sm hover:bg-gray-50 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play text-indigo-600"></i> Lihat Cara Kerja
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-12 mx-auto max-w-6xl" data-aos="fade-up" data-aos-delay="100">
+            <div class="relative bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden ring-1 ring-gray-900/5">
+                
+                <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center gap-4 sticky top-0 z-20">
+                    <div class="flex gap-2">
+                        <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                    </div>
+                    <div class="flex-1 bg-white border border-gray-200 rounded-md py-1 px-3 text-xs text-gray-400 flex items-center justify-center shadow-sm">
+                        <i class="fa-solid fa-lock text-green-500 mr-2"></i> https://app.blastpro.id/dashboard/demo-mode
+                    </div>
                 </div>
-                <div data-aos="zoom-in" data-aos-delay="100">
-                    <div class="text-4xl font-bold mb-2 text-yellow-400">5M+</div>
-                    <div class="text-indigo-200 text-xs md:text-sm font-medium uppercase tracking-wider">Pesan Terkirim</div>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="200">
-                    <div class="text-4xl font-bold mb-2 text-yellow-400">500+</div>
-                    <div class="text-indigo-200 text-xs md:text-sm font-medium uppercase tracking-wider">UMKM Bergabung</div>
-                </div>
-                <div data-aos="zoom-in" data-aos-delay="300">
-                    <div class="text-4xl font-bold mb-2 text-yellow-400">99.9%</div>
-                    <div class="text-indigo-200 text-xs md:text-sm font-medium uppercase tracking-wider">Server Uptime</div>
+
+                <div class="relative w-full h-[500px] md:h-[700px] bg-gray-100 overflow-hidden group">
+                    
+                    <iframe src="{{ url_for('demo.live_demo_view', page='dashboard') }}" 
+                            class="w-full h-full border-0 transform scale-100 origin-top-left transition-transform"
+                            loading="lazy" 
+                            id="demoFrame">
+                    </iframe>
+
+                    <div class="absolute inset-0 z-10 bg-transparent cursor-default"></div>
+                    
+                    <div class="absolute bottom-4 right-4 z-20">
+                        <span class="bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
+                            LIVE DEMO MODE
+                        </span>
+                    </div>
+
                 </div>
             </div>
         </div>
-    </section>
+
+    </div>
+</section>
 
     <!-- 4. Pricing Section -->
     {% include 'landing/_pricing.html' %}
 
     <!-- 5. FAQ Section -->
     {% include 'landing/_faq.html' %}
+
 
 {% endblock %}
