@@ -1795,143 +1795,235 @@ def fetch_telegram_message():
 # SECTION 11: BROADCAST SYSTEM (REAL-TIME STREAMING & HUMAN MODE)
 # ==============================================================================
 
+# Global State buat kontrol Stop/Pause
+# Format: {'user_id': 'running'} atau {'user_id': 'stopped'}
+broadcast_states = {}
+
+def process_spintax(text):
+    """
+    Fitur Anti-Spam: Mengacak kata dalam kurung kurawal.
+    Contoh: "{Halo|Hai|Pagi} Kak" -> Output bisa "Halo Kak", "Hai Kak", dll.
+    """
+    import re
+    if not text: return ""
+    pattern = r'\{([^{}]+)\}'
+    while True:
+        match = re.search(pattern, text)
+        if not match:
+            break
+        options = match.group(1).split('|')
+        choice = random.choice(options)
+        text = text[:match.start()] + choice + text[match.end():]
+    return text
+
 @app.route('/start_broadcast', methods=['POST'])
 @login_required
 def start_broadcast():
     """
-    Broadcast dengan Real-time Streaming Response + Human Behavior Logic.
-    Fitur Anti-Ban: Random Delay & Batch Pausing.
+    Broadcast Engine v3.0 (Ultimate).
+    Fitur: Real-time Stream, Multi-Account Switcher, Spintax, DB Logging, Stop Signal.
     """
     user_id = session['user_id']
-    message = request.form.get('message')
+    
+    # 1. Reset Status Broadcast jadi Running
+    broadcast_states[user_id] = 'running'
+
+    # 2. Tangkap Input Form
+    message_raw = request.form.get('message')
     template_id = request.form.get('template_id')
     selected_ids_str = request.form.get('selected_ids') 
     target_option = request.form.get('target_option')
+    sender_phone_req = request.form.get('sender_phone') # <--- Pilihan Akun
     image_file = request.files.get('image')
     
-    # 1. Logic Content (Template vs Manual)
+    # 3. Logic Content (Template vs Manual) & Cloud Media
     source_media = None
+    final_message_template = message_raw
+
     if template_id:
         tmpl = MessageTemplateManager.get_template_by_id(template_id)
         if tmpl:
-            if not message: message = tmpl['message_text']
-            # Cek Media dari "Database Telegram"
+            # Jika user tidak isi pesan manual, pakai dari template
+            if not final_message_template: 
+                final_message_template = tmpl['message_text']
+            
+            # Cek Cloud Media Reference
             if tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
-                source_media = {'chat': int(tmpl['source_chat_id']), 'id': int(tmpl['source_message_id'])}
+                source_media = {
+                    'chat': int(tmpl['source_chat_id']), 
+                    'id': int(tmpl['source_message_id'])
+                }
 
-    if not message:
-        return jsonify({"error": "Pesan konten wajib diisi."})
+    if not final_message_template:
+        return jsonify({"error": "Konten pesan tidak boleh kosong."})
 
-    # 2. Handle Upload Gambar Manual (Lokal)
+    # 4. Handle Local Image Upload
     manual_image_path = None
     if image_file and allowed_file(image_file.filename):
-        filename = secure_filename(f"broadcast_{user_id}_{int(time.time())}_{image_file.filename}")
+        filename = secure_filename(f"blast_{user_id}_{int(time.time())}_{image_file.filename}")
         manual_image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         image_file.save(manual_image_path)
 
-    # 3. Tentukan Target Audience
+    # 5. Tentukan Target Audience
     targets = []
-    if selected_ids_str and target_option == 'selected':
-        target_ids = [int(x) for x in selected_ids_str.split(',') if x.isdigit()]
+    if target_option == 'selected' and selected_ids_str:
+        # Kirim ke User yang dicentang saja
+        target_ids = [int(x) for x in selected_ids_str.split(',') if x.strip().isdigit()]
         if target_ids:
             res = supabase.table('tele_users').select("*").in_('user_id', target_ids).eq('owner_id', user_id).execute()
             targets = res.data
     else:
-        # Kirim ke SEMUA (Safety Limit 5000 dulu biar aman)
+        # Kirim ke SEMUA (Global Blast) - Limit 5000 biar server aman
         res = supabase.table('tele_users').select("*").eq('owner_id', user_id).limit(5000).execute()
         targets = res.data
 
     if not targets:
-        return jsonify({"error": "Tidak ada target penerima."})
+        return jsonify({"error": "Target audiens kosong/tidak ditemukan."})
 
-    # 4. GENERATOR FUNCTION (Logika Inti)
+    # 6. GENERATOR FUNCTION (The Engine)
     def generate():
         yield json.dumps({"type": "start", "total": len(targets)}) + "\n"
         
-        async def _process():
-            client = await get_active_client(user_id)
-            if not client:
-                yield json.dumps({"type": "error", "msg": "Telegram Disconnected"}) + "\n"
-                return
+        async def _engine():
+            client = None
+            
+            # --- [A] KONEKSI KE TELEGRAM ---
+            try:
+                # Logic: Pilih akun sesuai request user
+                if sender_phone_req and sender_phone_req != 'auto':
+                    # Cari session string akun tersebut
+                    acc_res = supabase.table('telegram_accounts').select("session_string")\
+                        .eq('user_id', user_id).eq('phone_number', sender_phone_req).eq('is_active', True).execute()
+                    
+                    if acc_res.data:
+                        session_str = acc_res.data[0]['session_string']
+                        client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
+                        await client.connect()
+                    else:
+                        yield json.dumps({"type": "error", "msg": f"Akun {sender_phone_req} tidak aktif/hilang."}) + "\n"
+                        return
+                else:
+                    # Default / Auto
+                    client = await get_active_client(user_id)
 
-            # Load Cloud Media (Sekali di awal biar hemat request)
-            cloud_media_obj = None
-            if source_media:
-                try:
-                    src_msg = await client.get_messages(source_media['chat'], ids=source_media['id'])
-                    if src_msg and src_msg.media: cloud_media_obj = src_msg.media
-                except: pass
+                if not client or not await client.is_user_authorized():
+                    yield json.dumps({"type": "error", "msg": "Gagal koneksi ke Telegram."}) + "\n"
+                    return
 
-            success_count = 0
-            fail_count = 0
+                # --- [B] PERSIAPAN MEDIA ---
+                cloud_media_obj = None
+                if source_media:
+                    try:
+                        # Fetch media object sekali aja di awal biar cepet
+                        src_msg = await client.get_messages(source_media['chat'], ids=source_media['id'])
+                        if src_msg and src_msg.media: 
+                            cloud_media_obj = src_msg.media
+                    except Exception as e:
+                        yield json.dumps({"type": "progress", "log": f"⚠️ Gagal load Cloud Media: {e}", "status": "warning"}) + "\n"
 
-            # --- LOOP PENGIRIMAN ---
-            for idx, user in enumerate(targets):
+                # --- [C] LOOPING PENGIRIMAN ---
+                success_count = 0
+                fail_count = 0
                 
-                # [SAFETY LOGIC 1]: Batch Pause (Istirahat Panjang)
-                # Setiap kelipatan 25 pesan, istirahat 3-5 menit
-                if idx > 0 and idx % 25 == 0:
-                    long_pause = random.randint(180, 300) # 3 s.d 5 Menit
+                for idx, user in enumerate(targets):
+                    
+                    # 1. CEK SIGNAL STOP (Real-time)
+                    if broadcast_states.get(user_id) == 'stopped':
+                        yield json.dumps({"type": "error", "msg": "⛔ Broadcast Dihentikan Paksa oleh User."}) + "\n"
+                        break
+
+                    # 2. SAFETY BREAK (Anti-Flood)
+                    # Istirahat 3-5 menit setiap 50 pesan
+                    if idx > 0 and idx % 50 == 0:
+                        rest_time = random.randint(180, 300)
+                        yield json.dumps({
+                            "type": "progress", "current": idx, "total": len(targets),
+                            "status": "warning", "log": f"☕ Cooling Down {rest_time}s (Anti-Ban Protocol)...",
+                            "success": success_count, "failed": fail_count
+                        }) + "\n"
+                        await asyncio.sleep(rest_time)
+
+                    # 3. PERSONALISASI & SPINTAX
+                    # Replace {name} dan acak kata {Halo|Hai}
+                    # Gunakan .get() dengan default value biar gak error kalau field kosong
+                    u_name = user.get('first_name') or "Kak"
+                    personalized_msg = final_message_template.replace("{name}", u_name)
+                    personalized_msg = process_spintax(personalized_msg) 
+
+                    # 4. EKSEKUSI KIRIM
+                    log_status = "FAILED"
+                    error_msg = None
+                    
+                    try:
+                        entity = await client.get_input_entity(int(user['user_id']))
+                        
+                        if cloud_media_obj:
+                            await client.send_file(entity, cloud_media_obj, caption=personalized_msg)
+                        elif manual_image_path:
+                            await client.send_file(entity, manual_image_path, caption=personalized_msg)
+                        else:
+                            await client.send_message(entity, personalized_msg)
+                        
+                        success_count += 1
+                        log_status = "SUCCESS"
+                        ui_log = f"Terkirim ke {u_name} ({user['user_id']})"
+                        ui_status = "success"
+
+                    except Exception as e:
+                        fail_count += 1
+                        error_msg = str(e)
+                        ui_log = f"Gagal ke {user.get('user_id')}: {error_msg[:20]}..."
+                        ui_status = "failed"
+                        
+                        # Handle FloodWait (Wajib!)
+                        if "FloodWait" in error_msg:
+                            wait_sec = int(re.search(r'\d+', error_msg).group()) if re.search(r'\d+', error_msg) else 60
+                            yield json.dumps({"type": "progress", "log": f"⏳ Kena FloodWait Telegram. Tidur {wait_sec}s...", "status": "warning"}) + "\n"
+                            await asyncio.sleep(wait_sec)
+
+                    # 5. CATAT KE DATABASE (Blast Logs)
+                    # Biar history-nya muncul di Dashboard Ringkasan
+                    try:
+                        supabase.table('blast_logs').insert({
+                            "user_id": user_id,
+                            "group_name": f"{u_name} (Private)", # Reuse kolom group_name buat nama user
+                            "group_id": user['user_id'],
+                            "status": log_status,
+                            "error_message": error_msg,
+                            "created_at": datetime.utcnow().isoformat()
+                        }).execute()
+                    except: pass # Jangan stop blast cuma gara2 gagal log DB
+
+                    # 6. UPDATE UI
                     yield json.dumps({
                         "type": "progress",
-                        "current": idx,
+                        "current": idx + 1,
                         "total": len(targets),
-                        "status": "warning", # Warna kuning di log
-                        "log": f"☕ SAFETY BREAK: Istirahat {long_pause} detik (Anti-Ban)...",
+                        "status": ui_status,
+                        "log": ui_log,
                         "success": success_count,
                         "failed": fail_count
                     }) + "\n"
-                    await asyncio.sleep(long_pause)
 
-                # [PROSES KIRIM]
-                try:
-                    final_msg = message.replace("{name}", user.get('first_name') or "Kak")
-                    entity = await client.get_input_entity(int(user['user_id']))
-                    
-                    if cloud_media_obj:
-                        await client.send_file(entity, cloud_media_obj, caption=final_msg)
-                    elif manual_image_path:
-                        await client.send_file(entity, manual_image_path, caption=final_msg)
-                    else:
-                        await client.send_message(entity, final_msg)
-                    
-                    success_count += 1
-                    status = "success"
-                    log_msg = f"Terkirim ke {user.get('first_name') or user.get('user_id')}"
+                    # 7. RANDOM DELAY (Human Behavior)
+                    # Delay acak 2.5s s/d 5.5s
+                    await asyncio.sleep(random.uniform(2.5, 5.5))
 
-                except Exception as e:
-                    fail_count += 1
-                    status = "failed"
-                    log_msg = f"Gagal ke {user.get('user_id')}: {str(e)[:15]}..."
-                
-                # Update Progress UI
-                yield json.dumps({
-                    "type": "progress",
-                    "current": idx + 1,
-                    "total": len(targets),
-                    "status": status,
-                    "log": log_msg,
-                    "success": success_count,
-                    "failed": fail_count
-                }) + "\n"
-                
-                # [SAFETY LOGIC 2]: Random Delay Antar Pesan
-                # Acak antara 1.5 sampai 3.0 detik (step 0.1)
-                step_delay = random.randrange(15, 31) / 10.0
-                await asyncio.sleep(step_delay)
-
-            await client.disconnect()
+            except Exception as e:
+                yield json.dumps({"type": "error", "msg": f"System Error: {str(e)}"}) + "\n"
             
-            if manual_image_path and os.path.exists(manual_image_path):
-                os.remove(manual_image_path)
+            finally:
+                if client: await client.disconnect()
+                if manual_image_path and os.path.exists(manual_image_path):
+                    os.remove(manual_image_path)
                 
-            yield json.dumps({"type": "done", "success": success_count, "failed": fail_count}) + "\n"
+                yield json.dumps({"type": "done", "success": success_count, "failed": fail_count}) + "\n"
 
-        # Bridge Async
+        # Async Bridge Loop
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            runner = _process()
+            runner = _engine()
             while True:
                 try:
                     yield loop.run_until_complete(runner.__anext__())
