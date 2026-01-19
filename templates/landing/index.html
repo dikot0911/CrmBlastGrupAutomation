@@ -1,25 +1,32 @@
-<script>
+{% extends "landing/base.html" %}
+
+{% block content %}
+
+    {% include 'landing/_hero.html' %}
+
+    {% include 'landing/_features.html' %}
+
+    {% include 'landing/_faq.html' %}
+
+    <script>
         function scaleIframe() {
             const container = document.getElementById('scrollContainer');
             const wrapper = document.getElementById('iframeWrapper');
             
-            // [FIX] Pake 1280px biar di HP tulisan lebih kebaca (gak semut banget)
+            // Cek elemen ada atau enggak (Penting biar ga error JS)
+            if (!container || !wrapper) return;
+
+            // [FIX] Pake 1280px biar di HP tulisan lebih kebaca
             const desktopWidth = 1280; 
-            
-            // Lebar layar HP user saat ini
             const containerWidth = container.offsetWidth;
             
-            // Hitung rasio zoom
             let scale = containerWidth / desktopWidth;
             
             if (containerWidth < desktopWidth) {
                 // Scaling Mode (Mobile)
                 wrapper.style.transform = `scale(${scale})`;
                 wrapper.style.transformOrigin = 'top left';
-                
-                // Set ukuran wrapper ke ukuran ASLI desktop
                 wrapper.style.width = `${desktopWidth}px`; 
-                // Tinggi disamain CSS biar overlay pas
                 wrapper.style.height = `1400px`; 
             } else {
                 // Desktop Mode (Normal)
@@ -33,3 +40,5 @@
         window.addEventListener('load', scaleIframe);
         window.addEventListener('resize', scaleIframe);
     </script>
+
+{% endblock %}
