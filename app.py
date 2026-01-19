@@ -1172,129 +1172,167 @@ def verify_code():
         return jsonify({'status': 'error', 'message': str(e)})
 
 # ==============================================================================
-# SECTION 9.5: QR CODE LOGIN HANDLER (NEW FEATURE)
+# SECTION 9.5: QR CODE LOGIN HANDLER (BACKGROUND THREAD VERSION)
 # ==============================================================================
+
+# Global Memory buat nyimpen status QR antar-thread
+# Format: {'uuid': {'status': 'waiting', 'qr_url': None, 'user_data': None}}
+qr_states = {}
+
+def qr_worker(user_id, session_uuid):
+    """
+    Worker yang jalan di background. Dia bakal nungguin sampe lu scan QR.
+    Gak bakal mati walaupun response HTTP udah dikirim ke browser.
+    """
+    async def _process():
+        # Bikin koneksi baru khusus buat sesi ini
+        client = TelegramClient(StringSession(), API_ID, API_HASH)
+        await client.connect()
+        
+        try:
+            if not await client.is_user_authorized():
+                # 1. Minta Token QR ke Telegram
+                qr_login = await client.qr_login()
+                
+                # 2. Update status biar bisa diambil sama Route /get_qr (biar gambar muncul)
+                qr_states[session_uuid]['qr_url'] = qr_login.url
+                qr_states[session_uuid]['status'] = 'waiting'
+                
+                # 3. MAGIC DISINI: TUNGGU SAMPE USER SCAN (Blocking di thread, aman)
+                # Script ini akan PAUSE di baris ini sampai HP lu klik 'Link Device'
+                # Timeout 60 detik biar gak ngegantung selamanya
+                try:
+                    await qr_login.wait(timeout=60) 
+                    
+                    # 4. Kalau lolos baris atas, berarti SUKSES SCAN!
+                    me = await client.get_me()
+                    final_session = client.session.save()
+                    
+                    # Simpan data user di memory sementara buat diambil sama Route /check_qr
+                    qr_states[session_uuid]['user_data'] = {
+                        'session': final_session,
+                        'phone': f"+{me.phone}",
+                        'first_name': me.first_name,
+                        'last_name': me.last_name,
+                        'username': me.username
+                    }
+                    qr_states[session_uuid]['status'] = 'success'
+                    
+                except asyncio.TimeoutError:
+                    qr_states[session_uuid]['status'] = 'expired'
+            else:
+                qr_states[session_uuid]['status'] = 'error'
+                
+        except Exception as e:
+            logger.error(f"QR Worker Error: {e}")
+            qr_states[session_uuid]['status'] = 'error'
+        finally:
+            # Tutup koneksi setelah selesai semua urusan
+            await client.disconnect()
+
+    # Jalankan async di dalam thread biasa (Event Loop Baru)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(_process())
+    loop.close()
 
 @app.route('/api/connect/get_qr', methods=['POST'])
 @login_required
 def get_qr_code():
     """
-    Generate QR Code Token dari Telegram.
-    Return: Gambar QR (Base64) & Session ID (UUID) untuk tracking.
+    Langkah 1: Generate QR dan jalankan Worker di background.
     """
     user_id = session['user_id']
     
-    # [LIMIT CHECK] Cek Batas Akun (Sama kayak send_code)
+    # Cek Limit Akun dulu (Optional, sesuaikan kebutuhan)
     try:
         res = supabase.table('telegram_accounts').select("id", count='exact', head=True).eq('user_id', user_id).execute()
-        current_count = res.count if res.count else 0
-        if current_count >= 3:
+        if (res.count or 0) >= 3:
             return jsonify({'status': 'limit_reached', 'message': 'Limit 3 Akun Tercapai!'})
     except: pass
 
-    async def _generate():
-        try:
-            # 1. Bikin Client Baru
-            client = TelegramClient(StringSession(), API_ID, API_HASH)
-            await client.connect()
-            
-            # 2. Request QR Token
-            if not await client.is_user_authorized():
-                qr_login = await client.qr_login()
-                
-                # Generate ID Unik buat sesi ini
-                session_uuid = str(uuid.uuid4())
-                
-                # Simpan client & qr object ke memory server
-                # Kita butuh ini buat ngecek status login nanti
-                qr_sessions[session_uuid] = {
-                    'client': client,
-                    'qr_login': qr_login,
-                    'user_id': user_id,
-                    'timestamp': time.time()
-                }
-                
-                # 3. Bikin Gambar QR Code
-                url = qr_login.url
-                img = qrcode.make(url)
-                
-                # Convert ke Base64 string buat dikirim ke HTML
-                buffered = BytesIO()
-                img.save(buffered, format="PNG")
-                img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                
-                return jsonify({
-                    'status': 'success', 
-                    'qr_image': f"data:image/png;base64,{img_str}",
-                    'session_uuid': session_uuid
-                })
-            else:
-                return jsonify({'status': 'error', 'message': 'Client tak terduga sudah login.'})
-                
-        except Exception as e:
-            logger.error(f"QR Gen Error: {e}")
-            return jsonify({'status': 'error', 'message': str(e)})
-
-    return run_async(_generate())
+    # Buat ID sesi unik
+    session_uuid = str(uuid.uuid4())
+    
+    # Siapkan slot memory
+    qr_states[session_uuid] = {'status': 'initializing', 'qr_url': None}
+    
+    # Jalankan Worker di Background Thread
+    # Thread ini jalan terpisah dari Flask Request, jadi gak bakal putus!
+    t = threading.Thread(target=qr_worker, args=(user_id, session_uuid))
+    t.daemon = True # Biar thread mati otomatis kalau server mati
+    t.start()
+    
+    # Tunggu sebentar sampe Worker dapet URL QR dari Telegram (Max 5 detik)
+    # Kita polling internal sebentar biar pas response dikirim, gambarnya udah ada
+    for _ in range(50): # 50 x 0.1s = 5 detik
+        if qr_states[session_uuid].get('qr_url'):
+            break
+        time.sleep(0.1)
+        
+    if not qr_states[session_uuid].get('qr_url'):
+        return jsonify({'status': 'error', 'message': 'Gagal menghubungi Telegram (Timeout). Coba lagi.'})
+        
+    # Generate Gambar QR
+    url = qr_states[session_uuid]['qr_url']
+    img = qrcode.make(url)
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    
+    return jsonify({
+        'status': 'success', 
+        'qr_image': f"data:image/png;base64,{img_str}",
+        'session_uuid': session_uuid
+    })
 
 @app.route('/api/connect/check_qr', methods=['POST'])
 @login_required
 def check_qr_status():
     """
-    Dipanggil terus-menerus (Polling) oleh frontend tiap 2 detik.
-    Mengecek apakah user sudah scan QR di HP nya.
+    Langkah 2: Dipanggil Ajax tiap 2 detik buat nanya status ke Worker.
     """
     session_uuid = request.json.get('session_uuid')
-    if not session_uuid or session_uuid not in qr_sessions:
-        return jsonify({'status': 'expired', 'message': 'QR Code kadaluarsa. Reload halaman.'})
+    user_id = session['user_id']
     
-    data = qr_sessions[session_uuid]
-    client = data['client']
-    qr_login = data['qr_login']
-    user_id = data['user_id']
+    if not session_uuid or session_uuid not in qr_states:
+        return jsonify({'status': 'expired', 'message': 'Sesi QR tidak ditemukan/kadaluarsa.'})
     
-    async def _check():
-        try:
-            # 1. Cek Status Login
-            # Logic Telethon: client.is_user_authorized() akan true otomatis setelah user scan di HP
-            if await client.is_user_authorized():
-                
-                # 2. Ambil Info User
-                me = await client.get_me()
-                final_session = client.session.save()
-                
-                # 3. Simpan ke Database (Upsert)
-                db_data = {
-                    'user_id': user_id,
-                    'phone_number': f"+{me.phone}",
-                    'session_string': final_session,
-                    'first_name': me.first_name or '',
-                    'last_name': me.last_name or '',
-                    'username': me.username or '',
-                    'is_active': True,
-                    'targets': '[]',
-                    'created_at': datetime.utcnow().isoformat()
-                }
-                
-                supabase.table('telegram_accounts').upsert(db_data, on_conflict="user_id, phone_number").execute()
-                
-                # 4. Bersihkan Memory
-                await client.disconnect()
-                del qr_sessions[session_uuid]
-                
-                return jsonify({'status': 'success', 'message': f'Login Berhasil: {me.first_name}'})
-            
-            else:
-                # Belum discan, suruh frontend nunggu lagi
-                return jsonify({'status': 'waiting'})
-                
-        except Exception as e:
-            # Kadang token expired, harus refresh
-            if "token expired" in str(e).lower():
-                 return jsonify({'status': 'expired', 'message': 'QR Code Timeout'})
-            return jsonify({'status': 'error', 'message': str(e)})
-
-    return run_async(_check())
+    state = qr_states[session_uuid]
+    
+    if state['status'] == 'success':
+        # AMBIL DATA DARI WORKER DAN SIMPAN KE DB
+        u_data = state['user_data']
+        
+        db_data = {
+            'user_id': user_id,
+            'phone_number': u_data['phone'],
+            'session_string': u_data['session'],
+            'first_name': u_data['first_name'] or '',
+            'last_name': u_data['last_name'] or '',
+            'username': u_data['username'] or '',
+            'is_active': True,
+            'targets': '[]',
+            'created_at': datetime.utcnow().isoformat()
+        }
+        
+        # Simpan ke Supabase (Upsert biar gak error duplicate)
+        supabase.table('telegram_accounts').upsert(db_data, on_conflict="user_id, phone_number").execute()
+        
+        # Bersihkan memory server biar gak penuh
+        del qr_states[session_uuid]
+        
+        return jsonify({'status': 'success', 'message': f"Login Berhasil: {u_data['first_name']}"})
+        
+    elif state['status'] == 'expired':
+        return jsonify({'status': 'expired'})
+        
+    elif state['status'] == 'error':
+        return jsonify({'status': 'error', 'message': 'Terjadi kesalahan koneksi.'})
+        
+    else:
+        # Masih nunggu scan (status: waiting)
+        return jsonify({'status': 'waiting'})
 
 # ==============================================================================
 # SECTION 10: BOT FEATURES API (SCAN, TARGETS, IMPORT)
