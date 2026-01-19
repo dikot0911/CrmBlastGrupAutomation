@@ -1342,38 +1342,42 @@ def scan_groups_api():
 @app.route('/save_bulk_targets', methods=['POST'])
 @login_required
 def save_bulk_targets():
-    """Bulk Save Targets to DB"""
-    user_id = session['user_id']
+    user = get_dashboard_context()
     data = request.json
-    selected = data.get('targets', [])
-    
+    targets = data.get('targets', [])
+    source_phone = data.get('source_phone') # <--- INI KUNCINYA
+
+    if not targets:
+        return jsonify({'status': 'error', 'message': 'No targets provided'})
+
     try:
-        count = 0
-        for item in selected:
-            # Serialize topic IDs to string
-            t_ids = ",".join(map(str, item.get('topic_ids', [])))
-            
-            payload = {
-                "user_id": user_id,
-                "group_name": item['group_name'],
-                "group_id": int(item['group_id']),
-                "topic_ids": t_ids,
-                "is_active": True,
-                "created_at": datetime.utcnow().isoformat()
-            }
-            
-            # Upsert Logic
-            ex = supabase.table('blast_targets').select('id').eq('user_id', user_id).eq('group_id', item['group_id']).execute()
-            
-            if ex.data:
-                supabase.table('blast_targets').update(payload).eq('id', ex.data[0]['id']).execute()
-            else:
-                supabase.table('blast_targets').insert(payload).execute()
-            count += 1
-            
-        return jsonify({"status": "success", "message": f"{count} target berhasil disimpan!"})
+        # Kita cari nama akunnya sekalian biar di UI bagus (Optional)
+        source_name = None
+        if source_phone:
+            acc_data = supabase.table('telegram_accounts').select("first_name").eq('phone_number', source_phone).execute()
+            if acc_data.data:
+                source_name = acc_data.data[0]['first_name']
+
+        final_data = []
+        for t in targets:
+            final_data.append({
+                'user_id': user.id,
+                'group_name': t['group_name'],
+                'group_id': str(t['group_id']),
+                'topic_ids': ",".join(map(str, t['topic_ids'])) if t.get('topic_ids') else None,
+                'created_at': datetime.now().isoformat(),
+                'source_phone': source_phone, # <--- PASTIKAN INI DISIMPAN
+                'source_name': source_name    # <--- DAN INI
+            })
+
+        # Insert ke Supabase
+        supabase.table('blast_targets').insert(final_data).execute()
+        
+        return jsonify({'status': 'success', 'message': f'{len(final_data)} targets saved linked to {source_phone}'})
+
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
+        logger.error(f"Error saving targets: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
 
 @app.route('/import_crm_api', methods=['POST'])
 @login_required
@@ -1641,40 +1645,40 @@ def start_broadcast():
 @app.route('/add_schedule', methods=['POST'])
 @login_required
 def add_schedule():
-    """
-    [UPGRADE] Menambah jadwal dengan dukungan Template & Target Group
-    """
-    h = request.form.get('hour')
-    m = request.form.get('minute')
+    user = get_dashboard_context()
     
-    # New Fields
+    # Tangkap Data Form
+    hour = request.form.get('hour')
+    minute = request.form.get('minute')
     template_id = request.form.get('template_id')
-    target_group_id = request.form.get('target_group_id')
+    target_group_id = request.form.get('target_group_id') # Bisa string kosong kalau 'Semua Grup'
     
-    if h and m:
-        try:
-            payload = {
-                "user_id": session['user_id'],
-                "run_hour": int(h),
-                "run_minute": int(m),
-                "is_active": True,
-                "created_at": datetime.utcnow().isoformat()
-            }
-            
-            # Jika user memilih template, simpan ID-nya
-            if template_id and template_id != "":
-                payload['template_id'] = int(template_id)
-                
-            # Jika user memilih target group spesifik
-            if target_group_id and target_group_id != "":
-                payload['target_group_id'] = int(target_group_id)
+    # [FIX] Tangkap Sender Phone
+    sender_phone = request.form.get('sender_phone') 
+    
+    # Validasi sederhana biar gak error kalau sender_phone kosong/salah
+    if not sender_phone or sender_phone == 'auto':
+        sender_phone = 'auto'
 
-            supabase.table('blast_schedules').insert(payload).execute()
-            flash('Jadwal berhasil ditambahkan dengan konfigurasi baru.', 'success')
-        except Exception as e:
-            flash(f'Gagal menambah jadwal: {e}', 'danger')
-            logger.error(f"Add Schedule Error: {e}")
-            
+    try:
+        data = {
+            'user_id': user.id,
+            'run_hour': int(hour),
+            'run_minute': int(minute),
+            'template_id': int(template_id) if template_id else None,
+            'target_group_id': target_group_id if target_group_id else None,
+            'sender_phone': sender_phone, # <--- SIMPAN KE DB
+            'status': 'active',
+            'created_at': datetime.now().isoformat()
+        }
+        
+        supabase.table('blast_schedules').insert(data).execute()
+        flash('Jadwal berhasil ditambahkan!', 'success')
+        
+    except Exception as e:
+        logger.error(f"Error add schedule: {e}")
+        flash(f'Gagal membuat jadwal: {str(e)}', 'error')
+
     return redirect(url_for('dashboard_schedule'))
 
 @app.route('/delete_schedule/<int:id>')
