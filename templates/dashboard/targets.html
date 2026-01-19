@@ -7,13 +7,13 @@
     <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-6">
         <div class="flex-1">
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
-                Target Grup <span class="text-indigo-600">Shere</span>
+                Target Grup <span class="text-indigo-600">Blast</span>
                 <span class="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-lg border border-indigo-200 align-top transform -translate-y-2">
                     {{ targets|length }} Active
                 </span>
             </h1>
             <p class="text-gray-500 mt-2 text-sm md:text-base max-w-2xl leading-relaxed">
-                Database grup dan forum Telegram tujuan promosi. Kelola ID topik spesifik untuk jangkauan yang lebih presisi.
+                Database grup terpisah berdasarkan akun Telegram. Pastikan memilih akun yang tepat saat membuat jadwal broadcast.
             </p>
         </div>
         
@@ -22,7 +22,7 @@
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <i class="fa-solid fa-search text-gray-400 group-focus-within:text-indigo-500 transition"></i>
                 </div>
-                <input type="text" id="mainSearchInput" onkeyup="filterSavedTargets()" placeholder="Cari target tersimpan..." 
+                <input type="text" id="mainSearchInput" onkeyup="filterSavedTargets()" placeholder="Cari target..." 
                        class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm transition">
             </div>
 
@@ -42,21 +42,24 @@
                         <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-black text-lg shadow-inner">
                             {{ t.group_name[:1]|upper }}
                         </div>
+                        
                         <div class="flex-1 min-w-0">
                             <h3 class="font-bold text-gray-800 text-lg leading-tight truncate pr-2" title="{{ t.group_name }}">
                                 {{ t.group_name }}
                             </h3>
-                            <div class="flex items-center gap-2 mt-1">
-                                <span class="bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded border border-gray-200 font-mono">
-                                    ID: {{ t.group_id }}
+                            
+                            <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                                <span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded border border-blue-200 font-bold flex items-center gap-1" title="Grup ini hasil scan dari akun ini">
+                                    <i class="fa-brands fa-telegram"></i> {{ t.source_phone or 'Default' }}
                                 </span>
+
                                 {% if t.topic_ids %}
-                                <span class="bg-yellow-50 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded border border-yellow-200 font-bold flex items-center gap-1">
-                                    <i class="fa-solid fa-comments"></i> Forum
+                                <span class="bg-yellow-50 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded border border-yellow-200 font-bold">
+                                    Forum
                                 </span>
                                 {% else %}
-                                <span class="bg-blue-50 text-blue-700 text-[10px] px-1.5 py-0.5 rounded border border-blue-200 font-bold flex items-center gap-1">
-                                    <i class="fa-solid fa-user-group"></i> Basic
+                                <span class="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded border border-gray-200 font-bold">
+                                    Basic
                                 </span>
                                 {% endif %}
                             </div>
@@ -64,8 +67,8 @@
                     </div>
                     
                     <div class="relative z-10">
-                        <a href="/delete_target/{{ t.id }}" onclick="return confirm('Yakin ingin menghapus target ini dari database?')" 
-                           class="w-8 h-8 rounded-full bg-transparent hover:bg-red-50 text-gray-300 hover:text-red-500 flex items-center justify-center transition duration-200">
+                        <a href="/delete_target/{{ t.id }}" onclick="return confirm('Yakin hapus target ini dari database?')" 
+                           class="w-8 h-8 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500 flex items-center justify-center transition">
                             <i class="fa-solid fa-trash-can"></i>
                         </a>
                     </div>
@@ -75,35 +78,30 @@
             <div class="px-6 pb-6">
                 <div class="bg-gray-50/80 rounded-xl p-3 border border-gray-100 min-h-[80px]">
                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2 flex justify-between">
-                        <span>Target Destinasi</span>
-                        <span class="text-indigo-400">{{ t.topic_ids.split(',')|length if t.topic_ids else '1' }} Titik</span>
+                        <span>Titik Broadcast</span>
+                        <span class="text-indigo-400 font-mono">{{ t.topic_ids.split(',')|length if t.topic_ids else '1' }} Titik</span>
                     </span>
                     
                     <div class="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto custom-scrollbar">
                         {% if t.topic_ids %}
                             {% for tid in t.topic_ids.split(',') %}
-                                {% if tid|int == 1 %}
-                                <span class="bg-white text-gray-600 px-2 py-1 rounded-lg text-[10px] font-bold border border-gray-200 shadow-sm flex items-center gap-1">
-                                    <i class="fa-solid fa-thumbtack text-gray-400"></i> General
-                                </span>
-                                {% else %}
                                 <span class="bg-white text-indigo-600 px-2 py-1 rounded-lg text-[10px] font-mono font-bold border border-indigo-100 shadow-sm">
                                     #{{ tid }}
                                 </span>
-                                {% endif %}
                             {% endfor %}
                         {% else %}
                              <span class="bg-white text-gray-500 px-2 py-1 rounded-lg text-[10px] font-bold border border-gray-200 shadow-sm w-full text-center">
-                                Broadcast ke Default Chat
+                                General Chat
                             </span>
                         {% endif %}
                     </div>
                 </div>
             </div>
-
+            
             <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-indigo-500/5 to-transparent rounded-bl-[3rem] -mr-4 -mt-4 pointer-events-none"></div>
         </div>
         {% else %}
+        
         <div class="col-span-full py-24 text-center bg-white rounded-[2rem] border-2 border-dashed border-gray-200">
             <div class="relative w-24 h-24 mx-auto mb-6">
                 <div class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20"></div>
@@ -123,53 +121,79 @@
         <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
             <i class="fa-solid fa-search"></i>
         </div>
-        <p class="text-gray-500 font-medium">Tidak ditemukan target Grup dengan nama tersebut.</p>
+        <p class="text-gray-500 font-medium">Tidak ditemukan target dengan nama tersebut.</p>
     </div>
 
 </div>
 
-<div id="scanModal" class="fixed inset-0 z-[60] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="scanModal" class="fixed inset-0 z-[60] hidden">
     <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop"></div>
     
     <div class="fixed inset-0 z-10 overflow-hidden flex items-center justify-center p-4 sm:p-6">
         <div class="relative transform flex flex-col w-full max-w-3xl h-[85vh] bg-white rounded-3xl shadow-2xl transition-all opacity-0 scale-95" id="modalPanel">
             
-            <div class="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center z-20 shrink-0">
+            <div class="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center shrink-0">
                 <div>
                     <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fa-brands fa-telegram text-blue-500"></i> Pilih Grup & Topik
+                        <i class="fa-brands fa-telegram text-blue-500"></i> Scan Grup
                     </h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Centang grup yang ingin dijadikan target Shere Grup.</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Pilih akun sumber untuk memindai grup.</p>
                 </div>
                 <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 flex items-center justify-center transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <div class="px-6 py-3 bg-gray-50/50 border-b border-gray-100 shrink-0">
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <i class="fa-solid fa-filter text-gray-400"></i>
+            <div class="px-6 py-4 bg-indigo-50 border-b border-indigo-100 shrink-0">
+                <label class="block text-xs font-bold text-indigo-900 uppercase mb-2">Pilih Akun Sumber</label>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <select id="scanAccountSelect" class="w-full pl-10 pr-4 py-2.5 bg-white border border-indigo-200 rounded-xl text-sm font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer appearance-none">
+                            {% for acc in accounts %}
+                                <option value="{{ acc.phone_number }}">{{ acc.first_name or 'Akun' }} ({{ acc.phone_number }})</option>
+                            {% else %}
+                                <option value="" disabled selected>⚠️ Tidak ada akun aktif</option>
+                            {% endfor %}
+                        </select>
+                        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none">
+                            <i class="fa-solid fa-user-circle"></i>
+                        </div>
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none text-xs">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
                     </div>
-                    <input type="text" id="scanSearchInput" onkeyup="filterScanResults()" 
-                           placeholder="Ketik nama grup untuk mencari..." 
-                           class="block w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-sm">
+                    <button onclick="startScanning()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition flex items-center gap-2 whitespace-nowrap">
+                        <i class="fa-solid fa-radar"></i> Mulai Scan
+                    </button>
+                </div>
+            </div>
+
+            <div class="px-6 py-2 bg-white border-b border-gray-100 shrink-0">
+                <div class="relative">
+                    <input type="text" id="scanSearchInput" onkeyup="filterScanResults()" placeholder="Filter nama grup..." class="w-full pl-8 pr-4 py-2 text-sm border-none focus:ring-0 placeholder-gray-400">
+                    <div class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
+                        <i class="fa-solid fa-filter text-xs"></i>
+                    </div>
                 </div>
             </div>
 
             <div class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-gray-50/30 relative" id="scanContent">
                 
-                <div class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10" id="loadingScan">
-                    <div class="relative w-20 h-20 mb-4">
-                        <div class="absolute top-0 left-0 w-full h-full border-4 border-indigo-100 rounded-full"></div>
-                        <div class="absolute top-0 left-0 w-full h-full border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+                <div id="initialState" class="flex flex-col items-center justify-center h-full text-center text-gray-400 py-10">
+                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
+                        <i class="fa-solid fa-arrow-up text-2xl text-indigo-200 animate-bounce"></i>
                     </div>
-                    <h4 class="text-gray-800 font-bold text-lg">Memindai Telegram...</h4>
-                    <p class="text-gray-500 text-sm mt-1">Mengambil daftar grup dan topik terbaru.</p>
+                    <p class="text-sm font-medium text-gray-500">Pilih akun di atas lalu klik "Mulai Scan"</p>
+                </div>
+
+                <div id="loadingScan" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white z-20">
+                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-600 mb-3"></i>
+                    <h4 class="font-bold text-gray-800">Sedang Memindai...</h4>
+                    <p class="text-xs text-gray-500">Bot sedang mengambil data dari Telegram.</p>
                 </div>
 
                 <div id="resultList" class="space-y-4 hidden pb-10"></div>
-
+                
                 <div id="emptyScanSearch" class="hidden flex-col items-center justify-center py-10 text-center">
                     <i class="fa-solid fa-ghost text-gray-300 text-3xl mb-3"></i>
                     <p class="text-gray-500 text-sm">Grup tidak ditemukan.</p>
@@ -181,26 +205,25 @@
                     <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
                     <span class="text-sm font-bold text-indigo-900" id="selectedCount">0 Grup Dipilih</span>
                 </div>
-                <button onclick="saveSelection()" id="btnSave" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                <button onclick="saveSelection()" id="btnSave" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                     <span>Simpan Pilihan</span>
                     <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </div>
-
         </div>
     </div>
 </div>
 
 <script>
+    // --- VARIABLES ---
     const modal = document.getElementById('scanModal');
     const backdrop = document.getElementById('modalBackdrop');
     const panel = document.getElementById('modalPanel');
     let scannedGroups = [];
 
-    // --- SEARCH SAVED TARGETS ---
+    // --- MAIN PAGE SEARCH ---
     function filterSavedTargets() {
-        const input = document.getElementById('mainSearchInput');
-        const filter = input.value.toLowerCase();
+        const filter = document.getElementById('mainSearchInput').value.toLowerCase();
         const items = document.getElementsByClassName('saved-target-item');
         let visibleCount = 0;
 
@@ -213,7 +236,7 @@
                 items[i].style.display = "none";
             }
         }
-
+        
         const noResult = document.getElementById('noSearchResults');
         if (visibleCount === 0 && items.length > 0) {
             noResult.classList.remove('hidden');
@@ -222,7 +245,7 @@
         }
     }
 
-    // --- MODAL FUNCTIONS ---
+    // --- MODAL UTILS ---
     function openScanModal() {
         modal.classList.remove('hidden');
         setTimeout(() => {
@@ -230,8 +253,12 @@
             panel.classList.remove('opacity-0', 'scale-95');
             panel.classList.add('opacity-100', 'scale-100');
         }, 10);
+        
+        // Reset UI State
+        document.getElementById('initialState').classList.remove('hidden');
+        document.getElementById('resultList').classList.add('hidden');
         document.getElementById('scanSearchInput').value = '';
-        startScanning();
+        scannedGroups = [];
     }
 
     function closeModal() {
@@ -240,12 +267,153 @@
         panel.classList.add('opacity-0', 'scale-95');
         setTimeout(() => {
             modal.classList.add('hidden');
-            document.getElementById('loadingScan').classList.remove('hidden');
-            document.getElementById('resultList').classList.add('hidden');
+            document.getElementById('loadingScan').classList.add('hidden'); // Ensure loading is hidden
         }, 300);
     }
 
-    // --- SEARCH INSIDE MODAL ---
+    // --- SCAN LOGIC (CORE) ---
+    async function startScanning() {
+        const phone = document.getElementById('scanAccountSelect').value;
+        if (!phone) return alert("Pilih akun sumber dulu bre!");
+
+        const loader = document.getElementById('loadingScan');
+        const list = document.getElementById('resultList');
+        const init = document.getElementById('initialState');
+
+        init.classList.add('hidden');
+        loader.classList.remove('hidden');
+        list.classList.add('hidden');
+        
+        try {
+            // KIRIM PARAMETER PHONE KE API
+            const res = await fetch(`/scan_groups_api?phone=${encodeURIComponent(phone)}`);
+            const data = await res.json();
+            
+            if(data.status === 'success') {
+                scannedGroups = data.data;
+                renderGroups(scannedGroups);
+            } else {
+                alert("Gagal scan: " + data.message);
+                init.classList.remove('hidden'); // Back to init if fail
+            }
+        } catch(e) {
+            alert("Error koneksi server.");
+            init.classList.remove('hidden');
+        } finally {
+            loader.classList.add('hidden');
+            list.classList.remove('hidden');
+        }
+    }
+
+    function renderGroups(groups) {
+        const list = document.getElementById('resultList');
+        list.innerHTML = '';
+        
+        if (groups.length === 0) {
+            list.innerHTML = `<div class="text-center py-20 text-gray-400 flex flex-col items-center">
+                <i class="fa-regular fa-folder-open text-3xl mb-2"></i>
+                <p class="text-sm">Tidak ada grup ditemukan di akun ini.</p>
+            </div>`;
+            return;
+        }
+
+        groups.forEach((g, index) => {
+            const isForum = g.is_forum;
+            let topicsHtml = '';
+
+            if(isForum) {
+                let topicChecks = '';
+                g.topics.forEach(t => {
+                    let badgeColor = t.title.toLowerCase().includes('general') ? 'border-gray-200 bg-gray-50' : 'border-indigo-100 bg-indigo-50/50';
+                    topicChecks += `
+                    <label class="group/topic relative flex items-center gap-3 p-2.5 rounded-xl border ${badgeColor} cursor-pointer hover:bg-white transition select-none">
+                        <input type="checkbox" class="topic-check-${index} form-checkbox h-4 w-4 text-indigo-600 rounded" value="${t.id}">
+                        <span class="text-xs font-medium truncate flex-1">${t.title}</span>
+                    </label>`;
+                });
+
+                // Kotak Panduan & Manual Input (Yang udah ada sebelumnya)
+                topicsHtml = `
+                <div class="mt-3 ml-11 hidden transition-all duration-300 ease-in-out" id="topic-box-${index}">
+                    <div class="bg-gray-50/80 rounded-xl p-3 border border-gray-200/60">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                <i class="fa-solid fa-tags mr-1"></i> Pilih Topik
+                            </p>
+                            <span class="text-[10px] text-indigo-500 cursor-pointer hover:underline" onclick="toggleAllTopics(${index})">Toggle All</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                            ${topicChecks || '<p class="text-xs text-gray-400 italic col-span-2">No topics found via API.</p>'}
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-gray-200/60">
+                             <div class="bg-blue-50 border border-blue-100 rounded-lg p-2 mb-2 flex gap-2 items-start">
+                                <i class="fa-solid fa-info-circle text-blue-500 text-xs mt-0.5"></i>
+                                <div class="text-[10px] text-blue-800">
+                                    <b>Manual ID:</b> Buka topik di Telegram Desktop, lihat URL <code>t.me/grup/<b>101</b></code>.
+                                </div>
+                            </div>
+                             <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Input Manual ID (Pisahkan koma)</label>
+                             <input type="text" id="manual-topic-${index}" placeholder="Contoh: 101, 202" 
+                                    class="w-full pl-3 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-mono placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            const item = document.createElement('div');
+            item.className = "scan-group-item bg-white p-4 rounded-2xl border border-gray-200 hover:border-indigo-400 transition group-checked:border-indigo-500";
+            item.setAttribute('data-group-name', g.name.toLowerCase());
+            
+            item.innerHTML = `
+                <div class="flex items-start gap-4">
+                    <div class="pt-1">
+                        <input type="checkbox" class="group-check form-checkbox h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" 
+                               value="${index}" onchange="toggleTopics(${index})">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <h4 class="font-bold text-gray-800 text-sm truncate select-text">${g.name}</h4>
+                            ${isForum ? '<span class="bg-yellow-100 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded font-bold border border-yellow-200">FORUM</span>' : ''}
+                        </div>
+                        <p class="text-xs text-gray-400 font-mono select-all">ID: ${g.id}</p>
+                    </div>
+                </div>
+                ${topicsHtml}
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    // --- TOGGLE & FILTER HELPERS ---
+    function toggleTopics(index) {
+        const box = document.getElementById(`topic-box-${index}`);
+        const checkbox = document.querySelector(`input[value="${index}"].group-check`);
+        if (checkbox.checked) {
+            if(box) {
+                box.classList.remove('hidden');
+                // Auto check 'General' topic if exists
+                const generalCheck = document.querySelector(`.topic-check-${index}[value="1"]`);
+                if(generalCheck && !generalCheck.checked) generalCheck.checked = true;
+            }
+        } else {
+            if(box) box.classList.add('hidden');
+        }
+        updateCount();
+    }
+
+    function toggleAllTopics(index) {
+        const checks = document.querySelectorAll(`.topic-check-${index}`);
+        const allChecked = Array.from(checks).every(c => c.checked);
+        checks.forEach(c => c.checked = !allChecked);
+    }
+
+    function updateCount() {
+        const count = document.querySelectorAll('.group-check:checked').length;
+        const label = document.getElementById('selectedCount');
+        label.innerText = `${count} Grup Dipilih`;
+        label.className = count > 0 ? "text-sm font-bold text-indigo-600 transition-colors" : "text-sm font-bold text-gray-400 transition-colors";
+    }
+
     function filterScanResults() {
         const query = document.getElementById('scanSearchInput').value.toLowerCase();
         const items = document.querySelectorAll('.scan-group-item');
@@ -271,171 +439,10 @@
         }
     }
 
-    // --- API & RENDER ---
-    async function startScanning() {
-        const loader = document.getElementById('loadingScan');
-        const list = document.getElementById('resultList');
-        const emptyState = document.getElementById('emptyScanSearch');
-
-        loader.classList.remove('hidden');
-        list.classList.add('hidden');
-        emptyState.classList.add('hidden');
-        
-        try {
-            const res = await fetch('/scan_groups_api');
-            const data = await res.json();
-            
-            if(data.status === 'success') {
-                scannedGroups = data.data;
-                renderGroups(scannedGroups);
-            } else {
-                alert("Gagal scan: " + data.message);
-                closeModal();
-            }
-        } catch(e) {
-            console.error(e);
-            alert("Terjadi kesalahan koneksi saat memindai.");
-            closeModal();
-        } finally {
-            loader.classList.add('hidden');
-            list.classList.remove('hidden');
-        }
-    }
-
-    function renderGroups(groups) {
-        const list = document.getElementById('resultList');
-        list.innerHTML = '';
-        
-        if (groups.length === 0) {
-            list.innerHTML = `<div class="text-center py-10 text-gray-500">Tidak ada grup ditemukan.</div>`;
-            return;
-        }
-
-        groups.forEach((g, index) => {
-            const isForum = g.is_forum;
-            let topicsHtml = '';
-
-            if(isForum) {
-                let topicChecks = '';
-                g.topics.forEach(t => {
-                    let badgeColor = t.title.toLowerCase().includes('general') ? 'border-gray-200 bg-gray-50 text-gray-600' : 'border-indigo-100 bg-indigo-50/50 text-indigo-600';
-                    topicChecks += `
-                    <label class="group/topic relative flex items-center gap-3 p-2.5 rounded-xl border ${badgeColor} cursor-pointer hover:bg-white hover:border-indigo-300 hover:shadow-sm transition-all select-none">
-                        <div class="relative flex items-center">
-                            <input type="checkbox" class="topic-check-${index} peer h-4 w-4 cursor-pointer appearance-none rounded border border-gray-300 text-indigo-600 transition-all checked:border-indigo-600 checked:bg-indigo-600" value="${t.id}">
-                            <i class="fa-solid fa-check absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-white opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
-                        </div>
-                        <span class="text-xs font-medium truncate flex-1">${t.title}</span>
-                    </label>`;
-                });
-
-                // --- INI DIA KOTAK PANDUAN YANG DISISIPKAN ---
-                topicsHtml = `
-                <div class="mt-3 ml-11 hidden transition-all duration-300 ease-in-out" id="topic-box-${index}">
-                    <div class="bg-gray-50/80 rounded-xl p-3 border border-gray-200/60">
-                        <div class="flex justify-between items-center mb-2">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                <i class="fa-solid fa-tags mr-1"></i> Pilih Topik
-                            </p>
-                            <span class="text-[10px] text-indigo-500 cursor-pointer hover:underline" onclick="toggleAllTopics(${index})">Toggle All</span>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 max-h-40 overflow-y-auto custom-scrollbar pr-1">
-                            ${topicChecks || '<p class="text-xs text-gray-400 italic col-span-2 text-center py-2">Tidak ada topik terdeteksi. Gunakan input manual.</p>'}
-                        </div>
-                        
-                        <div class="mt-3 pt-3 border-t border-gray-200/60">
-                             <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3">
-                                <div class="flex gap-2 items-start">
-                                    <i class="fa-solid fa-circle-info text-blue-500 mt-0.5 text-xs"></i>
-                                    <div class="text-[10px] text-blue-800">
-                                        <span class="font-bold">Cara ambil ID Topik Manual:</span>
-                                        <ul class="list-disc list-inside mt-1 space-y-0.5 text-blue-600/80">
-                                            <li>Buka Topik via Telegram Web/Desktop.</li>
-                                            <li>Cek URL: <code class="bg-white px-1 rounded border border-blue-100">t.me/grup/<b>101</b></code></li>
-                                            <li>Ambil angka terakhir (Contoh: <b>101</b>).</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                             
-                             <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Input Manual ID (Pisahkan koma)</label>
-                             <div class="flex gap-2">
-                                <div class="relative w-full">
-                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">#</span>
-                                    <input type="text" id="manual-topic-${index}" placeholder="Contoh: 2, 45, 101" 
-                                           class="w-full pl-6 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 outline-none font-mono placeholder-gray-300">
-                                </div>
-                             </div>
-                        </div>
-                    </div>
-                </div>`;
-            }
-
-            const item = document.createElement('div');
-            item.className = "scan-group-item bg-white p-4 rounded-2xl border border-gray-200 hover:border-indigo-400 hover:shadow-md transition-all duration-200 group-checked:border-indigo-500";
-            item.setAttribute('data-group-name', g.name.toLowerCase());
-            
-            item.innerHTML = `
-                <div class="flex items-start gap-4">
-                    <div class="pt-1">
-                        <div class="relative flex items-center">
-                            <input type="checkbox" class="group-check peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-gray-300 text-indigo-600 transition-all checked:border-indigo-600 checked:bg-indigo-600 hover:border-indigo-400" 
-                                   value="${index}" onchange="toggleTopics(${index})">
-                            <i class="fa-solid fa-check absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xs text-white opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
-                        </div>
-                    </div>
-                    
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-0.5">
-                            <h4 class="font-bold text-gray-800 text-sm truncate pr-2 select-text">${g.name}</h4>
-                            ${isForum ? '<span class="shrink-0 bg-yellow-100 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded font-bold border border-yellow-200">FORUM</span>' : ''}
-                        </div>
-                        <p class="text-xs text-gray-400 font-mono select-all">ID: ${g.id}</p>
-                    </div>
-                </div>
-                ${topicsHtml}
-            `;
-            list.appendChild(item);
-        });
-    }
-
-    function toggleTopics(index) {
-        const box = document.getElementById(`topic-box-${index}`);
-        const checkbox = document.querySelector(`input[value="${index}"].group-check`);
-        const itemContainer = checkbox.closest('.scan-group-item');
-        
-        if (checkbox.checked) {
-            itemContainer.classList.add('border-indigo-500', 'bg-indigo-50/10');
-            if(box) {
-                box.classList.remove('hidden');
-                const generalCheck = document.querySelector(`.topic-check-${index}[value="1"]`);
-                if(generalCheck && !generalCheck.checked) generalCheck.checked = true;
-            }
-        } else {
-            itemContainer.classList.remove('border-indigo-500', 'bg-indigo-50/10');
-            if(box) box.classList.add('hidden');
-        }
-        updateCount();
-    }
-
-    function toggleAllTopics(index) {
-        const checks = document.querySelectorAll(`.topic-check-${index}`);
-        const allChecked = Array.from(checks).every(c => c.checked);
-        checks.forEach(c => c.checked = !allChecked);
-    }
-
-    function updateCount() {
-        const count = document.querySelectorAll('.group-check:checked').length;
-        const label = document.getElementById('selectedCount');
-        label.innerText = `${count} Grup Dipilih`;
-        if(count > 0) label.className = "text-sm font-bold text-indigo-600 transition-colors";
-        else label.className = "text-sm font-bold text-gray-400 transition-colors";
-    }
-
+    // --- SAVE LOGIC (WITH SOURCE PHONE) ---
     async function saveSelection() {
+        const phone = document.getElementById('scanAccountSelect').value; // Tangkap Akun Sumber
         const btn = document.getElementById('btnSave');
-        const selected = [];
         const checks = document.querySelectorAll('.group-check:checked');
         
         if (checks.length === 0) return alert("Pilih minimal satu grup!");
@@ -443,27 +450,26 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan...';
 
+        const selected = [];
         checks.forEach(cb => {
             const idx = cb.value;
-            const groupData = scannedGroups[idx];
+            const g = scannedGroups[idx];
             let topicIds = [];
             
-            document.querySelectorAll(`.topic-check-${idx}:checked`).forEach(tc => {
-                topicIds.push(parseInt(tc.value));
-            });
+            // 1. Auto Topics
+            document.querySelectorAll(`.topic-check-${idx}:checked`).forEach(tc => topicIds.push(parseInt(tc.value)));
             
+            // 2. Manual Topics
             const manualInput = document.getElementById(`manual-topic-${idx}`);
             if(manualInput && manualInput.value) {
                 const manuals = manualInput.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
                 topicIds = [...topicIds, ...manuals];
             }
 
-            topicIds = [...new Set(topicIds)];
-
             selected.push({
-                group_name: groupData.name,
-                group_id: groupData.id,
-                topic_ids: topicIds 
+                group_name: g.name,
+                group_id: g.id,
+                topic_ids: [...new Set(topicIds)]
             });
         });
 
@@ -471,7 +477,10 @@
             const res = await fetch('/save_bulk_targets', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({targets: selected})
+                body: JSON.stringify({
+                    targets: selected,
+                    source_phone: phone // <-- KIRIM INFO PEMILIK AKUN
+                })
             });
             const resp = await res.json();
             if(resp.status === 'success') {
