@@ -1,48 +1,35 @@
-{% extends "landing/base.html" %}
-
-{% block content %}
-
-    {% include 'landing/_hero.html' %}
-
-    {% include 'landing/_features.html' %}
-
-    {% include 'landing/_pricing.html' %}
-
-    {% include 'landing/_faq.html' %}
-
-    <script>
+<script>
         function scaleIframe() {
             const container = document.getElementById('scrollContainer');
             const wrapper = document.getElementById('iframeWrapper');
             
-            // Lebar Desktop Ideal yang kita paksa tampil di HP
-            const desktopWidth = 1440; 
+            // [FIX] Pake 1280px biar di HP tulisan lebih kebaca (gak semut banget)
+            const desktopWidth = 1280; 
             
             // Lebar layar HP user saat ini
             const containerWidth = container.offsetWidth;
             
-            // Hitung rasio zoom (biar muat)
+            // Hitung rasio zoom
             let scale = containerWidth / desktopWidth;
             
             if (containerWidth < desktopWidth) {
-                // Kecilin wrapper pake CSS Transform
+                // Scaling Mode (Mobile)
                 wrapper.style.transform = `scale(${scale})`;
                 wrapper.style.transformOrigin = 'top left';
+                
+                // Set ukuran wrapper ke ukuran ASLI desktop
                 wrapper.style.width = `${desktopWidth}px`; 
-                // Tinggi harus diset manual biar scrollbarnya tau ada konten
-                wrapper.style.height = `800px`; 
+                // Tinggi disamain CSS biar overlay pas
+                wrapper.style.height = `1400px`; 
             } else {
-                // Kalau di Laptop/PC, balikin normal
+                // Desktop Mode (Normal)
                 wrapper.style.transform = 'scale(1)';
                 wrapper.style.width = '100%';
                 wrapper.style.height = '100%';
             }
         }
 
-        // Jalankan saat load & saat layar diputer/resize
+        // Jalankan saat load & resize
         window.addEventListener('load', scaleIframe);
         window.addEventListener('resize', scaleIframe);
     </script>
-
-{% endblock %}
-
