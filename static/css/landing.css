@@ -1,11 +1,13 @@
-/* --- GLOBAL --- */
+/* =========================================
+   1. GLOBAL STYLES
+   ========================================= */
 body {
     font-family: 'Plus Jakarta Sans', sans-serif;
     scroll-behavior: smooth;
     overflow-x: hidden;
 }
 
-/* --- ANIMATIONS --- */
+/* --- ANIMATIONS (BLOB BACKGROUND) --- */
 .blob {
     position: absolute;
     filter: blur(80px);
@@ -25,7 +27,9 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
-/* --- COMPONENTS --- */
+/* =========================================
+   2. COMPONENTS & CARDS
+   ========================================= */
 .feature-card:hover .icon-box {
     transform: scale(1.1) rotate(5deg);
 }
@@ -36,62 +40,45 @@ body {
     z-index: 10;
 }
 
-/* --- ACCORDION (FAQ) --- */
-.faq-item.active .faq-answer {
-    max-height: 200px;
-    opacity: 1;
-    margin-top: 0.75rem;
+/* =========================================
+   3. ACCORDION (FAQ)
+   ========================================= */
+/* Transisi Smooth buat buka-tutup FAQ */
+.faq-content {
+    transition: max-height 0.3s ease-out;
 }
-.faq-item .faq-answer {
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    transition: all 0.3s ease-in-out;
-}
-.faq-item.active .faq-icon {
+
+/* Rotasi Icon Panah */
+.rotate-180 {
     transform: rotate(180deg);
-
 }
 
-/* Container Utama */
-.browser-mockup-wrapper {
-    /* ... css lu yang tadi ... */
-    display: flex;
-    flex-direction: column;
-    background: #fff; /* Pastiin ada background */
-    height: 85vh; /* Jangan full 100% kalau di desktop, biar keliatan "mengambang" */
+/* =========================================
+   4. LIVE DEMO FIX (BAGIAN PENTING!)
+   ========================================= */
+
+/* A. Styling Scrollbar Iframe biar gak kaku */
+#demo iframe {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
-/* Header Browser Palsu (Titik Merah Kuning Ijo) */
-.browser-header {
-    background: #f1f3f5;
-    padding: 12px 15px;
-    border-bottom: 1px solid #e0e0e0;
-    border-radius: 10px 10px 0 0;
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0; /* Biar header gak gepeng pas discroll */
+/* B. Layer Pelindung (Overlay) */
+/* Ini kuncinya: User gak bisa klik tombol di dalam iframe, 
+   TAPI user tetep bisa SCROLL (swipe) halaman demo-nya. */
+#demo .absolute.inset-0.z-10 {
+    touch-action: pan-y; 
 }
 
-.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-.red { background: #ff5f56; }
-.yellow { background: #ffbd2e; }
-.green { background: #27c93f; }
-
-/* Area Konten (Ini yang penting biar bisa scroll!) */
-.browser-content {
-    flex-grow: 1; /* Ngisi sisa ruang */
-    overflow-y: auto; /* SCROLL CUMA DI DALAM KOTAK */
-    overflow-x: hidden;
-    position: relative;
-}
-
-/* KHUSUS MOBILE */
-@media (max-width: 768px) {
-    .browser-mockup-wrapper {
-        height: 100vh; /* Full layar di HP */
-        border-radius: 0;
-        margin: 0;
+/* C. Responsive Mobile Adjustment */
+@media (max-width: 640px) {
+    #demo iframe {
+        width: 100%;
+        height: 100%;
+        /* Opsional: Zoom out dikit konten demo biar muat banyak di layar HP */
+        /* zoom: 0.85; */ 
     }
-    .browser-header { display: none; } /* Umpetin header di HP */
+    
+    /* Opsional: Kalau mau container demonya gak terlalu tinggi di HP */
+    /* Pastikan class height di HTML udah bener (h-[500px]) */
 }
