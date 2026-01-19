@@ -82,3 +82,48 @@ body {
     /* Opsional: Kalau mau container demonya gak terlalu tinggi di HP */
     /* Pastikan class height di HTML udah bener (h-[500px]) */
 }
+
+/* =========================================
+   5. DESKTOP DEMO ENGINE (MOBILE FIX)
+   ========================================= */
+
+/* Jendela Browser Palsu */
+.demo-browser-window {
+    width: 100%;
+    /* Tinggi jendela yang tampil di layar HP */
+    height: 500px; 
+    overflow: hidden; 
+    position: relative;
+    background: #f8fafc;
+}
+
+/* Di Desktop, jendelanya lebih tinggi */
+@media (min-width: 768px) {
+    .demo-browser-window {
+        height: 700px;
+    }
+}
+
+/* Container Scroll (Biar user bisa swipe) */
+.demo-scroll-container {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto; /* Scroll Vertikal ON */
+    overflow-x: hidden; /* Horizontal OFF (karena udah di-scale JS) */
+    -webkit-overflow-scrolling: touch; /* Biar smooth di iPhone */
+    position: relative;
+    z-index: 10;
+}
+
+/* Wrapper Iframe (Dipaksa Desktop) */
+.demo-iframe-wrapper iframe {
+    /* Paksa Lebar Desktop (Wajib !important biar ga ditimpa tailwind) */
+    width: 1440px !important; 
+    min-width: 1440px !important;
+    
+    /* Tinggi konten di dalam demo */
+    height: 1200px !important; 
+    
+    border: none;
+    pointer-events: none; /* Matikan klik di level iframe juga */
+}
