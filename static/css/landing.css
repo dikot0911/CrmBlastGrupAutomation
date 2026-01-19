@@ -84,61 +84,64 @@ body {
 }
 
 /* =========================================
-   5. DESKTOP DEMO ENGINE (SCROLL FIX)
+   5. DESKTOP DEMO ENGINE (PROPORTIONAL FIX)
    ========================================= */
 
 /* Jendela Browser Palsu */
 .demo-browser-window {
     width: 100%;
-    /* Tinggi jendela di layar HP */
-    height: 500px; 
+    /* [FIX] Tinggi di HP dipendekin biar ga "manjang" */
+    height: 380px; 
     overflow: hidden; 
     position: relative;
     background: #f8fafc;
+    transition: height 0.3s ease;
 }
 
+/* Di Tablet/Desktop baru tinggiin */
 @media (min-width: 768px) {
     .demo-browser-window {
         height: 700px;
     }
 }
 
-/* Container Scroll (Biar user bisa swipe) */
+/* Container Scroll */
 .demo-scroll-container {
     width: 100%;
     height: 100%;
-    overflow: auto; /* Wajib auto biar scrollbar muncul */
-    -webkit-overflow-scrolling: touch; /* Smooth scroll di iPhone */
+    overflow: auto; 
+    -webkit-overflow-scrolling: touch;
     position: relative;
 }
 
 /* Wrapper Iframe */
 .demo-iframe-wrapper {
-    /* Kita set position relative biar Overlay nempel di sini */
     position: relative; 
     transform-origin: top left;
+    background: white; /* Biar ga transparan */
 }
 
-/* Iframe (HAPUS pointer-events: none disini) */
+/* Iframe */
 .demo-iframe-wrapper iframe {
-    width: 1440px !important; 
-    min-width: 1440px !important;
-    height: 1200px !important; 
+    /* [FIX] Lebar 1280px cukup (Laptop Mode) biar tulisan di HP ga kekecilan */
+    width: 1280px !important; 
+    min-width: 1280px !important;
+    
+    /* Tinggi konten diperpanjang biar enak discroll */
+    height: 1400px !important; 
+    
     border: none;
-    display: block; /* Hilangkan gap di bawah iframe */
+    display: block;
 }
 
-/* OVERLAY PELINDUNG (SOLUSI BARU) */
-/* Ini layer transparan yang nempel persis di atas iframe */
+/* OVERLAY PELINDUNG (Scroll Only) */
 .demo-click-blocker {
     position: absolute;
     top: 0;
     left: 0;
-    width: 1440px; /* Samain lebar desktop */
-    height: 1200px; /* Samain tinggi iframe */
+    width: 1280px; /* Samain lebar iframe */
+    height: 1400px; /* Samain tinggi iframe */
     background: transparent;
-    z-index: 50; /* Pastikan di atas iframe */
-    
-    /* Ini rahasianya: Block klik tapi izinkan scroll browser */
+    z-index: 50; 
     cursor: grab; 
 }
