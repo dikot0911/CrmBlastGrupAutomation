@@ -767,40 +767,60 @@ def dashboard_overview():
                            total_logs=total_logs,
                            active_page='dashboard')
 
+# Variable Global buat kontrol Broadcast
+# Format: {'user_id': 'running' | 'stopped'}
+broadcast_states = {}
+
 @app.route('/dashboard/broadcast')
 @login_required
 def dashboard_broadcast():
-    """Halaman Fitur Broadcast & Preview Pesan"""
+    """Halaman Fitur Broadcast"""
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
     crm_count = 0
     templates = []
+    accounts = [] # <--- INI WAJIB ADA
     selected_ids = ""
     count_selected = 0
     
     try:
+        # Fetch CRM Count
         crm_res = supabase.table('tele_users').select("id", count='exact', head=True).eq('owner_id', user.id).execute()
         crm_count = crm_res.count if crm_res.count else 0
         
         # Load Templates
         templates = MessageTemplateManager.get_templates(user.id)
         
-        # Tangkap ID dari URL (hasil lemparan dari CRM)
+        # [FIX] Load Active Accounts (Biar Muncul di Tab Pengirim)
+        acc_res = supabase.table('telegram_accounts').select("*").eq('user_id', user.id).eq('is_active', True).execute()
+        accounts = acc_res.data if acc_res.data else []
+
+        # Tangkap ID dari URL (lemparan dari CRM)
         ids_arg = request.args.get('ids')
         if ids_arg:
             selected_ids = ids_arg
             count_selected = len(ids_arg.split(','))
-        # ------------------------------------
-    except: pass
+            
+    except Exception as e:
+        logger.error(f"Broadcast Page Error: {e}")
 
     return render_template('dashboard/broadcast.html', 
                            user=user, 
                            user_count=crm_count, 
-                           templates=templates, 
-                           selected_ids=selected_ids,     # Kirim ke HTML
-                           count_selected=count_selected, # Kirim ke HTML
+                           templates=templates,
+                           accounts=accounts,       # <--- KIRIM KE HTML
+                           selected_ids=selected_ids,     
+                           count_selected=count_selected, 
                            active_page='broadcast')
+
+# API Buat Stop Broadcast
+@app.route('/api/broadcast/stop', methods=['POST'])
+@login_required
+def stop_broadcast_api():
+    user_id = session['user_id']
+    broadcast_states[user_id] = 'stopped' # Set Flag Stop
+    return jsonify({'status': 'success', 'message': 'Broadcast stopping...'})
 
 @app.route('/dashboard/targets')
 @login_required
