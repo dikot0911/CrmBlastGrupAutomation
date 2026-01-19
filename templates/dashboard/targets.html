@@ -4,6 +4,7 @@
 {% block content %}
 <div class="max-w-7xl mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-24">
     
+    <!-- 1. PAGE HEADER & STATS -->
     <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-6">
         <div class="flex-1">
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
@@ -13,11 +14,13 @@
                 </span>
             </h1>
             <p class="text-gray-500 mt-2 text-sm md:text-base max-w-2xl leading-relaxed">
-                Database grup terpisah berdasarkan akun Telegram. Pastikan memilih akun yang tepat saat membuat jadwal broadcast.
+                Kelola daftar grup, channel, dan forum Telegram yang akan menjadi sasaran promosi Anda. 
+                Data ini tersimpan aman dan terisolasi per akun.
             </p>
         </div>
         
         <div class="flex items-center gap-3 w-full md:w-auto">
+            <!-- Search Bar -->
             <div class="relative group w-full md:w-64">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <i class="fa-solid fa-search text-gray-400 group-focus-within:text-indigo-500 transition"></i>
@@ -26,34 +29,67 @@
                        class="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm shadow-sm transition">
             </div>
 
+            <!-- Scan Button -->
             <button onclick="openScanModal()" class="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-2 whitespace-nowrap w-full md:w-auto">
                 <i class="fa-solid fa-radar animate-pulse"></i> Scan Grup Baru
             </button>
         </div>
     </div>
 
+    <!-- 2. FILTER & SORT TOOLBAR (Optional for Future) -->
+    <!-- <div class="flex items-center gap-4 mb-6 overflow-x-auto pb-2">
+        <button class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition shadow-sm whitespace-nowrap">
+            All Targets
+        </button>
+        <button class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition shadow-sm whitespace-nowrap">
+            <i class="fa-brands fa-telegram mr-1"></i> Groups
+        </button>
+        <button class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-indigo-600 transition shadow-sm whitespace-nowrap">
+            <i class="fa-solid fa-comments mr-1"></i> Forums
+        </button>
+    </div> -->
+
+    <!-- 3. MAIN GRID CONTENT -->
     <div id="savedTargetsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {% for t in targets %}
+        <!-- CARD ITEM START -->
         <div class="saved-target-item bg-white rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-indigo-100/40 transition-all duration-300 group relative overflow-hidden" data-name="{{ t.group_name|lower }}">
             
+            <!-- Hover Action Overlay -->
+            <div class="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 flex gap-2">
+                <a href="/delete_target/{{ t.id }}" onclick="return confirm('Yakin hapus target ini dari database?')" 
+                   class="w-8 h-8 rounded-full bg-white/90 backdrop-blur border border-red-100 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 flex items-center justify-center transition shadow-sm" title="Hapus Target">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                </a>
+            </div>
+            
+            <!-- Card Body -->
             <div class="p-6 pb-4">
                 <div class="flex justify-between items-start mb-4">
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-black text-lg shadow-inner shrink-0">
+                        <!-- Icon Avatar -->
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-black text-lg shadow-inner shrink-0 relative">
                             {{ t.group_name[:1]|upper }}
+                            <!-- Online Indicator Dot -->
+                            <div class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                         </div>
                         
                         <div class="flex-1 min-w-0">
+                            <!-- Group Name -->
                             <h3 class="font-bold text-gray-800 text-lg leading-tight truncate pr-2" title="{{ t.group_name }}">
                                 {{ t.group_name }}
                             </h3>
                             
+                            <!-- Badges Row -->
                             <div class="flex flex-wrap items-center gap-2 mt-2">
+                                <!-- Source Account Badge (Fitur Baru) -->
                                 <span class="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded border border-blue-200 font-bold flex items-center gap-1" title="Grup ini hasil scan dari akun ini">
                                     <i class="fa-brands fa-telegram"></i> 
-                                    {{ t.source_phone or 'Default' }}
+                                    <!-- Jika ada data source di DB, tampilkan. Jika tidak, default -->
+                                    {{ t.source_phone or 'Default Account' }}
                                 </span>
 
+                                <!-- Type Badge -->
                                 {% if t.topic_ids %}
                                 <span class="bg-yellow-50 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded border border-yellow-200 font-bold flex items-center gap-1">
                                     <i class="fa-solid fa-comments"></i> Forum
@@ -66,17 +102,22 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="relative z-10">
-                        <a href="/delete_target/{{ t.id }}" onclick="return confirm('Yakin hapus target ini dari database?')" 
-                           class="w-8 h-8 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-500 flex items-center justify-center transition">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </a>
-                    </div>
                 </div>
             </div>
 
+            <!-- Footer Details -->
             <div class="px-6 pb-6">
+                <!-- ID & Date Info -->
+                <div class="flex items-center justify-between text-xs text-gray-400 mb-3 font-medium">
+                    <div class="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded">
+                        <i class="fa-solid fa-fingerprint"></i> ID: <span class="font-mono text-gray-600">{{ t.group_id }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-regular fa-clock"></i> {{ t.created_at[:10] if t.created_at else 'N/A' }}
+                    </div>
+                </div>
+
+                <!-- Topic Details Box -->
                 <div class="bg-gray-50/80 rounded-xl p-3 border border-gray-100 min-h-[80px]">
                     <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2 flex justify-between">
                         <span>Titik Broadcast</span>
@@ -92,129 +133,164 @@
                             {% endfor %}
                         {% else %}
                              <span class="bg-white text-gray-500 px-2 py-1 rounded-lg text-[10px] font-bold border border-gray-200 shadow-sm w-full text-center">
-                                General Chat
+                                General Chat (All Members)
                             </span>
                         {% endif %}
                     </div>
                 </div>
             </div>
             
+            <!-- Decorative Corner -->
             <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-indigo-500/5 to-transparent rounded-bl-[3rem] -mr-4 -mt-4 pointer-events-none"></div>
         </div>
+        <!-- CARD ITEM END -->
         {% else %}
         
-        <div class="col-span-full py-24 text-center bg-white rounded-[2rem] border-2 border-dashed border-gray-200">
+        <!-- EMPTY STATE -->
+        <div class="col-span-full py-24 text-center bg-white rounded-[2rem] border-2 border-dashed border-gray-200 hover:border-indigo-200 transition group cursor-pointer" onclick="openScanModal()">
             <div class="relative w-24 h-24 mx-auto mb-6">
-                <div class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20"></div>
-                <div class="relative w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-300">
+                <div class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20 group-hover:opacity-40 transition"></div>
+                <div class="relative w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-300 group-hover:text-indigo-500 group-hover:scale-110 transition duration-300">
                     <i class="fa-solid fa-satellite-dish text-4xl"></i>
                 </div>
             </div>
-            <h3 class="text-xl font-bold text-gray-800">Database Target Kosong</h3>
-            <p class="text-gray-500 mt-2 max-w-sm mx-auto">
-                Belum ada grup yang disimpan. Gunakan tombol "Scan Grup Baru" untuk mengambil data dari Telegram Anda.
+            <h3 class="text-xl font-bold text-gray-800 group-hover:text-indigo-600 transition">Database Target Kosong</h3>
+            <p class="text-gray-500 mt-2 max-w-sm mx-auto group-hover:text-gray-600">
+                Belum ada grup yang disimpan. Klik di sini untuk melakukan scan dari akun Telegram Anda.
             </p>
         </div>
         {% endfor %}
     </div>
 
+    <!-- Empty Search Result -->
     <div id="noSearchResults" class="hidden text-center py-20">
         <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
             <i class="fa-solid fa-search"></i>
         </div>
         <p class="text-gray-500 font-medium">Tidak ditemukan target dengan nama tersebut.</p>
+        <button onclick="document.getElementById('mainSearchInput').value=''; filterSavedTargets()" class="text-indigo-600 text-sm font-bold hover:underline mt-2">Reset Pencarian</button>
     </div>
 
 </div>
 
+<!-- ================================================================================== -->
+<!-- 4. MODAL SCANNER SUPER LENGKAP -->
+<!-- ================================================================================== -->
+
 <div id="scanModal" class="fixed inset-0 z-[60] hidden">
+    <!-- Backdrop Blur -->
     <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop"></div>
     
+    <!-- Modal Panel -->
     <div class="fixed inset-0 z-10 overflow-hidden flex items-center justify-center p-4 sm:p-6">
-        <div class="relative transform flex flex-col w-full max-w-3xl h-[85vh] bg-white rounded-3xl shadow-2xl transition-all opacity-0 scale-95" id="modalPanel">
+        <div class="relative transform flex flex-col w-full max-w-3xl h-[85vh] bg-white rounded-3xl shadow-2xl transition-all opacity-0 scale-95 border border-gray-200" id="modalPanel">
             
-            <div class="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center shrink-0">
+            <!-- Modal Header -->
+            <div class="bg-white px-6 py-5 border-b border-gray-100 flex justify-between items-center shrink-0 rounded-t-3xl">
                 <div>
                     <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <i class="fa-brands fa-telegram text-blue-500"></i> Scan Grup
+                        <i class="fa-brands fa-telegram text-blue-500 text-2xl"></i> 
+                        Scan Grup & Channel
                     </h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Pilih akun sumber untuk memindai grup.</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Pilih sumber data untuk memulai pemindaian otomatis.</p>
                 </div>
-                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 flex items-center justify-center transition">
-                    <i class="fa-solid fa-xmark"></i>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition focus:outline-none">
+                    <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
+            <!-- Modal Toolbar (Account Selection) -->
             <div class="px-6 py-4 bg-indigo-50 border-b border-indigo-100 shrink-0">
-                <label class="block text-xs font-bold text-indigo-900 uppercase mb-2">Pilih Akun Sumber</label>
-                <div class="flex gap-2">
-                    <div class="relative flex-1">
-                        <select id="scanAccountSelect" class="w-full pl-10 pr-4 py-2.5 bg-white border border-indigo-200 rounded-xl text-sm font-bold text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer appearance-none">
-                            {% for acc in accounts %}
-                                <option value="{{ acc.phone_number }}">{{ acc.first_name or 'Akun' }} ({{ acc.phone_number }})</option>
-                            {% else %}
-                                <option value="" disabled selected>⚠️ Tidak ada akun aktif</option>
-                            {% endfor %}
-                        </select>
-                        <div class="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none">
-                            <i class="fa-solid fa-user-circle"></i>
-                        </div>
-                        <div class="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none text-xs">
-                            <i class="fa-solid fa-chevron-down"></i>
+                <div class="flex flex-col sm:flex-row gap-4 items-end sm:items-center">
+                    <div class="flex-1 w-full">
+                        <label class="block text-[10px] font-bold text-indigo-900 uppercase tracking-wider mb-2 ml-1">Akun Sumber Scan</label>
+                        <div class="relative group">
+                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-user-circle text-indigo-400 group-hover:text-indigo-600 transition"></i>
+                            </div>
+                            <!-- Disini nanti bisa diloop kalau support multi akun -->
+                            <select id="scanAccountSelect" class="block w-full pl-10 pr-10 py-3 text-sm font-bold text-gray-700 bg-white border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm cursor-pointer appearance-none">
+                                <option value="{{ user.telegram_account.phone_number }}" selected>
+                                    {{ user.email }} ({{ user.telegram_account.phone_number }})
+                                </option>
+                            </select>
+                             <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-chevron-down text-indigo-400 text-xs"></i>
+                            </div>
                         </div>
                     </div>
-                    <button onclick="startScanning()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md transition flex items-center gap-2 whitespace-nowrap">
+                    <button onclick="startScanning()" id="btnStartScan" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md shadow-indigo-200 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
                         <i class="fa-solid fa-radar"></i> Mulai Scan
                     </button>
                 </div>
             </div>
 
-            <div class="px-6 py-2 bg-white border-b border-gray-100 shrink-0">
-                <div class="relative">
-                    <input type="text" id="scanSearchInput" onkeyup="filterScanResults()" placeholder="Filter nama grup..." class="w-full pl-8 pr-4 py-2 text-sm border-none focus:ring-0 placeholder-gray-400">
-                    <div class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">
-                        <i class="fa-solid fa-filter text-xs"></i>
-                    </div>
+            <!-- Filter Bar -->
+            <div class="px-6 py-3 bg-white border-b border-gray-100 shrink-0 flex items-center gap-3">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-filter absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="scanSearchInput" onkeyup="filterScanResults()" placeholder="Filter hasil scan..." class="w-full pl-8 pr-4 py-2 bg-gray-50 border-none rounded-lg text-sm focus:ring-0 placeholder-gray-400 transition focus:bg-white focus:shadow-inner">
                 </div>
-            </div>
-
-            <div class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-gray-50/30 relative" id="scanContent">
-                
-                <div id="initialState" class="flex flex-col items-center justify-center h-full text-center text-gray-400 py-10">
-                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                        <i class="fa-solid fa-arrow-up text-2xl text-indigo-200 animate-bounce"></i>
-                    </div>
-                    <p class="text-sm font-medium text-gray-500">Pilih akun di atas lalu klik "Mulai Scan"</p>
-                </div>
-
-                <div id="loadingScan" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white z-20">
-                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-600 mb-3"></i>
-                    <h4 class="font-bold text-gray-800">Sedang Memindai...</h4>
-                    <p class="text-xs text-gray-500">Bot sedang mengambil data dari Telegram.</p>
-                </div>
-
-                <div id="resultList" class="space-y-4 hidden pb-10"></div>
-                
-                <div id="emptyScanSearch" class="hidden flex-col items-center justify-center py-10 text-center">
-                    <i class="fa-solid fa-ghost text-gray-300 text-3xl mb-3"></i>
-                    <p class="text-gray-500 text-sm">Grup tidak ditemukan.</p>
-                </div>
-            </div>
-
-            <div class="bg-white px-6 py-4 border-t border-gray-100 flex justify-between items-center shrink-0 z-20">
                 <div class="flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                    <span class="text-sm font-bold text-indigo-900" id="selectedCount">0 Grup Dipilih</span>
+                    <span class="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded" id="scanCountBadge">0 Item</span>
                 </div>
-                <button onclick="saveSelection()" id="btnSave" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                    <span>Simpan Pilihan</span>
-                    <i class="fa-solid fa-arrow-right"></i>
+            </div>
+
+            <!-- Scan Content Area -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-gray-50/50 relative" id="scanContent">
+                
+                <!-- State 1: Initial -->
+                <div id="initialState" class="flex flex-col items-center justify-center h-full text-center py-10 animate-enter">
+                    <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 border border-gray-100">
+                        <i class="fa-solid fa-arrow-up text-3xl text-indigo-200 animate-bounce"></i>
+                    </div>
+                    <h4 class="font-bold text-gray-800 text-lg">Siap Memindai</h4>
+                    <p class="text-sm font-medium text-gray-500 max-w-xs mt-1">Klik tombol "Mulai Scan" di atas untuk mengambil daftar grup terbaru dari Telegram.</p>
+                </div>
+
+                <!-- State 2: Loading -->
+                <div id="loadingScan" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-[2px] z-20 transition-all">
+                    <div class="loader-spinner w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+                    <h4 class="font-bold text-gray-800 text-lg animate-pulse">Sedang Memproses...</h4>
+                    <p class="text-xs text-gray-500 mt-1">Mohon tunggu, jangan tutup jendela ini.</p>
+                </div>
+
+                <!-- State 3: Result List -->
+                <div id="resultList" class="space-y-3 hidden pb-10">
+                    <!-- Items will be injected here via JS -->
+                </div>
+                
+                <!-- State 4: Empty Search -->
+                <div id="emptyScanSearch" class="hidden flex-col items-center justify-center py-12 text-center">
+                    <i class="fa-solid fa-ghost text-gray-300 text-4xl mb-3"></i>
+                    <p class="text-gray-500 text-sm font-medium">Tidak ada hasil yang cocok.</p>
+                    <button onclick="document.getElementById('scanSearchInput').value=''; filterScanResults()" class="text-indigo-600 text-xs font-bold hover:underline mt-2">Clear Filter</button>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-white px-6 py-4 border-t border-gray-100 flex justify-between items-center shrink-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] rounded-b-3xl">
+                <div class="flex items-center gap-3">
+                    <div class="flex -space-x-2 overflow-hidden">
+                        <div class="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-600">1</div>
+                        <div class="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-green-100 flex items-center justify-center text-[10px] font-bold text-green-600">2</div>
+                        <div class="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-600">+</div>
+                    </div>
+                    <span class="text-sm font-bold text-gray-700" id="selectedCount">0 Grup Dipilih</span>
+                </div>
+                
+                <button onclick="saveSelection()" id="btnSave" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center gap-2">
+                    <span>Simpan Target</span>
+                    <i class="fa-solid fa-check-circle"></i>
                 </button>
             </div>
         </div>
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
     // --- VARIABLES ---
     const modal = document.getElementById('scanModal');
@@ -260,6 +336,7 @@
         document.getElementById('resultList').classList.add('hidden');
         document.getElementById('scanSearchInput').value = '';
         scannedGroups = [];
+        updateCount();
     }
 
     function closeModal() {
@@ -280,29 +357,37 @@
         const loader = document.getElementById('loadingScan');
         const list = document.getElementById('resultList');
         const init = document.getElementById('initialState');
+        const btnStart = document.getElementById('btnStartScan');
 
         init.classList.add('hidden');
         loader.classList.remove('hidden');
         list.classList.add('hidden');
+        btnStart.disabled = true;
+        btnStart.classList.add('opacity-50');
         
         try {
             // KIRIM PARAMETER PHONE KE API
-            const res = await fetch(`/scan_groups_api?phone=${encodeURIComponent(phone)}`);
+            // Note: Pastikan endpoint di app.py menerima query param atau session user
+            const res = await fetch(`/scan_groups_api`); 
             const data = await res.json();
             
             if(data.status === 'success') {
                 scannedGroups = data.data;
                 renderGroups(scannedGroups);
+                document.getElementById('scanCountBadge').innerText = `${scannedGroups.length} Item`;
             } else {
                 alert("Gagal scan: " + data.message);
                 init.classList.remove('hidden'); // Back to init if fail
             }
         } catch(e) {
+            console.error(e);
             alert("Error koneksi server.");
             init.classList.remove('hidden');
         } finally {
             loader.classList.add('hidden');
             list.classList.remove('hidden');
+            btnStart.disabled = false;
+            btnStart.classList.remove('opacity-50');
         }
     }
 
@@ -312,8 +397,8 @@
         
         if (groups.length === 0) {
             list.innerHTML = `<div class="text-center py-20 text-gray-400 flex flex-col items-center">
-                <i class="fa-regular fa-folder-open text-3xl mb-2"></i>
-                <p class="text-sm">Tidak ada grup ditemukan di akun ini.</p>
+                <i class="fa-regular fa-folder-open text-3xl mb-2 opacity-50"></i>
+                <p class="text-sm font-medium">Tidak ada grup ditemukan di akun ini.</p>
             </div>`;
             return;
         }
@@ -328,8 +413,8 @@
                     let badgeColor = t.title.toLowerCase().includes('general') ? 'border-gray-200 bg-gray-50' : 'border-indigo-100 bg-indigo-50/50';
                     topicChecks += `
                     <label class="group/topic relative flex items-center gap-3 p-2.5 rounded-xl border ${badgeColor} cursor-pointer hover:bg-white transition select-none">
-                        <input type="checkbox" class="topic-check-${index} form-checkbox h-4 w-4 text-indigo-600 rounded" value="${t.id}">
-                        <span class="text-xs font-medium truncate flex-1">${t.title}</span>
+                        <input type="checkbox" class="topic-check-${index} form-checkbox h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" value="${t.id}">
+                        <span class="text-xs font-medium truncate flex-1 text-gray-700">${t.title}</span>
                     </label>`;
                 });
 
@@ -338,51 +423,49 @@
                 <div class="mt-3 ml-11 hidden transition-all duration-300 ease-in-out" id="topic-box-${index}">
                     <div class="bg-gray-50/80 rounded-xl p-3 border border-gray-200/60">
                         <div class="flex justify-between items-center mb-2">
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                <i class="fa-solid fa-tags mr-1"></i> Pilih Topik
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center">
+                                <i class="fa-solid fa-tags mr-1.5 text-indigo-400"></i> Pilih Topik
                             </p>
-                            <span class="text-[10px] text-indigo-500 cursor-pointer hover:underline" onclick="toggleAllTopics(${index})">Toggle All</span>
+                            <span class="text-[10px] text-indigo-500 cursor-pointer hover:underline font-bold" onclick="toggleAllTopics(${index})">Pilih Semua</span>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 max-h-40 overflow-y-auto custom-scrollbar pr-1">
-                            ${topicChecks || '<p class="text-xs text-gray-400 italic col-span-2">No topics found via API.</p>'}
+                            ${topicChecks || '<p class="text-xs text-gray-400 italic col-span-2 text-center py-2">Topik otomatis tidak ditemukan.</p>'}
                         </div>
                         <div class="mt-3 pt-3 border-t border-gray-200/60">
                              <div class="bg-blue-50 border border-blue-100 rounded-lg p-2 mb-2 flex gap-2 items-start">
                                 <i class="fa-solid fa-info-circle text-blue-500 text-xs mt-0.5"></i>
-                                <div class="text-[10px] text-blue-800">
-                                    <b>Manual ID:</b> Buka topik di Telegram Desktop, lihat URL <code>t.me/grup/<b>101</b></code>.
+                                <div class="text-[10px] text-blue-800 leading-snug">
+                                    <b>Manual ID:</b> Jika topik tidak muncul, masukkan ID manual dari URL Telegram (misal: <code>t.me/grup/<b>101</b></code>).
                                 </div>
                             </div>
                              <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Input Manual ID (Pisahkan koma)</label>
                              <input type="text" id="manual-topic-${index}" placeholder="Contoh: 101, 202" 
-                                    class="w-full pl-3 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-mono placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                    class="w-full pl-3 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-mono placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
                         </div>
                     </div>
                 </div>`;
             }
 
             const item = document.createElement('div');
-            item.className = "scan-group-item bg-white p-4 rounded-2xl border border-gray-200 hover:border-indigo-400 transition group-checked:border-indigo-500";
+            item.className = "scan-group-item bg-white p-4 rounded-2xl border border-gray-200 hover:border-indigo-400 transition-all duration-200 group-checked:border-indigo-500 shadow-sm hover:shadow-md";
             item.setAttribute('data-group-name', g.name.toLowerCase());
             
-            // Render Info Tambahan (Member Count & Username)
+            // Render Info Tambahan
             let metaInfo = "";
-            if (g.members) metaInfo += `<span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 rounded">${g.members} Members</span>`;
-            if (g.username) metaInfo += `<a href="https://t.me/${g.username.replace('@','')}" target="_blank" class="text-[10px] text-blue-500 hover:underline ml-1">${g.username}</a>`;
-
+            if (g.id) metaInfo += `<span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-[10px] text-gray-500 border border-gray-200">${g.id}</span>`;
+            
             item.innerHTML = `
                 <div class="flex items-start gap-4">
                     <div class="pt-1">
-                        <input type="checkbox" class="group-check form-checkbox h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" 
+                        <input type="checkbox" class="group-check form-checkbox h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer transition transform active:scale-95" 
                                value="${index}" onchange="toggleTopics(${index})">
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-0.5">
-                            <h4 class="font-bold text-gray-800 text-sm truncate select-text">${g.name}</h4>
-                            ${isForum ? '<span class="bg-yellow-100 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded font-bold border border-yellow-200">FORUM</span>' : ''}
+                        <div class="flex items-center gap-2 mb-1">
+                            <h4 class="font-bold text-gray-800 text-sm truncate select-text cursor-text" title="${g.name}">${g.name}</h4>
+                            ${isForum ? '<span class="bg-yellow-100 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded font-bold border border-yellow-200 shadow-sm">FORUM</span>' : ''}
                         </div>
-                        <div class="flex items-center gap-2 text-xs text-gray-400 font-mono select-all">
-                            <span>ID: ${g.id}</span>
+                        <div class="flex items-center gap-2 text-xs text-gray-400">
                             ${metaInfo}
                         </div>
                     </div>
@@ -397,7 +480,10 @@
     function toggleTopics(index) {
         const box = document.getElementById(`topic-box-${index}`);
         const checkbox = document.querySelector(`input[value="${index}"].group-check`);
+        
+        // Highlight active card
         if (checkbox.checked) {
+            checkbox.closest('.scan-group-item').classList.add('border-indigo-500', 'bg-indigo-50/10');
             if(box) {
                 box.classList.remove('hidden');
                 // Auto check 'General' topic if exists
@@ -405,6 +491,7 @@
                 if(generalCheck && !generalCheck.checked) generalCheck.checked = true;
             }
         } else {
+            checkbox.closest('.scan-group-item').classList.remove('border-indigo-500', 'bg-indigo-50/10');
             if(box) box.classList.add('hidden');
         }
         updateCount();
@@ -412,6 +499,8 @@
 
     function toggleAllTopics(index) {
         const checks = document.querySelectorAll(`.topic-check-${index}`);
+        if(checks.length === 0) return;
+        
         const allChecked = Array.from(checks).every(c => c.checked);
         checks.forEach(c => c.checked = !allChecked);
     }
@@ -419,8 +508,18 @@
     function updateCount() {
         const count = document.querySelectorAll('.group-check:checked').length;
         const label = document.getElementById('selectedCount');
+        const btnSave = document.getElementById('btnSave');
+        
         label.innerText = `${count} Grup Dipilih`;
-        label.className = count > 0 ? "text-sm font-bold text-indigo-600 transition-colors" : "text-sm font-bold text-gray-400 transition-colors";
+        if (count > 0) {
+            label.className = "text-sm font-bold text-indigo-600 transition-colors";
+            btnSave.disabled = false;
+            btnSave.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            label.className = "text-sm font-bold text-gray-400 transition-colors";
+            btnSave.disabled = true;
+            btnSave.classList.add('opacity-50', 'cursor-not-allowed');
+        }
     }
 
     function filterScanResults() {
@@ -456,6 +555,7 @@
         
         if (checks.length === 0) return alert("Pilih minimal satu grup!");
 
+        const originalText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan...';
 
@@ -493,14 +593,16 @@
             });
             const resp = await res.json();
             if(resp.status === 'success') {
-                location.reload();
+                closeModal();
+                window.location.reload();
             } else {
                 throw new Error(resp.message);
             }
         } catch(e) {
             alert("Gagal simpan: " + e.message);
+        } finally {
             btn.disabled = false;
-            btn.innerHTML = '<span>Simpan Pilihan</span><i class="fa-solid fa-arrow-right"></i>';
+            btn.innerHTML = originalText;
         }
     }
 </script>
