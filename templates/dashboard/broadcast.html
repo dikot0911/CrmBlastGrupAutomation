@@ -355,7 +355,7 @@
         try {
             // Perlu endpoint baru di app.py: /api/get_crm_users?source=...
             // Untuk sementara kita simulasikan load semua atau pakai endpoint search yg ada
-            const res = await fetch(`/dashboard/crm?source=${sender}&format=json`); 
+            const res = await fetch(`/api/get_crm_users?source=${sender}`);
             // NOTE: Anda perlu modifikasi route dashboard_crm di app.py agar bisa return JSON jika diminta
             // Atau bikin endpoint khusus API.
             
@@ -480,3 +480,4 @@
     }
 </script>
 {% endblock %}
+
