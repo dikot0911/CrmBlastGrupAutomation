@@ -1,92 +1,100 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Database CRM & Pelanggan{% endblock %}
+{% block title %}CRM Database{% endblock %}
 
 {% block content %}
-<div class="max-w-[85rem] mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-32">
+<div class="max-w-[95rem] mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-32 font-sans">
     
     <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-6 relative z-10">
         <div class="flex-1">
             <div class="flex items-center gap-2 mb-2">
-                <span class="px-2.5 py-0.5 rounded-md bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-indigo-200">
-                    CRM SYSTEM v3.0 PRO
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-extrabold uppercase tracking-widest border border-indigo-100">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
+                    Live Database
                 </span>
-                <span class="px-2.5 py-0.5 rounded-md bg-white border border-gray-200 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
-                    {{ user_count }} Contacts Total
+                <span class="px-2.5 py-0.5 rounded-full bg-white border border-gray-200 text-gray-500 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                    v3.5 Enterprise
                 </span>
             </div>
-            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
-                Database <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Pelanggan</span>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+                Pelanggan <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">CRM</span>
             </h1>
             <p class="text-gray-500 mt-2 text-sm max-w-2xl leading-relaxed">
-                Kelola data pelanggan secara terpisah per-akun Telegram. Lakukan segmentasi, filter, dan blast promosi dengan presisi tinggi.
+                Pusat kendali data pelanggan. Kelola leads, filter berdasarkan sumber akun, dan eksekusi strategi marketing Anda dari satu tempat terpusat.
             </p>
         </div>
         
         <div class="flex gap-3 w-full md:w-auto">
-            <a href="/export_crm_csv?source={{ current_source or '' }}" target="_blank" class="group flex items-center justify-center gap-2 bg-white text-gray-700 hover:text-green-600 border border-gray-200 hover:border-green-200 px-5 py-3 rounded-xl font-bold shadow-sm hover:shadow-md transition-all duration-200 w-full md:w-auto">
-                <div class="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center group-hover:scale-110 transition">
-                    <i class="fa-solid fa-file-csv"></i>
+            <a href="/export_crm_csv?source={{ current_source or '' }}" target="_blank" class="group relative flex items-center justify-center gap-2 bg-white text-gray-700 hover:text-green-600 border border-gray-200 hover:border-green-200 px-5 py-3 rounded-xl font-bold shadow-sm hover:shadow-lg transition-all duration-300 w-full md:w-auto overflow-hidden">
+                <div class="absolute inset-0 bg-green-50 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                <div class="relative flex items-center gap-2">
+                    <i class="fa-solid fa-file-csv text-lg"></i>
+                    <span>Export CSV</span>
                 </div>
-                <span>Export Data</span>
             </a>
 
-            <button onclick="openImportModal()" class="group flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-gray-300/50 transition-all duration-200 transform hover:-translate-y-1 w-full md:w-auto">
-                <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                    <i class="fa-solid fa-plus"></i>
+            <button onclick="openImportModal()" class="group relative flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-gray-400/30 transition-all duration-300 transform hover:-translate-y-1 w-full md:w-auto overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div class="relative flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                    </div>
+                    <span>Tambah Data</span>
                 </div>
-                <span>Tambah Data</span>
             </button>
         </div>
     </div>
 
-    <div class="mb-6 overflow-x-auto pb-2 custom-scrollbar">
-        <div class="flex items-center gap-3 min-w-max">
+    <div class="mb-8">
+        <div class="flex items-center gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x">
             
             <a href="{{ url_for('dashboard_crm', source='all') }}" 
-               class="relative group flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all duration-300
+               class="snap-start relative group flex items-center gap-3 px-5 py-3.5 rounded-2xl border transition-all duration-300 min-w-max cursor-pointer
                       {% if not current_source or current_source == 'all' %}
-                        bg-gray-900 border-gray-900 text-white shadow-xl shadow-gray-200
+                        bg-gray-900 border-gray-900 text-white shadow-xl shadow-gray-300/50 scale-[1.02]
                       {% else %}
-                        bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50
+                        bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900
                       {% endif %}">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg
-                            {% if not current_source or current_source == 'all' %} bg-white/20 text-white {% else %} bg-gray-100 text-gray-500 {% endif %}">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors
+                            {% if not current_source or current_source == 'all' %} bg-white/20 text-white {% else %} bg-gray-100 text-gray-400 group-hover:bg-white group-hover:text-gray-900 shadow-inner {% endif %}">
                     <i class="fa-solid fa-layer-group"></i>
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-xs font-bold uppercase tracking-wider opacity-70">Global View</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider opacity-70">Global View</span>
                     <span class="font-bold text-sm">Semua Database</span>
                 </div>
                 {% if not current_source or current_source == 'all' %}
-                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-12 h-1 bg-indigo-500 rounded-t-full"></div>
+                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-12 h-1 bg-indigo-500 rounded-t-full shadow-[0_-2px_10px_rgba(99,102,241,0.5)]"></div>
                 {% endif %}
             </a>
 
             {% for acc in accounts %}
             <a href="{{ url_for('dashboard_crm', source=acc.phone_number) }}" 
-               class="relative group flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all duration-300 min-w-[200px]
+               class="snap-start relative group flex items-center gap-3 px-5 py-3.5 rounded-2xl border transition-all duration-300 min-w-[220px] cursor-pointer
                       {% if current_source == acc.phone_number %}
-                        bg-white border-indigo-500 ring-2 ring-indigo-100 shadow-xl shadow-indigo-100
+                        bg-white border-indigo-500 ring-4 ring-indigo-50/50 shadow-xl shadow-indigo-100 scale-[1.02] z-10
                       {% else %}
-                        bg-white border-gray-200 text-gray-600 hover:border-indigo-300 hover:shadow-md
+                        bg-white border-gray-200 text-gray-500 hover:border-indigo-200 hover:shadow-lg
                       {% endif %}">
                 
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg relative
-                            {% if current_source == acc.phone_number %} bg-indigo-50 text-indigo-600 {% else %} bg-blue-50 text-blue-500 {% endif %}">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg relative transition-colors
+                            {% if current_source == acc.phone_number %} bg-indigo-50 text-indigo-600 {% else %} bg-blue-50 text-blue-400 group-hover:text-blue-600 {% endif %}">
                     <i class="fa-brands fa-telegram"></i>
+                    {% if current_source == acc.phone_number %}
                     <span class="absolute -top-1 -right-1 flex h-3 w-3">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-white"></span>
                     </span>
+                    {% endif %}
                 </div>
 
                 <div class="flex flex-col flex-1 min-w-0">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 truncate">Database</span>
-                    <span class="font-bold text-sm text-gray-800 truncate">{{ acc.first_name or acc.phone_number }}</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 truncate">Database Akun</span>
+                    <span class="font-bold text-sm text-gray-900 truncate">{{ acc.first_name or 'Akun' }}</span>
+                    <span class="text-[10px] font-mono text-gray-400 truncate">{{ acc.phone_number }}</span>
                 </div>
 
                 {% if current_source == acc.phone_number %}
-                <div class="absolute top-3 right-3 text-indigo-500">
+                <div class="absolute top-3 right-3 text-indigo-600 drop-shadow-sm">
                     <i class="fa-solid fa-circle-check"></i>
                 </div>
                 {% endif %}
@@ -96,20 +104,22 @@
         </div>
     </div>
 
-    <div class="bg-white rounded-[2rem] border border-gray-200 shadow-xl shadow-gray-100/50 overflow-hidden flex flex-col min-h-[600px] relative">
+    <div class="bg-white rounded-[2rem] border border-gray-200 shadow-2xl shadow-gray-100/50 overflow-hidden flex flex-col min-h-[600px] relative">
         
-        <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-indigo-50/50 to-transparent rounded-bl-full pointer-events-none"></div>
+        <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-indigo-50/40 via-purple-50/20 to-transparent rounded-bl-full pointer-events-none"></div>
 
-        <div class="p-6 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-20 flex flex-col xl:flex-row justify-between items-center gap-4">
+        <div class="p-5 border-b border-gray-100 bg-white/80 backdrop-blur-xl sticky top-0 z-30 flex flex-col xl:flex-row justify-between items-center gap-4">
             
             <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto relative z-10">
-                <form action="{{ url_for('dashboard_crm') }}" method="GET" class="relative group w-full sm:w-80">
+                <form action="{{ url_for('dashboard_crm') }}" method="GET" class="relative group w-full sm:w-96">
                     <input type="hidden" name="per_page" value="{{ per_page }}">
-                    <input type="hidden" name="source" value="{{ current_source }}"> <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="fa-solid fa-search text-gray-400 group-focus-within:text-indigo-500 transition"></i>
+                    <input type="hidden" name="source" value="{{ current_source }}">
+                    
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
                     </div>
-                    <input type="text" name="q" value="{{ search_query }}" placeholder="Cari by Username / Nama / ID..." 
-                           class="block w-full pl-11 pr-12 py-3 bg-gray-50 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition placeholder-gray-400">
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="Cari Username, Nama, atau ID..." 
+                           class="block w-full pl-11 pr-12 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 focus:bg-white transition-all placeholder-gray-400 shadow-sm">
                     
                     {% if search_query %}
                     <a href="{{ url_for('dashboard_crm', source=current_source) }}" class="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer text-gray-400 hover:text-red-500 transition" title="Clear Search">
@@ -121,42 +131,31 @@
                     </button>
                     {% endif %}
                 </form>
-
-                <div id="bulkActionContainer" class="hidden animate-fade-in-up flex items-center gap-2">
-                    <div class="h-full bg-indigo-50 px-4 rounded-xl flex items-center gap-2 border border-indigo-100">
-                        <span class="text-xs font-bold text-indigo-600"><span id="countSelected">0</span> Dipilih</span>
-                    </div>
-                    <button onclick="blastSelected()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs px-5 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 transition flex items-center gap-2 h-full whitespace-nowrap transform active:scale-95">
-                        <i class="fa-solid fa-paper-plane"></i> 
-                        Follow Up Massal
-                    </button>
-                </div>
             </div>
 
             <div class="flex items-center gap-4 w-full xl:w-auto justify-between xl:justify-end relative z-10">
-                
-                <div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
-                    <span class="text-[10px] text-gray-400 font-bold uppercase">Show</span>
-                    <select onchange="changePerPage(this.value)" class="bg-transparent border-none text-gray-700 text-xs font-bold p-0 pr-6 cursor-pointer focus:ring-0">
-                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
-                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
-                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
-                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                <div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
+                    <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Show</span>
+                    <select onchange="changePerPage(this.value)" class="bg-transparent border-none text-gray-800 text-xs font-bold p-0 pr-6 cursor-pointer focus:ring-0">
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10 rows</option>
+                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25 rows</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50 rows</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100 rows</option>
                     </select>
                 </div>
 
-                <div class="flex items-center gap-1">
+                <div class="flex items-center gap-1.5">
                     <a href="{{ url_for('dashboard_crm', page=current_page-1, per_page=per_page, q=search_query, source=current_source) }}" 
-                       class="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 hover:text-indigo-600 transition disabled:opacity-50 {% if current_page <= 1 %}pointer-events-none opacity-50{% endif %}">
+                       class="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 hover:shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed {% if current_page <= 1 %}pointer-events-none opacity-50 bg-gray-50{% else %}bg-white{% endif %}">
                         <i class="fa-solid fa-chevron-left text-xs"></i>
                     </a>
                     
-                    <div class="px-3 py-1.5 bg-gray-50 rounded-lg text-xs font-bold text-gray-600 border border-gray-100">
-                        {{ current_page }} / {{ total_pages }}
+                    <div class="h-10 px-4 flex items-center justify-center bg-indigo-50 rounded-xl text-xs font-bold text-indigo-700 border border-indigo-100 shadow-inner">
+                        Page {{ current_page }} / {{ total_pages }}
                     </div>
 
                     <a href="{{ url_for('dashboard_crm', page=current_page+1, per_page=per_page, q=search_query, source=current_source) }}" 
-                       class="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 hover:text-indigo-600 transition disabled:opacity-50 {% if current_page >= total_pages %}pointer-events-none opacity-50{% endif %}">
+                       class="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 hover:bg-white hover:border-indigo-300 hover:text-indigo-600 hover:shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed {% if current_page >= total_pages %}pointer-events-none opacity-50 bg-gray-50{% else %}bg-white{% endif %}">
                         <i class="fa-solid fa-chevron-right text-xs"></i>
                     </a>
                 </div>
@@ -166,103 +165,119 @@
         <div class="flex-1 overflow-x-auto relative z-10">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-gray-50/50 text-gray-400 text-[10px] uppercase tracking-wider border-b border-gray-100">
-                        <th class="p-5 font-bold w-16 text-center">No</th>
-                        <th class="p-5 w-12 text-center">
+                    <tr class="bg-gray-50/80 text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-200 backdrop-blur-sm">
+                        <th class="p-5 font-extrabold w-16 text-center text-gray-400">#</th>
+                        <th class="p-5 w-14 text-center">
                             <div class="flex items-center justify-center">
-                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded-[4px] border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer transition">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="w-4 h-4 rounded-md border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition shadow-sm">
                             </div>
                         </th>
-                        <th class="p-5 font-bold">Pelanggan</th>
-                        <th class="p-5 font-bold">Username</th>
+                        <th class="p-5 font-bold">Profil Pelanggan</th>
+                        <th class="p-5 font-bold">Username / Kontak</th>
                         {% if not current_source or current_source == 'all' %}
                         <th class="p-5 font-bold">Sumber Data</th>
                         {% endif %}
                         <th class="p-5 font-bold">ID System</th>
-                        <th class="p-5 font-bold text-right">Action</th>
+                        <th class="p-5 font-bold text-right">Aksi Cepat</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-50 bg-white">
+                <tbody class="divide-y divide-gray-100 bg-white">
                     {% for u in crm_users %}
-                    <tr class="hover:bg-indigo-50/30 transition duration-200 group">
-                        <td class="p-5 text-center text-xs font-bold text-gray-300 group-hover:text-indigo-300">
+                    <tr class="hover:bg-indigo-50/40 transition duration-200 group">
+                        <td class="p-5 text-center text-xs font-bold text-gray-400 font-mono group-hover:text-indigo-400">
                             {{ ((current_page - 1) * per_page) + loop.index }}
                         </td>
                         
                         <td class="p-5 text-center">
                             <div class="flex items-center justify-center">
-                                <input type="checkbox" class="user-check rounded-[4px] border-gray-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer transition" value="{{ u.user_id }}" onchange="updateSelection()">
+                                <input type="checkbox" class="user-check w-4 h-4 rounded-md border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition shadow-sm" value="{{ u.user_id }}" onchange="updateSelection()">
                             </div>
                         </td>
                         
                         <td class="p-5">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 flex items-center justify-center text-sm font-black shadow-inner">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 flex items-center justify-center text-sm font-black shadow-sm ring-2 ring-white group-hover:ring-indigo-200 transition">
                                     {{ u.first_name[:1]|upper if u.first_name else '?' }}
                                 </div>
                                 <div class="flex flex-col">
-                                    <span class="font-bold text-gray-800 text-sm">{{ u.first_name or 'Tanpa Nama' }}</span>
-                                    <span class="text-[10px] text-gray-400">{{ u.last_interaction[:10] }} • Active</span>
+                                    <span class="font-bold text-gray-800 text-sm group-hover:text-indigo-700 transition">{{ u.first_name or 'Tanpa Nama' }}</span>
+                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                        <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                                        <span class="text-[10px] text-gray-400 font-medium">Aktif: {{ u.last_interaction[:10] }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </td>
                         
                         <td class="p-5">
                             {% if u.username %}
-                            <a href="https://t.me/{{ u.username }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition text-xs font-bold border border-blue-100 group/link">
-                                <i class="fa-brands fa-telegram"></i> @{{ u.username }}
-                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-0 group-hover/link:opacity-100 transition"></i>
+                            <a href="https://t.me/{{ u.username }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition text-xs font-bold border border-blue-100 group/link shadow-sm">
+                                <i class="fa-brands fa-telegram"></i> 
+                                <span class="truncate max-w-[120px]">@{{ u.username }}</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-0 group-hover/link:opacity-100 transition translate-x-1"></i>
                             </a>
                             {% else %}
-                            <span class="text-gray-300 text-xs italic px-2">No Username</span>
+                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-400 border border-gray-100 text-xs italic">
+                                <i class="fa-solid fa-ban text-[10px]"></i> No Username
+                            </span>
                             {% endif %}
                         </td>
 
                         {% if not current_source or current_source == 'all' %}
                         <td class="p-5">
-                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 border border-gray-200 text-[10px] font-bold">
+                            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 border border-gray-200 text-[10px] font-bold shadow-sm">
                                 <i class="fa-solid fa-database text-gray-400"></i>
-                                {{ u.source_phone if u.source_phone else 'Default' }}
+                                <span class="font-mono">{{ u.source_phone if u.source_phone else 'Legacy Data' }}</span>
                             </div>
                         </td>
                         {% endif %}
                         
                         <td class="p-5">
-                            <button onclick="copyToClipboard('{{ u.user_id }}')" class="group/id flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 transition cursor-pointer border border-transparent hover:border-gray-200" title="Copy ID">
-                                <span class="font-mono text-xs text-gray-500 font-bold">{{ u.user_id }}</span>
+                            <button onclick="copyToClipboard('{{ u.user_id }}')" class="group/id flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-100 border border-transparent hover:border-gray-200 transition cursor-pointer" title="Copy ID">
+                                <span class="font-mono text-xs text-gray-500 font-bold group-hover/id:text-gray-800">{{ u.user_id }}</span>
                                 <i class="fa-regular fa-copy text-[10px] text-gray-300 group-hover/id:text-indigo-500 transition"></i>
                             </button>
                         </td>
                         
                         <td class="p-5 text-right">
-                            <a href="/dashboard/broadcast?ids={{ u.user_id }}" class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-200 px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition text-xs font-bold">
-                                <i class="fa-regular fa-comments"></i> Chat
+                            <a href="/dashboard/broadcast?ids={{ u.user_id }}" class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-600 hover:text-indigo-600 hover:border-indigo-200 px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition text-xs font-bold transform hover:-translate-y-0.5">
+                                <i class="fa-regular fa-paper-plane"></i> Chat
                             </a>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="py-24 text-center bg-gray-50/30">
+                        <td colspan="8" class="py-32 text-center">
                             <div class="flex flex-col items-center justify-center animate-enter">
-                                <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 text-indigo-100 shadow-xl shadow-indigo-100/50 border border-indigo-50">
-                                    <i class="fa-solid fa-folder-open text-4xl"></i>
+                                <div class="relative mb-6">
+                                    <div class="w-32 h-32 bg-indigo-50 rounded-full flex items-center justify-center relative z-10 shadow-xl shadow-indigo-100">
+                                        <i class="fa-solid fa-folder-open text-5xl text-indigo-300"></i>
+                                    </div>
+                                    <div class="absolute -top-4 -right-4 w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center animate-bounce delay-700">
+                                        <i class="fa-solid fa-search text-xl text-purple-300"></i>
+                                    </div>
+                                    <div class="absolute -bottom-2 -left-4 w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center animate-bounce">
+                                        <i class="fa-solid fa-database text-lg text-blue-300"></i>
+                                    </div>
                                 </div>
-                                <h3 class="text-xl font-bold text-gray-800">Database Kosong</h3>
-                                <p class="text-gray-500 text-sm mt-2 max-w-sm mx-auto leading-relaxed">
+                                
+                                <h3 class="text-2xl font-black text-gray-800 tracking-tight">Database Kosong</h3>
+                                <p class="text-gray-500 text-sm mt-3 max-w-sm mx-auto leading-relaxed">
                                     {% if search_query %}
-                                    Tidak ditemukan data untuk pencarian "<b>{{ search_query }}</b>" di database ini.
+                                    Tidak ditemukan data untuk pencarian "<span class="text-gray-800 font-bold bg-yellow-100 px-1 rounded">{{ search_query }}</span>".
                                     {% else %}
-                                    Belum ada data pelanggan di folder akun ini. Silakan import atau sync data baru.
+                                    Folder ini belum memiliki data pelanggan. Silakan lakukan sinkronisasi Telegram atau Import CSV.
                                     {% endif %}
                                 </p>
                                 
                                 {% if search_query %}
-                                <a href="{{ url_for('dashboard_crm', source=current_source) }}" class="mt-6 px-6 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold shadow-sm hover:bg-gray-50 hover:text-red-500 hover:border-red-200 transition">
-                                    Clear Search
+                                <a href="{{ url_for('dashboard_crm', source=current_source) }}" class="mt-8 px-8 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:text-red-500 hover:border-red-100 transition transform hover:-translate-y-1">
+                                    <i class="fa-solid fa-xmark mr-2"></i> Reset Pencarian
                                 </a>
                                 {% else %}
-                                <button onclick="openImportModal()" class="mt-6 px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition transform hover:-translate-y-1">
-                                    <i class="fa-solid fa-plus mr-2"></i> Tambah Data Sekarang
+                                <button onclick="openImportModal()" class="mt-8 px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-sm font-bold shadow-xl shadow-indigo-200 hover:shadow-2xl hover:scale-105 transition transform flex items-center gap-2">
+                                    <i class="fa-solid fa-cloud-arrow-down animate-bounce"></i>
+                                    Isi Database Sekarang
                                 </button>
                                 {% endif %}
                             </div>
@@ -273,123 +288,149 @@
             </table>
         </div>
         
-        <div class="p-4 bg-white border-t border-gray-100 flex justify-between items-center text-xs text-gray-400 relative z-20">
+        <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-xs text-gray-500 relative z-20">
             <div class="flex items-center gap-2">
-                <i class="fa-solid fa-server"></i>
-                <span>Database Source: <b class="text-gray-700">{{ current_source if current_source and current_source != 'all' else 'Global (All Accounts)' }}</b></span>
+                <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                <span>Source: <b class="text-gray-800">{{ current_source if current_source and current_source != 'all' else 'Global View' }}</b></span>
             </div>
             <div>
-                Showing {{ crm_users|length }} of {{ total_users }} records
+                Menampilkan <b class="text-gray-800">{{ crm_users|length }}</b> dari <b class="text-gray-800">{{ total_users }}</b> data
             </div>
         </div>
     </div>
 </div>
 
+<div id="bulkActionContainer" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 hidden animate-fade-in-up">
+    <div class="bg-gray-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-6 border border-gray-700/50 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shadow-lg">
+                <span id="countSelected">0</span>
+            </div>
+            <span class="text-sm font-medium text-gray-300">Item Dipilih</span>
+        </div>
+        
+        <div class="h-8 w-px bg-gray-700"></div>
+        
+        <button onclick="blastSelected()" class="group flex items-center gap-2 text-sm font-bold hover:text-indigo-400 transition">
+            <div class="p-2 rounded-lg bg-white/10 group-hover:bg-indigo-600 transition">
+                <i class="fa-solid fa-paper-plane"></i>
+            </div>
+            <span>Follow Up Massal</span>
+        </button>
+        
+        <button onclick="copyAllIds()" class="group flex items-center gap-2 text-sm font-bold hover:text-green-400 transition ml-2">
+            <div class="p-2 rounded-lg bg-white/10 group-hover:bg-green-600 transition">
+                <i class="fa-regular fa-copy"></i>
+            </div>
+            <span>Copy ID</span>
+        </button>
+
+        <button onclick="document.getElementById('selectAll').click()" class="text-gray-500 hover:text-white transition ml-4">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+    </div>
+</div>
+
 <div id="importModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop"></div>
-    <div class="fixed inset-0 z-10 overflow-y-auto">
-        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="closeImportModal()"></div>
+    <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 transition-all" id="modalPanel">
             
-            <div class="relative transform overflow-hidden rounded-[2rem] bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg opacity-0 scale-95 border border-gray-100" id="modalPanel">
+            <div class="bg-gray-900 px-8 py-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-2xl -mr-10 -mt-10"></div>
+                <div class="relative z-10 flex justify-between items-start">
+                    <div>
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i> Tambah Data
+                        </h3>
+                        <p class="text-gray-400 text-xs mt-1">Sinkronisasi data otomatis atau upload manual.</p>
+                    </div>
+                    <button onclick="closeImportModal()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:bg-white hover:text-gray-900 transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-8 space-y-6">
                 
-                <div class="bg-gradient-to-br from-gray-900 to-gray-800 px-8 py-6 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
-                    <div class="relative z-10 flex justify-between items-start">
-                        <div>
-                            <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                                <i class="fa-solid fa-cloud-arrow-up text-indigo-400"></i> Tambah Data
-                            </h3>
-                            <p class="text-gray-400 text-xs mt-1">Pilih metode import dan akun tujuan.</p>
+                <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 relative">
+                    <div class="absolute -top-3 left-4 bg-white px-2 text-[10px] font-bold text-yellow-600 border border-yellow-100 rounded uppercase tracking-wider shadow-sm">
+                        Langkah 1
+                    </div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-2 ml-1">Pilih Database Tujuan</label>
+                    <div class="relative">
+                        <select id="importTargetAccount" class="block w-full pl-4 pr-10 py-3 bg-white border border-gray-200 text-gray-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-sm appearance-none cursor-pointer">
+                            <option value="" disabled selected>-- Pilih Folder Akun --</option>
+                            {% for acc in accounts %}
+                            <option value="{{ acc.phone_number }}">{{ acc.first_name }} ({{ acc.phone_number }})</option>
+                            {% endfor %}
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
                         </div>
-                        <button onclick="closeImportModal()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:bg-white/20 hover:text-white transition backdrop-blur-sm">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
                     </div>
                 </div>
-                
-                <div class="p-8 space-y-6">
-                    
-                    <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
-                        <label class="block text-xs font-bold text-yellow-800 uppercase tracking-wide mb-2">
-                            <i class="fa-solid fa-database mr-1"></i> Pilih Database Tujuan
-                        </label>
-                        <div class="relative">
-                            <select id="importTargetAccount" class="block w-full pl-4 pr-10 py-3 bg-white border border-yellow-200 text-gray-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm appearance-none cursor-pointer shadow-sm">
-                                <option value="" disabled selected>-- Pilih Akun Telegram --</option>
-                                {% for acc in accounts %}
-                                <option value="{{ acc.phone_number }}">{{ acc.first_name }} ({{ acc.phone_number }})</option>
-                                {% endfor %}
-                            </select>
-                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                                <i class="fa-solid fa-chevron-down text-xs"></i>
-                            </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    <button onclick="runTelegramSync()" class="group flex items-center gap-4 p-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-indigo-500 hover:bg-indigo-50/30 transition text-left relative overflow-hidden">
+                        <div class="bg-indigo-100 text-indigo-600 w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-xl shadow-sm group-hover:scale-110 transition">
+                            <i class="fa-brands fa-telegram"></i>
                         </div>
-                        <p class="text-[10px] text-yellow-600 mt-2 leading-tight">
-                            *Data yang diimport akan masuk khusus ke database akun yang dipilih di atas.
-                        </p>
-                    </div>
-
-                    <div class="w-full h-px bg-gray-100"></div>
-
-                    <div class="grid grid-cols-1 gap-4">
-                        <div onclick="runTelegramSync()" class="group flex items-center gap-4 p-4 rounded-2xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50/50 cursor-pointer transition relative overflow-hidden shadow-sm hover:shadow-md">
-                            <div class="bg-blue-100 text-blue-600 w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-2xl shadow-inner">
-                                <i class="fa-brands fa-telegram"></i>
-                            </div>
-                            <div class="flex-1">
-                                <h4 class="font-bold text-gray-800 group-hover:text-blue-700">Sync Telegram</h4>
-                                <p class="text-xs text-gray-500 mt-0.5">Scan otomatis history chat akun yang dipilih.</p>
-                            </div>
-                            <div class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-300 group-hover:border-blue-200 group-hover:text-blue-500 transition">
-                                <i class="fa-solid fa-chevron-right text-xs"></i>
-                            </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-800 group-hover:text-indigo-700">Sync Telegram</h4>
+                            <p class="text-xs text-gray-500 mt-0.5">Scan otomatis history chat akun yang dipilih.</p>
                         </div>
-
-                        <div onclick="toggleCsvForm()" class="group flex items-center gap-4 p-4 rounded-2xl border border-gray-200 hover:border-green-500 hover:bg-green-50/50 cursor-pointer transition relative overflow-hidden shadow-sm hover:shadow-md">
-                            <div class="bg-green-100 text-green-600 w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-2xl shadow-inner">
-                                <i class="fa-solid fa-file-csv"></i>
-                            </div>
-                            <div class="flex-1">
-                                <h4 class="font-bold text-gray-800 group-hover:text-green-700">Upload CSV</h4>
-                                <p class="text-xs text-gray-500 mt-0.5">Import file database eksternal.</p>
-                            </div>
-                            <div class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-300 group-hover:border-green-200 group-hover:text-green-500 transition">
-                                <i class="fa-solid fa-chevron-down text-xs"></i>
-                            </div>
+                        <div class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-300 group-hover:border-indigo-200 group-hover:text-indigo-500 transition">
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
                         </div>
-                    </div>
+                    </button>
 
-                    <div id="csvForm" class="hidden bg-gray-50 p-5 rounded-2xl border border-gray-200 animate-enter">
-                        <div class="text-xs text-gray-500 mb-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                            <strong class="text-gray-700 block mb-1">Format Wajib:</strong>
-                            Header <code>user_id</code> (wajib).<br>
+                    <button onclick="toggleCsvForm()" class="group flex items-center gap-4 p-4 rounded-2xl border-2 border-dashed border-gray-200 hover:border-green-500 hover:bg-green-50/30 transition text-left relative overflow-hidden">
+                        <div class="bg-green-100 text-green-600 w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-xl shadow-sm group-hover:scale-110 transition">
+                            <i class="fa-solid fa-file-csv"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-800 group-hover:text-green-700">Upload CSV</h4>
+                            <p class="text-xs text-gray-500 mt-0.5">Import file database eksternal (Excel/CSV).</p>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-300 group-hover:border-green-200 group-hover:text-green-500 transition">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </div>
+                    </button>
+                </div>
+
+                <div id="csvForm" class="hidden bg-gray-50 p-5 rounded-2xl border border-gray-200 animate-enter">
+                    <div class="text-xs text-gray-500 mb-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex items-start gap-2">
+                        <i class="fa-solid fa-circle-info text-blue-500 mt-0.5"></i>
+                        <div>
+                            <strong class="text-gray-800">Format Wajib:</strong> Header <code>user_id</code>.<br>
                             Opsional: <code>username</code>, <code>first_name</code>.
                         </div>
-                        <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-xs text-gray-500 mb-4 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-800 file:text-white hover:file:bg-gray-700 cursor-pointer"/>
-                        
-                        <button onclick="uploadCsv()" id="btnUploadCsv" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-3 rounded-xl text-sm shadow-lg shadow-green-200 transition transform active:scale-95 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> Upload Sekarang
-                        </button>
                     </div>
+                    <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-xs text-gray-500 mb-4 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-800 file:text-white hover:file:bg-gray-700 cursor-pointer"/>
+                    
+                    <button onclick="uploadCsv()" id="btnUploadCsv" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-3.5 rounded-xl text-sm shadow-lg shadow-green-200 transition transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Proses Upload
+                    </button>
                 </div>
-                
-                <div id="loadingOverlay" class="hidden absolute inset-0 bg-white/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center">
-                    <div class="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-4 relative">
-                        <div class="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
-                        <div class="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                        <i class="fa-solid fa-robot text-indigo-600 text-2xl animate-pulse"></i>
-                    </div>
-                    <h4 class="text-lg font-bold text-gray-800">Sedang Memproses...</h4>
-                    <p class="text-sm text-gray-500 mt-1" id="loadingText">Mohon tunggu sebentar</p>
-                </div>
-
             </div>
+            
+            <div id="loadingOverlay" class="hidden absolute inset-0 bg-white/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center">
+                <div class="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-6 relative shadow-lg">
+                    <div class="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+                    <div class="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <i class="fa-solid fa-robot text-indigo-600 text-3xl animate-pulse"></i>
+                </div>
+                <h4 class="text-xl font-black text-gray-800">Sedang Bekerja...</h4>
+                <p class="text-sm text-gray-500 mt-2 font-medium" id="loadingText">Mohon tunggu, jangan tutup halaman ini.</p>
+            </div>
+
         </div>
     </div>
 </div>
 
 <script>
-    // --- 1. PAGINATION & FILTER ---
+    // --- 1. CORE LOGIC (PAGINATION) ---
     function changePerPage(val) {
         const url = new URL(window.location.href);
         url.searchParams.set('per_page', val);
@@ -397,7 +438,7 @@
         window.location.href = url.toString();
     }
 
-    // --- 2. CHECKBOX & BULK ACTION ---
+    // --- 2. BULK ACTION LOGIC ---
     function toggleSelectAll() {
         const master = document.getElementById('selectAll');
         const checkboxes = document.querySelectorAll('.user-check');
@@ -419,8 +460,10 @@
 
         if (count > 0) {
             container.classList.remove('hidden');
+            container.classList.add('flex');
         } else {
             container.classList.add('hidden');
+            container.classList.remove('flex');
         }
     }
 
@@ -430,12 +473,18 @@
         const ids = Array.from(selected).map(cb => cb.value).join(',');
         window.location.href = `/dashboard/broadcast?ids=${ids}`;
     }
+    
+    function copyAllIds() {
+        const selected = document.querySelectorAll('.user-check:checked');
+        const ids = Array.from(selected).map(cb => cb.value).join('\n');
+        navigator.clipboard.writeText(ids).then(() => alert("Semua ID terpilih berhasil disalin!"));
+    }
 
     // --- 3. UTILS ---
     function copyToClipboard(text) {
         navigator.clipboard.writeText(text).then(() => {
             const el = document.createElement('div');
-            el.className = 'fixed bottom-6 right-6 bg-gray-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl animate-fade-in-up z-50 flex items-center gap-2';
+            el.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs font-bold px-4 py-2 rounded-full shadow-xl animate-fade-in-up z-50 flex items-center gap-2';
             el.innerHTML = '<i class="fa-solid fa-check-circle text-green-400"></i> ID Disalin!';
             document.body.appendChild(el);
             setTimeout(() => {
@@ -447,20 +496,19 @@
 
     // --- 4. IMPORT MODAL ---
     const modal = document.getElementById('importModal');
-    const backdrop = document.getElementById('modalBackdrop');
     const panel = document.getElementById('modalPanel');
 
     function openImportModal() {
         modal.classList.remove('hidden');
         setTimeout(() => {
-            backdrop.classList.remove('opacity-0');
+            modal.classList.remove('backdrop-blur-sm', 'bg-gray-900/60'); 
+            modal.classList.add('bg-gray-900/60', 'backdrop-blur-sm'); 
             panel.classList.remove('opacity-0', 'scale-95');
             panel.classList.add('opacity-100', 'scale-100');
         }, 10);
     }
 
     function closeImportModal() {
-        backdrop.classList.add('opacity-0');
         panel.classList.remove('opacity-100', 'scale-100');
         panel.classList.add('opacity-0', 'scale-95');
         setTimeout(() => {
@@ -486,17 +534,15 @@
         document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
-    // --- 5. API CALLS (UPDATED WITH ACCOUNT SELECTION) ---
-    
-    // Helper: Validasi Akun
+    // --- 5. API CALLS ---
     function getSelectedAccount() {
         const select = document.getElementById('importTargetAccount');
         const val = select.value;
         if (!val) {
-            alert("⚠️ Harap pilih DATABASE AKUN TUJUAN terlebih dahulu di bagian atas modal!");
+            alert("⚠️ WAJIB: Pilih Database Tujuan dulu di atas!");
             select.focus();
-            select.classList.add('ring-2', 'ring-red-500');
-            setTimeout(() => select.classList.remove('ring-2', 'ring-red-500'), 2000);
+            select.parentElement.classList.add('animate-shake');
+            setTimeout(() => select.parentElement.classList.remove('animate-shake'), 500);
             return null;
         }
         return val;
@@ -506,10 +552,9 @@
         const targetPhone = getSelectedAccount();
         if (!targetPhone) return;
 
-        showLoading(`Scanning Chat History dari akun ${targetPhone}...`);
+        showLoading(`Sedang scan chat history akun ${targetPhone}...`);
         
         try {
-            // Kita kirim phone ke backend agar sync jalan di akun yang benar
             const res = await fetch('/import_crm_api', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -519,13 +564,12 @@
             
             if(data.status === 'success') {
                 alert("✅ " + data.message);
-                // Reload ke tab akun tersebut
                 window.location.href = `{{ url_for('dashboard_crm') }}?source=${targetPhone}`;
             } else {
                 alert("❌ Error: " + data.message);
                 hideLoading();
             }
-        } catch(e) { alert("⚠️ Koneksi Error"); hideLoading(); }
+        } catch(e) { alert("⚠️ Koneksi Terputus"); hideLoading(); }
     }
 
     async function uploadCsv() {
@@ -537,7 +581,7 @@
 
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
-        formData.append('source_phone', targetPhone); // Kirim info akun
+        formData.append('source_phone', targetPhone); 
 
         showLoading("Importing CSV ke Database...");
         try {
@@ -554,4 +598,16 @@
         } catch(e) { alert("⚠️ Upload Error"); hideLoading(); }
     }
 </script>
+
+<style>
+    .animate-shake {
+        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    @keyframes shake {
+        10%, 90% { transform: translate3d(-1px, 0, 0); }
+        20%, 80% { transform: translate3d(2px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+        40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+</style>
 {% endblock %}
