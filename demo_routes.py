@@ -55,46 +55,31 @@ def get_demo_data():
 # --- RUTE DEMO ---
 @demo_bp.route('/live-demo/<path:page>')
 def live_demo_view(page):
-    demo_user = DemoUserEntity()
-    data = get_demo_data()
-
-    # Flag 'is_demo_mode' ini kuncinya!
-    common_args = {
-        'user': demo_user, 
-        'user_count': data['crm_count'], 
-        'is_demo_mode': True, 
-        'selected_ids': None
-    }
-
     try:
+        data = get_demo_data()
+        user = DemoUserEntity()
+        
+        # Inject variable wajib biar dashboard.html ga error
+        common = {
+            'user': user,
+            'user_count': 888,
+            'is_demo_mode': True, # Flag demo
+            'selected_ids': None
+        }
+
         if page == 'dashboard':
-            return render_template('dashboard/index.html', **common_args, 
+            return render_template('dashboard/index.html', **common, 
                                    logs=data['logs'], schedules=data['schedules'], targets=data['targets'],
                                    current_page=1, total_pages=1, per_page=5, total_logs=5, active_page='dashboard')
-            
-        elif page == 'broadcast':
-            return render_template('dashboard/broadcast.html', **common_args, count_selected=0, active_page='broadcast')
-            
-        elif page == 'targets':
-            return render_template('dashboard/targets.html', **common_args, targets=data['targets'], active_page='targets')
-            
-        elif page == 'schedule':
-            return render_template('dashboard/schedule.html', **common_args, schedules=data['schedules'], active_page='schedule')
-        
-        elif page == 'crm':
-             return render_template('dashboard/crm.html', **common_args, crm_users=data['crm_users'], active_page='crm')
+        # ... (Sisa route lain biarin sama kayak punya lu) ...
+        elif page == 'broadcast': return render_template('dashboard/broadcast.html', **common, active_page='broadcast', count_selected=0)
+        elif page == 'targets': return render_template('dashboard/targets.html', **common, targets=data['targets'], active_page='targets')
+        elif page == 'schedule': return render_template('dashboard/schedule.html', **common, schedules=data['schedules'], active_page='schedule')
+        elif page == 'crm': return render_template('dashboard/crm.html', **common, crm_users=data['crm_users'], active_page='crm')
+        elif page == 'connection': return render_template('dashboard/connection.html', **common, active_page='connection')
+        elif page == 'profile': return render_template('dashboard/profile.html', **common, active_page='profile')
+        else: return redirect('/live-demo/dashboard')
 
-        elif page == 'connection':
-             return render_template('dashboard/connection.html', **common_args, active_page='connection')
-             
-        elif page == 'profile':
-             return render_template('dashboard/profile.html', **common_args, active_page='profile')
-
-        else:
-            return redirect('/live-demo/dashboard')
-            
     except Exception as e:
-        logger.error(f"Demo View Error: {e}")
-        return "Demo sedang loading..."
-
-    return "OK"
+        logger.error(f"Demo Error: {e}")
+        return "Loading Demo..."
