@@ -94,46 +94,100 @@
 
 </div>
 
-<div id="connectModal" class="fixed inset-0 z-50 hidden">
-    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
-    <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-95 opacity-0" id="modalPanel">
-            
-            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
-                <h3 class="text-white font-bold text-lg"><i class="fa-brands fa-telegram mr-2"></i> Tambah Akun</h3>
-                <button onclick="closeModal()" class="text-indigo-200 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
+<div id="connectModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop"></div>
 
-            <div class="p-6">
-                <div id="step1">
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Nomor Telegram</label>
-                    <div class="relative mb-4">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span class="text-gray-500 font-bold text-sm">🇮🇩</span>
-                        </div>
-                        <input type="text" id="phoneInput" placeholder="+628xxx" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-mono text-gray-800 font-bold">
-                    </div>
-                    <button onclick="sendOtp()" id="btnSendOtp" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-indigo-200">
-                        Kirim Kode OTP
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:w-full sm:max-w-md opacity-0 scale-95" id="modalPanel">
+                
+                <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-brands fa-telegram"></i> Sambungkan Telegram
+                    </h3>
+                    <button onclick="closeModal()" class="text-indigo-200 hover:text-white transition">
+                        <i class="fa-solid fa-xmark text-xl"></i>
                     </button>
                 </div>
 
-                <div id="step2" class="hidden">
-                    <div class="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-4 text-xs text-blue-700 flex gap-2">
-                        <i class="fa-solid fa-paper-plane mt-0.5"></i>
-                        <span>Kode dikirim ke aplikasi Telegram di HP Anda (Bukan SMS).</span>
-                    </div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">Kode OTP</label>
-                    <input type="text" id="otpInput" placeholder="12345" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition text-center font-bold text-2xl tracking-widest mb-4">
+                <div class="flex border-b border-gray-100">
+                    <button onclick="switchTab('phone')" id="tabPhone" class="flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 transition">
+                        <i class="fa-solid fa-mobile-screen mr-1"></i> Nomor HP
+                    </button>
+                    <button onclick="switchTab('qr')" id="tabQr" class="flex-1 py-3 text-sm font-bold text-gray-500 hover:text-indigo-500 transition">
+                        <i class="fa-solid fa-qrcode mr-1"></i> Scan QR Code
+                    </button>
+                </div>
+
+                <div class="p-6">
                     
-                    <div id="passField" class="hidden mb-4 animate-enter">
-                        <label class="block text-sm font-bold text-gray-700 mb-2">Password 2FA</label>
-                        <input type="password" id="pwInput" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <div id="contentPhone" class="space-y-4">
+                        <div class="text-center mb-4">
+                            <div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-600 text-2xl">
+                                <i class="fa-solid fa-comment-sms"></i>
+                            </div>
+                            <p class="text-xs text-gray-500">Masukkan nomor HP Telegram Anda (diawali kode negara, cth: +62).</p>
+                        </div>
+
+                        <div id="step1">
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Nomor HP</label>
+                            <input type="text" id="phoneInput" placeholder="+628xxx" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none font-mono font-bold text-lg text-center tracking-wider text-gray-800">
+                            <button onclick="sendOtp()" id="btnSendOtp" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl mt-4 transition shadow-lg">
+                                Kirim Kode OTP
+                            </button>
+                        </div>
+
+                        <div id="step2" class="hidden animate-enter">
+                            <div class="bg-yellow-50 border border-yellow-100 p-3 rounded-lg mb-4 flex gap-3 items-start">
+                                <i class="fa-solid fa-circle-info text-yellow-600 mt-0.5"></i>
+                                <div class="text-xs text-yellow-800">
+                                    Cek aplikasi Telegram Anda (Bukan SMS). Masukkan kode login yang dikirim oleh Telegram.
+                                </div>
+                            </div>
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Kode OTP</label>
+                            <input type="text" id="otpInput" placeholder="12345" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none font-mono font-bold text-2xl text-center tracking-[0.5em]">
+                            
+                            <div id="passField" class="hidden mt-3 animate-enter">
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-2">Password (2FA)</label>
+                                <input type="password" id="pwInput" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            </div>
+
+                            <button onclick="verifyOtp()" id="btnVerify" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl mt-4 transition shadow-lg">
+                                Verifikasi & Login
+                            </button>
+                        </div>
                     </div>
 
-                    <button onclick="verifyOtp()" id="btnVerify" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-green-200">
-                        Verifikasi & Login
-                    </button>
+                    <div id="contentQr" class="hidden flex flex-col items-center justify-center py-4">
+                        <div id="qrLoading" class="flex flex-col items-center">
+                            <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-3"></div>
+                            <p class="text-sm font-bold text-gray-500">Membuat QR Code...</p>
+                        </div>
+
+                        <div id="qrDisplay" class="hidden flex flex-col items-center w-full animate-enter">
+                            <div class="bg-white p-2 rounded-xl border-2 border-gray-200 shadow-inner mb-4">
+                                <img id="qrImage" src="" class="w-48 h-48 object-contain rounded-lg">
+                            </div>
+                            
+                            <div class="bg-indigo-50 text-indigo-800 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 mb-4 animate-pulse">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Menunggu Scan...
+                            </div>
+
+                            <ol class="text-left text-xs text-gray-600 space-y-2 list-decimal pl-5 bg-gray-50 p-4 rounded-xl w-full border border-gray-100">
+                                <li>Buka <b>Telegram</b> di HP.</li>
+                                <li>Ke <b>Settings</b> > <b>Devices</b>.</li>
+                                <li>Klik <b>Link Desktop Device</b>.</li>
+                                <li>Arahkan kamera ke QR Code ini.</li>
+                            </ol>
+                        </div>
+                        
+                        <div id="qrError" class="hidden text-center">
+                            <i class="fa-solid fa-triangle-exclamation text-red-500 text-3xl mb-2"></i>
+                            <p class="text-sm font-bold text-gray-800 mb-2">Gagal memuat QR</p>
+                            <button onclick="generateQR()" class="text-indigo-600 hover:underline text-xs font-bold">Coba Lagi</button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -143,7 +197,7 @@
 <div id="limitModal" class="fixed inset-0 z-[60] hidden">
     <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" onclick="closeLimitModal()"></div>
     <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center animate-enter">
             <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
                 <i class="fa-solid fa-lock"></i>
             </div>
@@ -161,24 +215,32 @@
 <script>
     const modal = document.getElementById('connectModal');
     const panel = document.getElementById('modalPanel');
+    const backdrop = document.getElementById('modalBackdrop');
     const limitModal = document.getElementById('limitModal');
 
+    // --- MODAL UTILS ---
     function openConnectModal() {
         modal.classList.remove('hidden');
         setTimeout(() => {
+            backdrop.classList.remove('opacity-0');
             panel.classList.remove('scale-95', 'opacity-0');
             panel.classList.add('scale-100', 'opacity-100');
         }, 10);
+        // Default ke Tab Phone
+        switchTab('phone'); 
     }
 
     function closeModal() {
+        backdrop.classList.add('opacity-0');
         panel.classList.remove('scale-100', 'opacity-100');
         panel.classList.add('scale-95', 'opacity-0');
         setTimeout(() => {
             modal.classList.add('hidden');
+            // Reset UI
             document.getElementById('step1').classList.remove('hidden');
             document.getElementById('step2').classList.add('hidden');
             document.getElementById('passField').classList.add('hidden');
+            stopQrPolling(); // Matikan QR polling biar gak boros
         }, 300);
     }
 
@@ -186,6 +248,104 @@
         limitModal.classList.add('hidden');
     }
 
+    // --- TAB SWITCHER LOGIC ---
+    let qrPollInterval = null;
+    let currentSessionUuid = null;
+
+    function switchTab(tab) {
+        const tPhone = document.getElementById('tabPhone');
+        const tQr = document.getElementById('tabQr');
+        const cPhone = document.getElementById('contentPhone');
+        const cQr = document.getElementById('contentQr');
+
+        if(tab === 'phone') {
+            tPhone.className = "flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 transition";
+            tQr.className = "flex-1 py-3 text-sm font-bold text-gray-500 hover:text-indigo-500 transition";
+            cPhone.classList.remove('hidden');
+            cQr.classList.add('hidden');
+            stopQrPolling(); 
+        } else {
+            tQr.className = "flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 transition";
+            tPhone.className = "flex-1 py-3 text-sm font-bold text-gray-500 hover:text-indigo-500 transition";
+            cQr.classList.remove('hidden');
+            cPhone.classList.add('hidden');
+            generateQR(); // Generate QR pas tab dibuka
+        }
+    }
+
+    function stopQrPolling() {
+        if(qrPollInterval) {
+            clearInterval(qrPollInterval);
+            qrPollInterval = null;
+        }
+    }
+
+    // --- QR CODE LOGIC ---
+    async function generateQR() {
+        document.getElementById('qrLoading').classList.remove('hidden');
+        document.getElementById('qrDisplay').classList.add('hidden');
+        document.getElementById('qrError').classList.add('hidden');
+        stopQrPolling();
+
+        try {
+            const res = await fetch('/api/connect/get_qr', {method: 'POST'});
+            const data = await res.json();
+
+            if(data.status === 'success') {
+                document.getElementById('qrImage').src = data.qr_image;
+                currentSessionUuid = data.session_uuid;
+                
+                document.getElementById('qrLoading').classList.add('hidden');
+                document.getElementById('qrDisplay').classList.remove('hidden');
+                
+                startPolling(); // Mulai cek status
+            } else if (data.status === 'limit_reached') {
+                closeModal();
+                limitModal.classList.remove('hidden');
+            } else {
+                throw new Error(data.message);
+            }
+        } catch(e) {
+            console.error(e);
+            document.getElementById('qrLoading').classList.add('hidden');
+            document.getElementById('qrError').classList.remove('hidden');
+        }
+    }
+
+    function startPolling() {
+        qrPollInterval = setInterval(async () => {
+            try {
+                const res = await fetch('/api/connect/check_qr', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_uuid: currentSessionUuid})
+                });
+                const data = await res.json();
+
+                if(data.status === 'success') {
+                    stopQrPolling();
+                    // Efek Sukses
+                    const display = document.getElementById('qrDisplay');
+                    display.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-48 animate-enter">
+                            <i class="fa-solid fa-circle-check text-green-500 text-5xl mb-3"></i>
+                            <h4 class="font-bold text-gray-800 text-lg">Berhasil!</h4>
+                            <p class="text-sm text-gray-500">Login sebagai ${data.message.split(': ')[1]}</p>
+                        </div>
+                    `;
+                    setTimeout(() => location.reload(), 1500);
+                } else if(data.status === 'expired') {
+                    stopQrPolling();
+                    alert("QR Code Kadaluarsa. Silakan refresh.");
+                    generateQR();
+                }
+            } catch(e) {
+                console.log("Polling Error", e);
+            }
+        }, 2000); // Cek tiap 2 detik
+    }
+
+    // --- PHONE OTP LOGIC (LEGACY) ---
     async function sendOtp() {
         const phone = document.getElementById('phoneInput').value;
         const btn = document.getElementById('btnSendOtp');
