@@ -883,20 +883,34 @@ def dashboard_templates():
                            templates=templates, 
                            active_page='templates')
 
-@app.route('/dashboard/crm')
+app.route('/dashboard/crm')
 @login_required
 def dashboard_crm():
-    """Halaman Database Pelanggan (CRM) dengan Server-Side Pagination"""
+    """Halaman Database Pelanggan dengan Filter Folder Akun"""
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
-    # --- LOGIC PAGINATION & SEARCH (Update Ini!) ---
-    # 1. Ambil parameter dari URL (default page 1, 50 baris per halaman)
+    # 1. Ambil List Akun Yang AKTIF Saja
+    # Ini kunci fitur "Kalau disconnect, folder hilang"
+    accounts = []
+    active_phones = []
+    try:
+        acc_res = supabase.table('telegram_accounts').select("*")\
+            .eq('user_id', user.id).eq('is_active', True)\
+            .order('created_at', desc=True).execute()
+        accounts = acc_res.data if acc_res.data else []
+        active_phones = [acc['phone_number'] for acc in accounts]
+    except Exception as e:
+        logger.error(f"Fetch Accounts Error: {e}")
+
+    # 2. Logic Pagination & Search
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
     search_query = request.args.get('q', '').strip()
     
-    # 2. Hitung Offset Database (Start - End)
+    # Tangkap parameter folder/tab yang dipilih user
+    current_source = request.args.get('source', 'all') 
+
     start = (page - 1) * per_page
     end = start + per_page - 1
     
@@ -909,36 +923,52 @@ def dashboard_crm():
             # Base Query
             query = supabase.table('tele_users').select("*", count='exact').eq('owner_id', user.id)
             
-            # Filter Pencarian (Jika ada)
+            # --- LOGIC FOLDER ---
+            if current_source != 'all':
+                # Jika user klik Tab Akun A, tampilkan cuma data Akun A
+                # Dan pastikan akun A masih aktif (security check)
+                if current_source in active_phones:
+                    query = query.eq('source_phone', current_source)
+                else:
+                    # Kalau user maksa akses link akun yg udah disconnect, kasih kosong
+                    query = query.eq('id', -1) 
+            else:
+                # Jika Tab "All Database", HANYA tampilkan data dari akun yang MASIH AKTIF
+                # Data dari akun disconnect disembunyikan (tapi tidak dihapus di DB)
+                if active_phones:
+                    query = query.in_('source_phone', active_phones)
+                else:
+                    # Kalau gak ada akun aktif sama sekali, sembunyikan semua data
+                    query = query.eq('id', -1)
+
+            # Filter Pencarian
             if search_query:
-                # Cari berdasarkan username (Case Insensitive)
                 query = query.ilike('username', f'%{search_query}%') 
             
-            # Eksekusi Query dengan Range (Halaman)
+            # Eksekusi
             res = query.order('last_interaction', desc=True).range(start, end).execute()
             
             crm_users = res.data if res.data else []
             total_users = res.count if res.count else 0
             
-            # Hitung Total Halaman (Matematika)
             import math
             total_pages = math.ceil(total_users / per_page) if per_page > 0 else 0
             
         except Exception as e:
-            logger.error(f"CRM Pagination Error: {e}")
+            logger.error(f"CRM Data Error: {e}")
     
-    # 3. Kirim SEMUA variabel ini ke HTML (PENTING!)
+    # KIRIM 'accounts' dan 'current_source' KE HTML (INI YG KEMAREN KURANG)
     return render_template('dashboard/crm.html', 
                            user=user, 
                            crm_users=crm_users, 
-                           user_count=total_users, # Update variable count
-                           # Variabel Pagination Wajib:
+                           user_count=total_users,
                            current_page=page,
                            total_pages=total_pages,
                            per_page=per_page,
-                           total_users=total_users,
                            search_query=search_query,
-                           active_page='crm')
+                           active_page='crm',
+                           accounts=accounts,       # <--- WAJIB ADA
+                           current_source=current_source) # <--- WAJIB ADA
 
 @app.route('/dashboard/connection')
 @login_required
@@ -1382,34 +1412,56 @@ def save_bulk_targets():
 @app.route('/import_crm_api', methods=['POST'])
 @login_required
 def import_crm_api():
-    """Scan Private Chats for CRM"""
+    """Scan Private Chats & Tag Source Phone"""
     user_id = session['user_id']
+    data = request.json
+    source_phone = data.get('source_phone') # Tangkap pilihan user
+
+    if not source_phone:
+        return jsonify({"status": "error", "message": "Target akun belum dipilih."})
     
     async def _import():
-        client = await get_active_client(user_id)
-        if not client: return jsonify({"status": "error", "message": "Telegram tidak terhubung."})
+        # Connect pakai akun SPESIFIK yang dipilih user
+        # Kita cari session string akun tsb
+        try:
+            acc_res = supabase.table('telegram_accounts').select("session_string")\
+                .eq('user_id', user_id).eq('phone_number', source_phone).eq('is_active', True).execute()
+            
+            if not acc_res.data:
+                return jsonify({"status": "error", "message": "Akun tidak aktif/ditemukan."})
+                
+            session_str = acc_res.data[0]['session_string']
+            client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
+            await client.connect()
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Koneksi gagal: {e}"})
         
         count = 0
         try:
+            # Ambil profil akun sendiri buat ngecek source
+            me = await client.get_me()
+            my_phone = f"+{me.phone}" if me.phone else source_phone
+
             async for dialog in client.iter_dialogs(limit=500):
                 if dialog.is_user and not dialog.entity.bot:
                     u = dialog.entity
-                    data = {
+                    data_payload = {
                         "owner_id": user_id,
                         "user_id": u.id,
                         "username": u.username,
                         "first_name": u.first_name,
+                        "source_phone": my_phone, # <--- SIMPAN NOMOR PENGIMPOR
                         "last_interaction": datetime.utcnow().isoformat(),
                         "created_at": datetime.utcnow().isoformat()
                     }
-                    # Upsert Safe Logic
                     try:
-                        supabase.table('tele_users').upsert(data, on_conflict="owner_id, user_id").execute()
+                        # Upsert logic: Update source_phone biar data lama kelabeli juga
+                        supabase.table('tele_users').upsert(data_payload, on_conflict="owner_id, user_id").execute()
                         count += 1
                     except: pass
                     
             await client.disconnect()
-            return jsonify({"status": "success", "message": f"Berhasil mengimpor {count} kontak baru."})
+            return jsonify({"status": "success", "message": f"Berhasil sinkronisasi {count} kontak dari {my_phone}."})
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)})
             
@@ -1879,50 +1931,104 @@ def ping():
 @login_required
 def import_crm_csv():
     """
-    Import Database Pelanggan via CSV.
-    Validasi: Header wajib 'user_id', 'username' (opsional), 'first_name' (opsional).
+    [UPGRADE] Import Database Pelanggan via CSV (Smart Handling).
+    Fitur:
+    - Support UTF-8 BOM (Excel Friendly)
+    - Auto-Normalize Headers (Case insensitive)
+    - Integrasi Source Phone (Folder System)
+    - Batch Processing Anti-Timeout
     """
     user_id = session['user_id']
     
+    # 1. Validasi Request Dasar
     if 'file' not in request.files:
         return jsonify({"status": "error", "message": "Tidak ada file yang diunggah."})
     
     file = request.files['file']
+    source_phone = request.form.get('source_phone') # Tangkap pilihan folder akun
+
     if file.filename == '':
         return jsonify({"status": "error", "message": "Nama file kosong."})
     
-    if not file.filename.endswith('.csv'):
+    if not source_phone:
+        return jsonify({"status": "error", "message": "Harap pilih Database Akun Tujuan terlebih dahulu."})
+
+    if not file.filename.lower().endswith('.csv'):
         return jsonify({"status": "error", "message": "Format file harus .csv"})
 
     try:
-        # Baca file di memori (Stream) biar cepet
-        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-        csv_input = csv.DictReader(stream)
+        # 2. Smart Encoding Reader (Handle Excel BOM issues)
+        # File CSV dari Excel seringkali punya karakter 'BOM' di awal yang bikin error
+        # Kita baca binary dulu, lalu decode paksa
+        file_content = file.stream.read()
         
-        # Validasi Header Minimal
-        if 'user_id' not in csv_input.fieldnames:
+        try:
+            decoded_content = file_content.decode('utf-8-sig') # Best for Excel
+        except UnicodeDecodeError:
+            try:
+                decoded_content = file_content.decode('latin-1') # Fallback
+            except:
+                return jsonify({"status": "error", "message": "Encoding file tidak dikenali. Gunakan UTF-8."})
+
+        # Siapkan Stream IO
+        stream = io.StringIO(decoded_content, newline=None)
+        csv_input = csv.DictReader(stream)
+
+        # 3. Normalisasi Header (Biar gak sensitif huruf besar/kecil)
+        # Kita bikin map key standar: 'user_id', 'username', 'first_name'
+        # Jadi user upload header 'User ID' atau 'USER_ID' tetap masuk
+        normalized_map = {}
+        if csv_input.fieldnames:
+            for field in csv_input.fieldnames:
+                clean_field = field.strip().lower().replace(" ", "_")
+                if "user" in clean_field and "id" in clean_field:
+                    normalized_map['user_id'] = field
+                elif "user" in clean_field and "name" in clean_field:
+                    normalized_map['username'] = field
+                elif "name" in clean_field or "nama" in clean_field:
+                    normalized_map['first_name'] = field
+
+        # Cek Header Wajib
+        if 'user_id' not in normalized_map:
             return jsonify({
                 "status": "error", 
-                "message": "Format CSV Salah! Wajib ada kolom header: 'user_id'."
+                "message": "Format CSV Tidak Valid! Tidak ditemukan kolom 'user_id' atau 'User ID'."
             })
 
         valid_rows = []
         errors = 0
         
+        # 4. Iterasi Data
         for row in csv_input:
             try:
-                # Validasi User ID harus Angka
-                uid_raw = row.get('user_id', '').strip()
-                if not uid_raw.isdigit():
+                # Ambil data pake map yang sudah dinormalisasi
+                raw_uid = row.get(normalized_map['user_id'], '').strip()
+                
+                # Validasi ID (Harus Angka)
+                if not raw_uid.isdigit():
                     errors += 1
                     continue 
                 
-                # Rapihkan data
+                # Ambil Username (Optional)
+                raw_username = None
+                if 'username' in normalized_map:
+                    val = row.get(normalized_map['username'], '').strip()
+                    # Bersihkan '@' atau link t.me/ jika user iseng masukin itu
+                    raw_username = val.replace("@", "").replace("https://t.me/", "") if val else None
+
+                # Ambil Nama (Optional)
+                raw_name = "Imported Contact"
+                if 'first_name' in normalized_map:
+                    val = row.get(normalized_map['first_name'], '').strip()
+                    if val: raw_name = val
+
+                # Susun Data Bersih
                 clean_data = {
                     "owner_id": user_id,
-                    "user_id": int(uid_raw),
-                    "username": row.get('username', '').strip() or None,
-                    "first_name": row.get('first_name', 'Imported Contact').strip(),
+                    "user_id": int(raw_uid),
+                    "username": raw_username,
+                    "first_name": raw_name,
+                    "source_phone": source_phone, # <--- PENTING: Masuk ke folder akun ini
                     "last_interaction": datetime.utcnow().isoformat(),
                     "created_at": datetime.utcnow().isoformat()
                 }
@@ -1933,22 +2039,29 @@ def import_crm_csv():
                 continue
 
         if not valid_rows:
-            return jsonify({"status": "error", "message": "File kosong atau data user_id tidak valid."})
+            return jsonify({"status": "error", "message": "File terbaca kosong atau semua User ID tidak valid."})
 
-        # Batch Insert ke Supabase (Biar aman kalau data ribuan)
+        # 5. Batch Upsert ke Database (Supabase)
+        # Insert per 1000 baris biar server gak timeout
         batch_size = 1000
+        total_inserted = 0
+        
         for i in range(0, len(valid_rows), batch_size):
             batch = valid_rows[i:i + batch_size]
+            # Upsert: Update jika ID sudah ada, Insert jika belum
             supabase.table('tele_users').upsert(batch, on_conflict="owner_id, user_id").execute()
+            total_inserted += len(batch)
 
-        msg = f"Sukses import {len(valid_rows)} kontak."
+        # 6. Response Sukses
+        msg = f"Sukses import {total_inserted} kontak ke database {source_phone}."
         if errors > 0:
-            msg += f" ({errors} baris dilewati karena format salah)"
+            msg += f" ({errors} baris diabaikan karena format salah)"
             
         return jsonify({"status": "success", "message": msg})
 
     except Exception as e:
-        return jsonify({"status": "error", "message": f"Gagal proses file: {str(e)}"})
+        logger.error(f"CSV Import Critical Error: {e}")
+        return jsonify({"status": "error", "message": f"Server Error: {str(e)}"})
 
 @app.route('/export_crm_csv')
 @login_required
