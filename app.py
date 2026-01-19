@@ -1664,18 +1664,16 @@ def api_get_crm_users():
 @app.route('/import_crm_api', methods=['POST'])
 @login_required
 def import_crm_api():
-    """Scan Private Chats & Tag Source Phone"""
     user_id = session['user_id']
     data = request.json
-    source_phone = data.get('source_phone') # Tangkap pilihan user
+    source_phone = data.get('source_phone') # <--- Ini Format Benar dari DB (+62...)
 
     if not source_phone:
         return jsonify({"status": "error", "message": "Target akun belum dipilih."})
     
     async def _import():
-        # Connect pakai akun SPESIFIK yang dipilih user
-        # Kita cari session string akun tsb
         try:
+            # Connect pakai akun yang dipilih user
             acc_res = supabase.table('telegram_accounts').select("session_string")\
                 .eq('user_id', user_id).eq('phone_number', source_phone).eq('is_active', True).execute()
             
@@ -1690,30 +1688,33 @@ def import_crm_api():
         
         count = 0
         try:
-            # Ambil profil akun sendiri buat ngecek source
-            me = await client.get_me()
-            my_phone = f"+{me.phone}" if me.phone else source_phone
+            # KITA PAKE 'source_phone' DARI FRONTEND SEBAGAI LABEL
+            # Biar formatnya persis sama dengan nama foldernya
+            final_source_label = source_phone 
 
-            async for dialog in client.iter_dialogs(limit=500):
+            async for dialog in client.iter_dialogs(limit=1000): # Naikkan limit biar puas
                 if dialog.is_user and not dialog.entity.bot:
                     u = dialog.entity
+                    
+                    # Skip akun sendiri
+                    if u.self: continue
+
                     data_payload = {
                         "owner_id": user_id,
                         "user_id": u.id,
                         "username": u.username,
                         "first_name": u.first_name,
-                        "source_phone": my_phone, # <--- SIMPAN NOMOR PENGIMPOR
+                        "source_phone": final_source_label, # <--- LABEL KONSISTEN (+62...)
                         "last_interaction": datetime.utcnow().isoformat(),
                         "created_at": datetime.utcnow().isoformat()
                     }
                     try:
-                        # Upsert logic: Update source_phone biar data lama kelabeli juga
                         supabase.table('tele_users').upsert(data_payload, on_conflict="owner_id, user_id").execute()
                         count += 1
                     except: pass
                     
             await client.disconnect()
-            return jsonify({"status": "success", "message": f"Berhasil sinkronisasi {count} kontak dari {my_phone}."})
+            return jsonify({"status": "success", "message": f"Berhasil sinkronisasi {count} kontak ke folder {final_source_label}."})
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)})
             
