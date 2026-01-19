@@ -96,7 +96,14 @@ def live_demo_view(page):
                                    active_page='schedule')
         
         elif page == 'crm':
-             return render_template('dashboard/crm.html', **common, crm_users=data['crm_users'], active_page='crm')
+             return render_template('dashboard/crm.html', **common, 
+                                    crm_users=data['crm_users'], 
+                                    active_page='crm',
+                                    # --- TAMBAHAN WAJIB (Biar Gak Error Merah) ---
+                                    current_page=1, 
+                                    total_pages=1, 
+                                    per_page=10, 
+                                    total_logs=len(data['crm_users']))
 
         elif page == 'connection':
              return render_template('dashboard/connection.html', **common, active_page='connection')
