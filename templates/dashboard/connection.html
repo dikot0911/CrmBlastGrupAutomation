@@ -324,25 +324,41 @@
 
                 if(data.status === 'success') {
                     stopQrPolling();
-                    // Efek Sukses
-                    const display = document.getElementById('qrDisplay');
-                    display.innerHTML = `
+                    document.getElementById('qrDisplay').innerHTML = `
                         <div class="flex flex-col items-center justify-center h-48 animate-enter">
                             <i class="fa-solid fa-circle-check text-green-500 text-5xl mb-3"></i>
                             <h4 class="font-bold text-gray-800 text-lg">Berhasil!</h4>
-                            <p class="text-sm text-gray-500">Login sebagai ${data.message.split(': ')[1]}</p>
                         </div>
                     `;
                     setTimeout(() => location.reload(), 1500);
-                } else if(data.status === 'expired') {
+                } 
+                else if(data.status === '2fa') {
+                    // MUNCULIN INPUT PASSWORD
+                    stopQrPolling(); // Stop bentar pollingnya
+                    const pass = prompt("Akun Anda dilindungi 2FA. Masukkan Password Cloud:");
+                    if(pass) {
+                        // Kirim password ke backend
+                        await fetch('/api/connect/submit_2fa', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({session_uuid: currentSessionUuid, password: pass})
+                        });
+                        // Lanjut polling lagi buat nunggu hasil login password
+                        startPolling(); 
+                    } else {
+                        alert("Password dibutuhkan untuk login.");
+                        location.reload();
+                    }
+                }
+                else if(data.status === 'expired') {
                     stopQrPolling();
-                    alert("QR Code Kadaluarsa. Silakan refresh.");
+                    alert("QR Code Kadaluarsa.");
                     generateQR();
                 }
             } catch(e) {
                 console.log("Polling Error", e);
             }
-        }, 2000); // Cek tiap 2 detik
+        }, 2000); 
     }
 
     // --- PHONE OTP LOGIC (LEGACY) ---
