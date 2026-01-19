@@ -85,10 +85,10 @@
                                 <i class="fa-brands fa-telegram mr-1.5 text-gray-400"></i> Akun Pengirim
                             </label>
                             <div class="relative">
-                                <select name="sender_phone" class="w-full pl-11 pr-10 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-medium text-gray-700 cursor-pointer appearance-none hover:border-gray-300 group-hover:shadow-sm">
-                                    <option value="auto">⚡ Otomatis (Akun Utama)</option>
+                                <select name="sender_phone" id="senderSelect" onchange="updateTargetOptions()" class="w-full pl-11 pr-10 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-medium text-gray-700 cursor-pointer appearance-none hover:border-gray-300 group-hover:shadow-sm">
+                                    <option value="auto">⚡ Otomatis (Rotasi Akun Utama)</option>
                                     {% for acc in accounts %}
-                                        <option value="{{ acc.phone_number }}">{{ acc.phone_number }}</option>
+                                        <option value="{{ acc.phone_number }}">{{ acc.first_name }} - {{ acc.phone_number }}</option>
                                     {% endfor %}
                                 </select>
                                 <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition group-hover:text-indigo-500">
@@ -99,8 +99,25 @@
                                 </div>
                             </div>
                             <p class="text-[10px] text-gray-400 mt-1.5 ml-1">
-                                *Pilih nomor spesifik untuk membagi beban pengiriman.
+                                *Pilih akun spesifik agar daftar target menyesuaikan grup akun tersebut.
                             </p>
+                        </div>
+
+                        <div class="group">
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
+                                <i class="fa-solid fa-users-viewfinder mr-1.5 text-gray-400"></i> Target Audiens
+                            </label>
+                            <div class="relative">
+                                <select name="target_group_id" id="targetSelect" class="w-full pl-11 pr-10 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-medium text-gray-700 cursor-pointer appearance-none hover:border-gray-300 group-hover:shadow-sm">
+                                    <option value="">-- Pilih Akun Terlebih Dahulu --</option>
+                                    </select>
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition group-hover:text-indigo-500">
+                                    <i class="fa-solid fa-bullseye"></i>
+                                </div>
+                                <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs">
+                                    <i class="fa-solid fa-chevron-down"></i>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="group">
@@ -112,33 +129,13 @@
                             </label>
                             <div class="relative">
                                 <select name="template_id" class="w-full pl-11 pr-10 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-medium text-gray-700 cursor-pointer appearance-none hover:border-gray-300 group-hover:shadow-sm">
-                                    <option value="">-- Kirim Pesan Default --</option>
+                                    <option value="">-- Kirim Pesan Manual (Input Saat Eksekusi) --</option>
                                     {% for t in templates %}
                                         <option value="{{ t.id }}">{{ t.name }}</option>
                                     {% endfor %}
                                 </select>
                                 <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition group-hover:text-indigo-500">
                                     <i class="fa-solid fa-file-lines"></i>
-                                </div>
-                                <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs">
-                                    <i class="fa-solid fa-chevron-down"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="group">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">
-                                <i class="fa-solid fa-users-viewfinder mr-1.5 text-gray-400"></i> Target Audiens
-                            </label>
-                            <div class="relative">
-                                <select name="target_group_id" class="w-full pl-11 pr-10 py-3.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-medium text-gray-700 cursor-pointer appearance-none hover:border-gray-300 group-hover:shadow-sm">
-                                    <option value="">-- Kirim ke SEMUA Grup --</option>
-                                    {% for t in targets %}
-                                        <option value="{{ t.id }}">{{ t.group_name }}</option>
-                                    {% endfor %}
-                                </select>
-                                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition group-hover:text-indigo-500">
-                                    <i class="fa-solid fa-bullseye"></i>
                                 </div>
                                 <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs">
                                     <i class="fa-solid fa-chevron-down"></i>
@@ -205,17 +202,25 @@
                             <div class="flex flex-wrap gap-4 justify-center sm:justify-start">
                                 <div>
                                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Pengirim</p>
-                                    <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-bold border border-blue-100">
-                                        <i class="fa-brands fa-telegram"></i> 
-                                        {{ s.sender_phone if s.sender_phone else 'Auto (Default)' }}
-                                    </span>
+                                    
+                                    {% if s.sender_phone and s.sender_phone != 'auto' %}
+                                        <span class="inline-flex items-center gap-1.5 bg-fuchsia-50 text-fuchsia-700 px-2.5 py-1 rounded text-xs font-bold border border-fuchsia-100 shadow-sm">
+                                            <i class="fa-solid fa-user-check text-fuchsia-500"></i> 
+                                            {{ s.sender_phone }}
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded text-xs font-bold border border-blue-100 shadow-sm">
+                                            <i class="fa-solid fa-robot text-blue-500"></i> 
+                                            Auto (Default)
+                                        </span>
+                                    {% endif %}
                                 </div>
 
                                 <div>
                                     <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Target</p>
                                     {% if s.target_group_id %}
                                         <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-bold border border-purple-100">
-                                            <i class="fa-solid fa-crosshairs"></i> Spesifik (ID: {{ s.target_group_id }})
+                                            <i class="fa-solid fa-crosshairs"></i> Group ID: {{ s.target_group_id }}
                                         </span>
                                     {% else %}
                                         <span class="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-bold border border-green-100">
@@ -256,4 +261,72 @@
 
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 1. SIAPKAN DATA TARGET DARI JINJA KE JAVASCRIPT
+    // Kita buat array object yang berisi info grup dan source phone-nya
+    const allTargets = [
+        {% for t in targets %}
+        {
+            id: "{{ t.id }}",
+            name: "{{ t.group_name }}",
+            source_phone: "{{ t.source_phone }}" // Pastikan field ini ada di model Target Anda
+        },
+        {% endfor %}
+    ];
+
+    function updateTargetOptions() {
+        const senderSelect = document.getElementById('senderSelect');
+        const targetSelect = document.getElementById('targetSelect');
+        const selectedPhone = senderSelect.value;
+
+        // Kosongkan opsi target saat ini
+        targetSelect.innerHTML = '';
+
+        // Opsi Default (Semua/Kosong)
+        let defaultOption = document.createElement('option');
+        
+        if (selectedPhone === 'auto') {
+            defaultOption.value = "";
+            defaultOption.text = "-- Kirim ke SEMUA Grup (Mode Auto) --";
+            targetSelect.appendChild(defaultOption);
+
+            // Jika Auto, tampilkan SEMUA target (atau filter sesuai logika bisnis Anda)
+            allTargets.forEach(t => {
+                let opt = document.createElement('option');
+                opt.value = t.id;
+                opt.text = t.name + (t.source_phone ? ` (${t.source_phone})` : '');
+                targetSelect.appendChild(opt);
+            });
+
+        } else {
+            // JIKA AKUN SPESIFIK DIPILIH
+            defaultOption.value = "";
+            defaultOption.text = `-- Semua Grup dari ${selectedPhone} --`;
+            targetSelect.appendChild(defaultOption);
+
+            // Filter target yang source_phone-nya sama dengan akun yang dipilih
+            const filteredTargets = allTargets.filter(t => t.source_phone === selectedPhone);
+
+            if (filteredTargets.length > 0) {
+                filteredTargets.forEach(t => {
+                    let opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.text = t.name;
+                    targetSelect.appendChild(opt);
+                });
+            } else {
+                let emptyOpt = document.createElement('option');
+                emptyOpt.text = "⚠️ Tidak ada grup tersimpan untuk akun ini";
+                emptyOpt.disabled = true;
+                targetSelect.appendChild(emptyOpt);
+            }
+        }
+    }
+
+    // Jalankan fungsi saat halaman dimuat untuk set initial state
+    document.addEventListener('DOMContentLoaded', updateTargetOptions);
+</script>
 {% endblock %}
