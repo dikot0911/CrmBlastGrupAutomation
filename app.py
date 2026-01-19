@@ -1626,6 +1626,21 @@ def save_bulk_targets():
         logger.error(f"Error saving targets: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
+@app.route('/api/get_crm_users', methods=['GET'])
+@login_required
+def api_get_crm_users():
+    """API untuk mengambil data user CRM (JSON Format) buat Modal Selector"""
+    user_id = session['user_id']
+    source = request.args.get('source', 'all')
+    
+    query = supabase.table('tele_users').select("user_id, first_name, username").eq('owner_id', user_id)
+    
+    if source != 'all' and source != 'auto':
+        query = query.eq('source_phone', source)
+        
+    res = query.limit(1000).execute() # Limit 1000 biar gak berat
+    return jsonify(res.data)
+
 @app.route('/import_crm_api', methods=['POST'])
 @login_required
 def import_crm_api():
