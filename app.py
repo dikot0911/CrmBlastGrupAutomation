@@ -1743,6 +1743,49 @@ def delete_template(id):
         
     return redirect(url_for('dashboard_templates'))
 
+@app.route('/update_template', methods=['POST'])
+@login_required
+def update_template():
+    user_id = session['user_id']
+    t_id = request.form.get('id') # Tangkap ID template
+    name = request.form.get('name')
+    msg = request.form.get('message')
+    
+    # Tangkap ID Sumber Cloud Media
+    src_chat = request.form.get('source_chat_id')
+    src_msg = request.form.get('source_message_id')
+    
+    # Konversi ke int/bigint kalau ada datanya
+    final_chat = int(src_chat) if src_chat and src_chat != 'null' and src_chat != '' else None
+    final_msg = int(src_msg) if src_msg and src_msg != 'null' and src_msg != '' else None
+
+    if not t_id:
+        flash('ID Template tidak valid.', 'danger')
+        return redirect(url_for('dashboard_templates'))
+
+    if not name:
+        flash('Nama Template wajib diisi.', 'warning')
+        return redirect(url_for('dashboard_templates'))
+    
+    try:
+        data = {
+            'name': name, 
+            'message_text': msg, 
+            'source_chat_id': final_chat, 
+            'source_message_id': final_msg,
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        # Eksekusi Update ke Database
+        supabase.table('message_templates').update(data).eq('id', t_id).eq('user_id', user_id).execute()
+        
+        flash('Template berhasil diperbarui!', 'success')
+    except Exception as e:
+        flash(f'Gagal update: {str(e)}', 'danger')
+        logger.error(f"Template Update Error: {e}")
+    
+    return redirect(url_for('dashboard_templates'))
+
 # ==============================================================================
 # SECTION 13: SUPER ADMIN PANEL
 # ==============================================================================
