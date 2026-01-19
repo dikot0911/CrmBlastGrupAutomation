@@ -889,15 +889,14 @@ def dashboard_templates():
                            templates=templates, 
                            active_page='templates')
 
-app.route('/dashboard/crm')
+@app.route('/dashboard/crm')
 @login_required
 def dashboard_crm():
     """Halaman Database Pelanggan dengan Filter Folder Akun"""
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
-    # 1. Ambil List Akun Yang AKTIF Saja
-    # Ini kunci fitur "Kalau disconnect, folder hilang"
+    # 1. Ambil List Akun Yang AKTIF Saja (Untuk Navigasi Folder)
     accounts = []
     active_phones = []
     try:
@@ -914,7 +913,7 @@ def dashboard_crm():
     per_page = request.args.get('per_page', 50, type=int)
     search_query = request.args.get('q', '').strip()
     
-    # Tangkap parameter folder/tab yang dipilih user
+    # Tangkap parameter folder/tab yang dipilih user (Default: all)
     current_source = request.args.get('source', 'all') 
 
     start = (page - 1) * per_page
@@ -931,20 +930,17 @@ def dashboard_crm():
             
             # --- LOGIC FOLDER ---
             if current_source != 'all':
-                # Jika user klik Tab Akun A, tampilkan cuma data Akun A
-                # Dan pastikan akun A masih aktif (security check)
+                # Filter hanya data milik akun tertentu
                 if current_source in active_phones:
                     query = query.eq('source_phone', current_source)
                 else:
-                    # Kalau user maksa akses link akun yg udah disconnect, kasih kosong
+                    # Kalau user iseng ganti URL ke akun yg gak aktif/gak ada -> Kosongkan hasil
                     query = query.eq('id', -1) 
             else:
-                # Jika Tab "All Database", HANYA tampilkan data dari akun yang MASIH AKTIF
-                # Data dari akun disconnect disembunyikan (tapi tidak dihapus di DB)
+                # Tab "All Database": Tampilkan semua data TAPI HANYA dari akun yang masih aktif
                 if active_phones:
                     query = query.in_('source_phone', active_phones)
                 else:
-                    # Kalau gak ada akun aktif sama sekali, sembunyikan semua data
                     query = query.eq('id', -1)
 
             # Filter Pencarian
@@ -962,8 +958,10 @@ def dashboard_crm():
             
         except Exception as e:
             logger.error(f"CRM Data Error: {e}")
+            # Jangan crash, kirim data kosong aja biar halaman tetep kebuka
+            crm_users = []
     
-    # KIRIM 'accounts' dan 'current_source' KE HTML (INI YG KEMAREN KURANG)
+    # Render Template dengan semua variabel yang dibutuhkan
     return render_template('dashboard/crm.html', 
                            user=user, 
                            crm_users=crm_users, 
@@ -973,8 +971,8 @@ def dashboard_crm():
                            per_page=per_page,
                            search_query=search_query,
                            active_page='crm',
-                           accounts=accounts,       # <--- WAJIB ADA
-                           current_source=current_source) # <--- WAJIB ADA
+                           accounts=accounts,       # <--- PENTING BUAT FOLDER
+                           current_source=current_source) # <--- PENTING BUAT NAVIGASI
 
 @app.route('/dashboard/connection')
 @login_required
