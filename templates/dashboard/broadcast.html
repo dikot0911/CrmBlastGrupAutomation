@@ -2,307 +2,438 @@
 {% block title %}Broadcast Pesan{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-24">
+<div class="max-w-[90rem] mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-32">
     
-    <div class="mb-8">
-        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Broadcast Pesan</h1>
-        <p class="text-gray-500 mt-1 text-sm">Kirim pesan massal ke database pelanggan Anda secara real-time.</p>
+    <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-6">
+        <div>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
+                <i class="fa-solid fa-paper-plane text-indigo-600"></i> Broadcast Pesan
+            </h1>
+            <p class="text-gray-500 mt-2 text-sm max-w-2xl">
+                Kirim pesan massal ke database pelanggan atau grup secara real-time. Mendukung format teks, gambar, dan video.
+            </p>
+        </div>
+        
+        <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </span>
+            <div class="text-xs font-bold text-gray-700">
+                <span class="block text-[10px] text-gray-400 font-normal uppercase tracking-wider">Server Status</span>
+                READY TO BLAST
+            </div>
+        </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         
-        <div class="lg:col-span-7 space-y-6">
+        <div class="xl:col-span-7 space-y-6">
             
-            <div class="bg-blue-50 border border-blue-100 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
-                <div class="absolute top-0 right-0 w-20 h-20 bg-blue-200 rounded-full blur-2xl opacity-30 -mr-5 -mt-5"></div>
-                <h3 class="text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
-                    <i class="fa-brands fa-telegram"></i> Import Konten dari Telegram
-                </h3>
-                <div class="flex gap-2">
-                    <div class="relative flex-1">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fa-solid fa-link text-blue-400 text-xs"></i>
-                        </div>
-                        <input type="text" id="teleLinkInput" placeholder="Contoh: https://t.me/channelku/123" 
-                               class="w-full pl-8 pr-4 py-2 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Langkah 1: Pilih Pengirim</h3>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="sender_phone" value="auto" class="peer sr-only" checked onchange="updateTargetOptions()">
+                            <div class="p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-200 peer-checked:border-indigo-600 peer-checked:bg-indigo-50/50 transition-all text-center h-full flex flex-col items-center justify-center gap-2">
+                                <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-lg">
+                                    <i class="fa-solid fa-robot"></i>
+                                </div>
+                                <span class="text-sm font-bold text-gray-700">Otomatis</span>
+                                <span class="text-[10px] text-gray-400">Rotasi Akun</span>
+                            </div>
+                            <div class="absolute top-2 right-2 text-indigo-600 opacity-0 peer-checked:opacity-100 transition">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                        </label>
+
+                        {% for acc in accounts %}
+                        <label class="cursor-pointer relative">
+                            <input type="radio" name="sender_phone" value="{{ acc.phone_number }}" class="peer sr-only" onchange="updateTargetOptions()">
+                            <div class="p-4 rounded-xl border-2 border-gray-200 hover:border-blue-200 peer-checked:border-blue-600 peer-checked:bg-blue-50/50 transition-all text-center h-full flex flex-col items-center justify-center gap-2">
+                                <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-lg">
+                                    <i class="fa-brands fa-telegram"></i>
+                                </div>
+                                <span class="text-sm font-bold text-gray-700 truncate w-full">{{ acc.first_name }}</span>
+                                <span class="text-[10px] text-gray-400 truncate w-full">{{ acc.phone_number }}</span>
+                            </div>
+                            <div class="absolute top-2 right-2 text-blue-600 opacity-0 peer-checked:opacity-100 transition">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                        </label>
+                        {% endfor %}
                     </div>
-                    <button onclick="fetchTelegramMessage()" id="btnFetch" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md transition flex items-center gap-2">
-                        <i class="fa-solid fa-cloud-arrow-down"></i> Load
-                    </button>
                 </div>
             </div>
 
-            <form id="broadcastForm" class="bg-white rounded-[1.5rem] border border-gray-100 shadow-xl shadow-gray-200/40 p-6 relative overflow-hidden">
-                
-                <div class="mb-4 flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-200">
-                    <div>
-                        <span class="text-xs text-gray-500 font-bold uppercase tracking-wider">Target Penerima</span>
-                        <div class="font-bold text-gray-800 mt-0.5">
-                            {% if selected_ids %}
-                                <span class="text-indigo-600">{{ count_selected }} Orang Terpilih</span>
-                                <input type="hidden" name="target_option" value="selected">
-                                <input type="hidden" name="selected_ids" value="{{ selected_ids }}">
-                            {% else %}
-                                <span class="text-green-600">Semua Database ({{ user_count }})</span>
-                                <input type="hidden" name="target_option" value="all">
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Langkah 2: Target Penerima</h3>
                 </div>
-
-                <div class="mb-4">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Template (Opsional)</label>
-                    <select name="template_id" id="templateSelect" onchange="loadTemplate()" class="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500 transition">
-                        <option value="">-- Tulis Manual --</option>
-                        {% for t in templates %}
-                        <option value="{{ t.id }}" data-text="{{ t.message_text }}">{{ t.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2 flex justify-between">
-                        Editor Pesan
-                        <span class="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500">Markdown Support</span>
-                    </label>
-                    <textarea name="message" id="messageInput" rows="6" placeholder="Halo {name}, tulis pesanmu disini..." 
-                              class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition font-mono leading-relaxed"></textarea>
+                <div class="p-6 space-y-4">
                     
-                    <div class="flex gap-2 mt-2">
-                        <button type="button" onclick="insertTag('{name}')" class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded hover:bg-indigo-100 transition font-bold cursor-pointer">
-                            + Nama User
-                        </button>
-                        <button type="button" onclick="insertTag('**text**')" class="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-gray-200 transition font-bold cursor-pointer">
-                            + Bold
-                        </button>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Pilih Kategori Target</label>
+                        <select id="targetType" onchange="toggleTargetMode()" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition text-sm font-bold text-gray-700">
+                            <option value="all">🌍 Semua Database (Broadcast Global)</option>
+                            <option value="manual">🎯 Pilih Manual (Centang User)</option>
+                            </select>
                     </div>
-                </div>
 
-                <div class="mb-6">
-                    <label class="block w-full border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition group">
-                        <input type="file" name="image" id="imageInput" accept="image/*" class="hidden" onchange="previewImage(this)">
-                        <div class="flex flex-col items-center justify-center pt-2 pb-3" id="uploadPlaceholder">
-                            <i class="fa-regular fa-image text-2xl text-gray-300 group-hover:text-indigo-400 mb-2 transition"></i>
-                            <p class="text-xs text-gray-500 font-medium">Upload Gambar (Optional)</p>
-                        </div>
-                        <div id="imagePreviewContainer" class="hidden relative w-full h-32">
-                            <img id="imagePreview" src="" class="w-full h-full object-cover rounded-lg opacity-80">
-                            <button type="button" onclick="clearImage(event)" class="absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center hover:bg-red-600 shadow-md">
-                                <i class="fa-solid fa-xmark text-xs"></i>
+                    <div id="manualSelectionBox" class="hidden animate-enter">
+                        <div class="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex justify-between items-center">
+                            <div>
+                                <span class="text-xs font-bold text-yellow-800 block">User Terpilih:</span>
+                                <span class="text-lg font-black text-gray-800" id="selectedCountDisplay">0</span>
+                                <span class="text-xs text-gray-500"> Kontak</span>
+                            </div>
+                            <button type="button" onclick="openDatabaseModal()" class="bg-white border border-yellow-200 text-yellow-700 hover:bg-yellow-100 px-4 py-2 rounded-lg text-xs font-bold shadow-sm transition">
+                                <i class="fa-solid fa-list-check mr-1"></i> Buka Database
                             </button>
                         </div>
-                    </label>
-                </div>
-
-                <button type="button" id="btnSend" onclick="startBroadcast()" class="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/30 transition transform hover:-translate-y-1 flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-paper-plane"></i> Kirim Broadcast Sekarang
-                </button>
-            </form>
-
-            <div id="consoleContainer" class="hidden bg-[#0F172A] rounded-[1.5rem] border border-gray-800 shadow-2xl p-6 relative overflow-hidden animate-fade-in-up">
-                <div class="flex justify-between items-center mb-4 border-b border-gray-800 pb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="flex gap-1.5">
-                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                        </div>
-                        <span class="text-gray-400 text-xs font-mono ml-2">root@blastpro:~# ./broadcast.sh</span>
+                        <input type="hidden" id="selectedIdsInput" name="selected_ids">
                     </div>
-                    <span id="statusBadge" class="bg-indigo-900/50 text-indigo-300 text-[10px] px-2 py-1 rounded border border-indigo-700/50 animate-pulse">Processing...</span>
-                </div>
 
-                <div class="grid grid-cols-3 gap-4 mb-6">
-                    <div class="bg-gray-800/50 p-3 rounded-xl border border-gray-700 text-center">
-                        <div class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Progress</div>
-                        <div class="text-xl font-black text-white" id="progressPercentage">0%</div>
-                    </div>
-                    <div class="bg-gray-800/50 p-3 rounded-xl border border-gray-700 text-center">
-                        <div class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Sukses</div>
-                        <div class="text-xl font-black text-green-400" id="successCount">0</div>
-                    </div>
-                    <div class="bg-gray-800/50 p-3 rounded-xl border border-gray-700 text-center">
-                        <div class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Gagal</div>
-                        <div class="text-xl font-black text-red-400" id="failCount">0</div>
-                    </div>
-                </div>
-
-                <div class="w-full bg-gray-800 rounded-full h-2 mb-4 overflow-hidden">
-                    <div id="progressBar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(99,102,241,0.5)]" style="width: 0%"></div>
-                </div>
-
-                <div id="logContainer" class="h-64 overflow-y-auto custom-scrollbar font-mono text-xs space-y-1.5 p-2">
-                    <p class="text-gray-500 italic">> Initializing system...</p>
-                    <p class="text-gray-500 italic">> Connecting to Telegram API...</p>
                 </div>
             </div>
+
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Langkah 3: Isi Pesan</h3>
+                    <div class="flex gap-2">
+                        <span class="text-[10px] bg-gray-200 px-2 py-0.5 rounded text-gray-600 font-mono">Markdown ON</span>
+                    </div>
+                </div>
+                <div class="p-6 space-y-4">
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Gunakan Template (Opsional)</label>
+                        <div class="relative">
+                            <select id="templateSelect" onchange="loadTemplate()" class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition text-sm text-gray-600 appearance-none cursor-pointer">
+                                <option value="">-- Tulis Manual --</option>
+                                {% for t in templates %}
+                                <option value="{{ t.id }}" data-msg="{{ t.message_text }}" data-media="{{ t.source_message_id }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                                <i class="fa-solid fa-quote-right"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <textarea id="messageInput" rows="6" class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition text-sm font-mono resize-none leading-relaxed placeholder-gray-400" placeholder="Halo {name}, ada promo menarik nih..." oninput="updatePreview()"></textarea>
+                        
+                        <div class="absolute bottom-3 right-3 flex gap-2">
+                            <button type="button" onclick="insertTag('{name}')" class="text-[10px] bg-white border border-gray-200 px-2 py-1 rounded hover:bg-gray-100 transition font-bold text-indigo-600 shadow-sm">+ Nama</button>
+                            <button type="button" onclick="insertTag('**text**')" class="text-[10px] bg-white border border-gray-200 px-2 py-1 rounded hover:bg-gray-100 transition font-bold text-gray-600 shadow-sm">Bold</button>
+                        </div>
+                    </div>
+
+                    <div id="imageUploadSection">
+                        <label class="flex items-center gap-3 p-3 border border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition group">
+                            <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 group-hover:text-indigo-500 group-hover:bg-white transition shadow-sm">
+                                <i class="fa-regular fa-image"></i>
+                            </div>
+                            <div class="flex-1">
+                                <span class="text-sm font-bold text-gray-600" id="fileLabel">Upload Gambar (Opsional)</span>
+                            </div>
+                            <input type="file" id="imageInput" class="hidden" accept="image/*" onchange="previewImage(event)">
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+
+            <button onclick="startBroadcast()" id="btnBlast" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-2xl shadow-xl shadow-indigo-200 transition transform hover:-translate-y-1 flex items-center justify-center gap-3 text-lg">
+                <i class="fa-solid fa-paper-plane"></i> KIRIM BROADCAST
+            </button>
 
         </div>
 
-        <div class="lg:col-span-5 hidden lg:block">
-            <div class="sticky top-6">
-                <div class="bg-gray-100 rounded-[2.5rem] border-8 border-white shadow-2xl overflow-hidden relative h-[600px]">
-                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-white rounded-b-xl z-20"></div>
+        <div class="xl:col-span-5 space-y-6 sticky top-6">
+            
+            <div class="flex justify-center">
+                <div class="w-[320px] bg-white rounded-[3rem] border-[8px] border-gray-800 shadow-2xl overflow-hidden relative ring-4 ring-gray-200 h-[600px] flex flex-col">
                     
-                    <div class="bg-[#517DA2] p-4 pt-8 flex items-center gap-3 text-white shadow-md relative z-10">
+                    <div class="bg-[#517DA2] p-4 pt-10 flex items-center gap-3 text-white shadow-md relative z-10 shrink-0">
                         <i class="fa-solid fa-arrow-left"></i>
-                        <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold">B</div>
-                        <div>
-                            <h4 class="font-bold text-sm">BlastPro Bot</h4>
+                        <div class="w-9 h-9 bg-indigo-500 rounded-full flex items-center justify-center border border-white/20 font-bold text-sm">B</div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-sm leading-tight">BlastPro Bot</h4>
                             <p class="text-[10px] opacity-80">bot</p>
                         </div>
-                        <i class="fa-solid fa-ellipsis-vertical ml-auto"></i>
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
                     </div>
 
-                    <div class="bg-[#86A6C3] h-full p-4 overflow-y-auto bg-opacity-20" style="background-image: radial-gradient(#86A6C3 1px, transparent 1px); background-size: 20px 20px;">
-                        <div class="text-center my-4">
-                            <span class="bg-black/20 text-white text-[10px] px-2 py-1 rounded-full">Today</span>
-                        </div>
-                        <div class="bg-white rounded-tr-xl rounded-bl-xl rounded-br-xl p-3 shadow-sm max-w-[85%] ml-auto relative animate-enter">
-                            <div id="bubbleImage" class="hidden mb-2 rounded-lg overflow-hidden">
-                                <img src="" class="w-full h-32 object-cover">
+                    <div class="flex-1 bg-[#7289DA] relative overflow-hidden flex flex-col p-3" style="background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: cover;">
+                        <div class="flex-1"></div> <div class="bg-white rounded-xl rounded-tl-none p-1 shadow-md max-w-[90%] self-start animate-enter mb-4">
+                            <div id="previewImageContainer" class="hidden rounded-lg overflow-hidden mb-1">
+                                <img id="previewImg" src="" class="w-full h-auto object-cover max-h-40">
                             </div>
-                            <p id="bubbleText" class="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap">Pratinjau pesan Anda...</p>
-                            <div class="flex justify-end items-center gap-1 mt-1">
-                                <span class="text-[9px] text-gray-400">Now</span>
-                                <i class="fa-solid fa-check-double text-[9px] text-blue-500"></i>
+                            
+                            <div class="px-2 pt-1 pb-1">
+                                <p id="previewText" class="text-sm text-gray-800 whitespace-pre-wrap leading-snug font-sans">Halo {name}, tulis pesanmu...</p>
+                            </div>
+                            
+                            <div class="flex justify-end gap-1 px-2 pb-1">
+                                <span class="text-[10px] text-gray-400">10:45</span>
+                                <i class="fa-solid fa-check-double text-[10px] text-blue-500"></i>
                             </div>
                         </div>
                     </div>
+
+                    <div class="bg-white p-3 border-t border-gray-100 flex items-center gap-2 shrink-0">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400"><i class="fa-solid fa-paperclip"></i></div>
+                        <div class="flex-1 h-8 bg-gray-100 rounded-full"></div>
+                        <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white"><i class="fa-solid fa-microphone"></i></div>
+                    </div>
                 </div>
-                <p class="text-center text-xs text-gray-400 mt-4 uppercase tracking-widest font-bold">Live Preview</p>
+            </div>
+
+            <div id="logContainer" class="hidden bg-gray-900 rounded-2xl p-4 shadow-xl border border-gray-700 font-mono text-xs h-64 overflow-y-auto custom-scrollbar">
+                <div class="flex items-center gap-2 border-b border-gray-700 pb-2 mb-2 sticky top-0 bg-gray-900">
+                    <div class="flex gap-1.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                    </div>
+                    <span class="text-gray-400 font-bold ml-2">System Terminal</span>
+                </div>
+                <div id="logContent" class="space-y-1">
+                    </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div id="databaseModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="closeDatabaseModal()"></div>
+    <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden h-[80vh] flex flex-col transform transition-all scale-95 opacity-0" id="dbModalPanel">
+            
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-gray-800 text-lg">Pilih Kontak</h3>
+                <button onclick="closeDatabaseModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-0 relative">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-white sticky top-0 z-10 shadow-sm">
+                        <tr>
+                            <th class="p-4 border-b w-10"><input type="checkbox" onchange="toggleSelectAllModal(this)"></th>
+                            <th class="p-4 border-b text-xs font-bold text-gray-500 uppercase">Nama</th>
+                            <th class="p-4 border-b text-xs font-bold text-gray-500 uppercase">Username</th>
+                            <th class="p-4 border-b text-xs font-bold text-gray-500 uppercase">ID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalUserList" class="divide-y divide-gray-100">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-200 bg-white flex justify-between items-center">
+                <span class="text-sm font-bold text-indigo-600"><span id="modalSelectedCount">0</span> dipilih</span>
+                <button onclick="confirmSelection()" class="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-indigo-700 transition">
+                    Konfirmasi Pilihan
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // --- 1. PREVIEW LOGIC ---
-    const msgInput = document.getElementById('messageInput');
-    const bubbleText = document.getElementById('bubbleText');
-
-    msgInput.addEventListener('input', function() {
-        if(this.value.trim() === '') {
-            bubbleText.innerText = 'Pratinjau pesan Anda...';
-        } else {
-            let text = this.value
-                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-                .replace(/__(.*?)__/g, '<i>$1</i>')
-                .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 rounded text-red-500">$1</code>');
-            bubbleText.innerHTML = text;
-        }
-    });
+    // --- 1. VARIABLE & SETUP ---
+    // Dump data akun dan usernya ke variabel JS (Lite Version)
+    // Untuk production data besar, sebaiknya pakai AJAX. Ini contoh simple.
+    
+    // Kita butuh data user per akun untuk filtering
+    // Tapi karena data bisa ribuan, kita load via AJAX saat modal dibuka saja.
+    
+    const messageInput = document.getElementById('messageInput');
+    const previewText = document.getElementById('previewText');
+    const previewImg = document.getElementById('previewImg');
+    const previewContainer = document.getElementById('previewImageContainer');
+    
+    // --- 2. EDITOR LOGIC ---
+    function updatePreview() {
+        let val = messageInput.value;
+        if (!val) val = "Halo {name}, tulis pesanmu...";
+        
+        // Simple Markdown Parsing
+        val = val.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>'); // Bold
+        val = val.replace(/__(.*?)__/g, '<i>$1</i>'); // Italic
+        val = val.replace(/\n/g, '<br>');
+        
+        // Highlight Variable
+        val = val.replace(/{name}/g, '<span class="bg-yellow-200 text-yellow-800 px-1 rounded text-[10px] font-bold">{Nama}</span>');
+        
+        previewText.innerHTML = val;
+    }
 
     function insertTag(tag) {
-        const start = msgInput.selectionStart;
-        const end = msgInput.selectionEnd;
-        const text = msgInput.value;
+        const start = messageInput.selectionStart;
+        const end = messageInput.selectionEnd;
+        const text = messageInput.value;
         const before = text.substring(0, start);
         const after = text.substring(end, text.length);
-        msgInput.value = before + tag + after;
-        msgInput.dispatchEvent(new Event('input'));
+        
+        messageInput.value = before + tag + after;
+        messageInput.focus();
+        updatePreview();
     }
 
-    // --- 2. IMAGE PREVIEW ---
-    function previewImage(input) {
-        if (input.files && input.files[0]) {
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if(file) {
+            document.getElementById('fileLabel').innerText = file.name;
             const reader = new FileReader();
             reader.onload = function(e) {
-                document.getElementById('imagePreview').src = e.target.result;
-                document.getElementById('imagePreviewContainer').classList.remove('hidden');
-                document.getElementById('uploadPlaceholder').classList.add('hidden');
-                document.querySelector('#bubbleImage img').src = e.target.result;
-                document.getElementById('bubbleImage').classList.remove('hidden');
+                previewImg.src = e.target.result;
+                previewContainer.classList.remove('hidden');
             }
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
-    function clearImage(e) {
-        e.preventDefault();
-        document.getElementById('imageInput').value = '';
-        document.getElementById('imagePreviewContainer').classList.add('hidden');
-        document.getElementById('uploadPlaceholder').classList.remove('hidden');
-        document.getElementById('bubbleImage').classList.add('hidden');
-    }
-
-    // --- 3. FETCH TELEGRAM MESSAGE ---
-    async function fetchTelegramMessage() {
-        const link = document.getElementById('teleLinkInput').value;
-        const btn = document.getElementById('btnFetch');
-        
-        if(!link) return alert("Masukkan link dulu bre!");
-        
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-        btn.disabled = true;
-
-        try {
-            const res = await fetch('/api/fetch_message', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({link: link})
-            });
-            const data = await res.json();
-
-            if(data.status === 'success') {
-                msgInput.value = data.text;
-                msgInput.dispatchEvent(new Event('input'));
-                if(data.has_media) alert("✅ Teks diambil! Media akan otomatis terkirim.");
-            } else {
-                alert("❌ Gagal: " + data.message);
-            }
-        } catch(e) {
-            alert("⚠️ Error koneksi.");
-        } finally {
-            btn.innerHTML = 'Load';
-            btn.disabled = false;
+            reader.readAsDataURL(file);
         }
     }
 
     function loadTemplate() {
         const select = document.getElementById('templateSelect');
-        const text = select.options[select.selectedIndex].dataset.text;
-        if(text) {
-            msgInput.value = text;
-            msgInput.dispatchEvent(new Event('input'));
+        const opt = select.options[select.selectedIndex];
+        if(opt.value) {
+            messageInput.value = opt.getAttribute('data-msg');
+            updatePreview();
+            
+            // Note: Handle media template logic here if needed
         }
     }
 
-    // --- 4. REAL-TIME CONSOLE LOGIC (UPDATED) ---
-    async function startBroadcast() {
-        if(!msgInput.value) return alert("Isi pesan dulu dong!");
-        if(!confirm("Yakin mau kirim pesan massal ini?")) return;
-
-        // UI Prep
-        const consoleDiv = document.getElementById('consoleContainer');
-        const logBox = document.getElementById('logContainer');
-        const pBar = document.getElementById('progressBar');
-        const pText = document.getElementById('progressPercentage');
-        const sCount = document.getElementById('successCount');
-        const fCount = document.getElementById('failCount');
-        const btnSend = document.getElementById('btnSend');
-        const statusBadge = document.getElementById('statusBadge');
-
-        // Show Console, Hide Button (Sementara)
-        consoleDiv.classList.remove('hidden');
-        btnSend.classList.add('opacity-50', 'cursor-not-allowed');
-        btnSend.disabled = true;
-        btnSend.innerText = "Sedang Mengirim...";
+    // --- 3. TARGETING LOGIC ---
+    function updateTargetOptions() {
+        // Logic: Kalau pilih akun spesifik, dropdown target grup (kalau ada fitur grup) bisa difilter
+        // Untuk CRM Broadcast, logic utamanya ada di backend filter (source_phone)
+        const sender = document.querySelector('input[name="sender_phone"]:checked').value;
+        console.log("Sender changed to:", sender);
         
-        // Reset States
-        logBox.innerHTML = '';
-        pBar.style.width = '0%';
-        pText.innerText = "0%";
-        sCount.innerText = "0";
-        fCount.innerText = "0";
-        statusBadge.innerText = "Initializing...";
-        statusBadge.className = "bg-indigo-900/50 text-indigo-300 text-[10px] px-2 py-1 rounded border border-indigo-700/50 animate-pulse";
+        // Reset manual selection jika ganti akun
+        document.getElementById('selectedIdsInput').value = "";
+        document.getElementById('selectedCountDisplay').innerText = "0";
+    }
 
-        const formData = new FormData(document.getElementById('broadcastForm'));
+    function toggleTargetMode() {
+        const mode = document.getElementById('targetType').value;
+        const box = document.getElementById('manualSelectionBox');
+        
+        if(mode === 'manual') {
+            box.classList.remove('hidden');
+        } else {
+            box.classList.add('hidden');
+        }
+    }
 
+    // --- 4. MODAL DATABASE LOGIC (FETCH DATA) ---
+    const dbModal = document.getElementById('databaseModal');
+    const dbPanel = document.getElementById('dbModalPanel');
+    let tempSelectedIds = new Set();
+
+    async function openDatabaseModal() {
+        dbModal.classList.remove('hidden');
+        setTimeout(() => {
+            dbPanel.classList.remove('scale-95', 'opacity-0');
+            dbPanel.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
+        // Fetch Data via AJAX (Biar gak berat di awal load page)
+        // Kita kirim parameter sender_phone buat filter
+        const sender = document.querySelector('input[name="sender_phone"]:checked').value;
+        const tbody = document.getElementById('modalUserList');
+        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading Data...</td></tr>';
+
+        try {
+            // Perlu endpoint baru di app.py: /api/get_crm_users?source=...
+            // Untuk sementara kita simulasikan load semua atau pakai endpoint search yg ada
+            const res = await fetch(`/dashboard/crm?source=${sender}&format=json`); 
+            // NOTE: Anda perlu modifikasi route dashboard_crm di app.py agar bisa return JSON jika diminta
+            // Atau bikin endpoint khusus API.
+            
+            // Fallback: Kita ambil dari DOM hidden atau endpoint khusus
+            // Di sini saya asumsikan endpoint API tersedia.
+            // SEMENTARA: Kita pakai dummy logic atau reload page logic
+            // ... (Implementasi API Backend diperlukan untuk ini)
+            
+            // SIMULASI DATA (Hapus ini jika API sudah ready)
+            tbody.innerHTML = `
+                <tr>
+                    <td class="p-4"><input type="checkbox" value="123" onchange="updateModalCount(this)"></td>
+                    <td class="p-4 text-sm font-bold">User Demo 1</td>
+                    <td class="p-4 text-xs text-blue-500">@demo1</td>
+                    <td class="p-4 text-xs font-mono">123456</td>
+                </tr>
+                <tr>
+                    <td class="p-4"><input type="checkbox" value="456" onchange="updateModalCount(this)"></td>
+                    <td class="p-4 text-sm font-bold">User Demo 2</td>
+                    <td class="p-4 text-xs text-blue-500">@demo2</td>
+                    <td class="p-4 text-xs font-mono">789012</td>
+                </tr>
+            `;
+            
+        } catch(e) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500">Gagal memuat data.</td></tr>';
+        }
+    }
+
+    function closeDatabaseModal() {
+        dbPanel.classList.remove('scale-100', 'opacity-100');
+        dbPanel.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => dbModal.classList.add('hidden'), 300);
+    }
+
+    function updateModalCount(checkbox) {
+        if(checkbox.checked) tempSelectedIds.add(checkbox.value);
+        else tempSelectedIds.delete(checkbox.value);
+        document.getElementById('modalSelectedCount').innerText = tempSelectedIds.size;
+    }
+
+    function confirmSelection() {
+        const ids = Array.from(tempSelectedIds).join(',');
+        document.getElementById('selectedIdsInput').value = ids;
+        document.getElementById('selectedCountDisplay').innerText = tempSelectedIds.size;
+        closeDatabaseModal();
+    }
+
+    // --- 5. BROADCAST EXECUTION ---
+    async function startBroadcast() {
+        const msg = messageInput.value;
+        if(!msg) return alert("Pesan tidak boleh kosong!");
+
+        const btn = document.getElementById('btnBlast');
+        const logBox = document.getElementById('logContainer');
+        const logContent = document.getElementById('logContent');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> BLASTING...';
+        logBox.classList.remove('hidden');
+        logContent.innerHTML = '<div class="text-blue-400">> Initializing Broadcast Engine...</div>';
+
+        const formData = new FormData();
+        formData.append('message', msg);
+        formData.append('sender_phone', document.querySelector('input[name="sender_phone"]:checked').value);
+        
+        const targetType = document.getElementById('targetType').value;
+        if(targetType === 'manual') {
+            formData.append('target_option', 'selected');
+            formData.append('selected_ids', document.getElementById('selectedIdsInput').value);
+        } else {
+            formData.append('target_option', 'all');
+        }
+
+        const img = document.getElementById('imageInput').files[0];
+        if(img) formData.append('image', img);
+
+        // STREAMING RESPONSE
         try {
             const response = await fetch('/start_broadcast', {
                 method: 'POST',
@@ -313,74 +444,38 @@
             const decoder = new TextDecoder();
 
             while (true) {
-                const { done, value } = await reader.read();
+                const { value, done } = await reader.read();
                 if (done) break;
-
-                const chunk = decoder.decode(value);
+                
+                const chunk = decoder.decode(value, {stream: true});
                 const lines = chunk.split('\n');
-
+                
                 for (const line of lines) {
                     if (!line.trim()) continue;
                     try {
                         const data = JSON.parse(line);
                         
-                        if(data.error) {
-                            logBox.innerHTML += `<p class="text-red-500 font-bold">❌ Error: ${data.error}</p>`;
-                            statusBadge.innerText = "Error";
-                            statusBadge.className = "bg-red-900/50 text-red-300 text-[10px] px-2 py-1 rounded border border-red-700/50";
-                            btnSend.disabled = false;
-                            btnSend.classList.remove('opacity-50', 'cursor-not-allowed');
-                            btnSend.innerText = "Coba Lagi";
-                            return;
+                        if (data.type === 'progress') {
+                            const color = data.status === 'success' ? 'text-green-400' : 'text-red-400';
+                            const icon = data.status === 'success' ? '✓' : '✗';
+                            logContent.innerHTML += `<div class="${color}">> [${data.current}/${data.total}] ${icon} ${data.log}</div>`;
+                        } else if (data.type === 'start') {
+                            logContent.innerHTML += `<div class="text-yellow-400">> Target Found: ${data.total} Users. Starting...</div>`;
+                        } else if (data.type === 'done') {
+                            logContent.innerHTML += `<div class="text-blue-400 font-bold border-t border-gray-700 mt-2 pt-2">> DONE! Success: ${data.success}, Failed: ${data.failed}</div>`;
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fa-solid fa-check"></i> SELESAI';
                         }
-
-                        if(data.type === 'start') {
-                            statusBadge.innerText = `Sending to ${data.total} targets`;
-                        }
-
-                        if(data.type === 'progress') {
-                            // Update UI
-                            const percent = Math.round((data.current / data.total) * 100);
-                            pBar.style.width = `${percent}%`;
-                            pText.innerText = `${percent}%`;
-                            sCount.innerText = data.success;
-                            fCount.innerText = data.failed;
-
-                            // Custom Log Style
-                            let logHtml = "";
-                            if(data.status === 'warning') {
-                                logHtml = `<p class="text-yellow-400 bg-yellow-900/20 p-1 rounded">⚠️ ${data.log}</p>`;
-                            } else {
-                                const color = data.status === 'success' ? 'text-green-400' : 'text-red-400';
-                                const icon = data.status === 'success' ? '➜' : '✖';
-                                logHtml = `<p class="${color}"><span class="opacity-50">${icon}</span> ${data.log}</p>`;
-                            }
-                            
-                            logBox.innerHTML += logHtml;
-                            logBox.scrollTop = logBox.scrollHeight;
-                        }
-
-                        if(data.type === 'done') {
-                            logBox.innerHTML += `<p class="text-blue-400 mt-2 font-bold border-t border-gray-700 pt-2">=== TASK COMPLETED ===</p>`;
-                            statusBadge.innerText = "Completed";
-                            statusBadge.className = "bg-green-900/50 text-green-300 text-[10px] px-2 py-1 rounded border border-green-700/50";
-                            pBar.classList.remove('from-indigo-500', 'to-purple-500');
-                            pBar.classList.add('bg-green-500');
-                            
-                            btnSend.innerText = "Kirim Broadcast Selesai";
-                            // Biarkan tombol disabled biar ga spam klik, user harus refresh kalau mau kirim ulang
-                        }
-
-                    } catch (e) {
-                        console.log("Stream parse error", e);
-                    }
+                        
+                        logBox.scrollTop = logBox.scrollHeight; // Auto scroll
+                        
+                    } catch (e) { console.log("Parse Error", line); }
                 }
             }
-
         } catch (e) {
-            logBox.innerHTML += `<p class="text-red-500 font-bold bg-red-900/20 p-2 rounded">🔥 Fatal Network Error: ${e}</p>`;
-            btnSend.disabled = false;
-            btnSend.innerText = "Retry Connection";
+            alert("Error: " + e);
+            btn.disabled = false;
+            btn.innerHTML = 'COBA LAGI';
         }
     }
 </script>
