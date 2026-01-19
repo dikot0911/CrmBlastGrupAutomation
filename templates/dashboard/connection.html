@@ -18,37 +18,57 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         {% for acc in accounts %}
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition relative group overflow-hidden">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 relative group overflow-hidden">
+            
             <div class="h-1.5 w-full {{ 'bg-green-500' if acc.is_active else 'bg-yellow-500' }}"></div>
             
             <div class="p-6">
                 <div class="flex justify-between items-start mb-4">
-                    <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl">
-                        <i class="fa-brands fa-telegram"></i>
+                    <div class="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xl font-bold shadow-md">
+                        {{ (acc.first_name[:1] if acc.first_name else 'T') | upper }}
                     </div>
+
                     {% if acc.is_active %}
-                    <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide border border-green-200">
-                        Aktif
+                    <span class="bg-green-50 text-green-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-green-200 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> AKTIF
                     </span>
                     {% else %}
-                    <span class="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide border border-yellow-200">
-                        Pending
+                    <span class="bg-yellow-50 text-yellow-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-yellow-200">
+                        PENDING
                     </span>
                     {% endif %}
                 </div>
                 
-                <h3 class="text-lg font-bold text-gray-800 mb-1">{{ acc.phone_number }}</h3>
-                <p class="text-xs text-gray-400 font-mono">Added: {{ acc.created_at[:10] }}</p>
+                <div class="mb-4">
+                    <h3 class="text-lg font-bold text-gray-900 leading-tight truncate">
+                        {{ acc.first_name }} {{ acc.last_name or '' }}
+                    </h3>
+                    
+                    {% if acc.username %}
+                    <a href="https://t.me/{{ acc.username }}" target="_blank" class="text-indigo-500 text-sm font-medium hover:underline block mb-1">
+                        @{{ acc.username }}
+                    </a>
+                    {% else %}
+                    <span class="text-gray-400 text-xs italic block mb-1">Tidak ada username</span>
+                    {% endif %}
+
+                    <div class="flex items-center gap-2 mt-2 bg-gray-50 px-3 py-1.5 rounded-lg w-fit">
+                        <i class="fa-solid fa-phone text-gray-400 text-xs"></i>
+                        <span class="text-xs font-mono text-gray-600 font-bold">{{ acc.phone_number }}</span>
+                    </div>
+                </div>
                 
-                <div class="mt-6 pt-4 border-t border-gray-50 flex justify-between items-center">
-                    <span class="text-xs text-gray-400">ID: ...{{ acc.id|string|slice(-4) }}</span>
-                    <button onclick="disconnectAccount('{{ acc.phone_number }}')" class="text-red-400 hover:text-red-600 text-sm font-bold flex items-center gap-1 transition">
-                        <i class="fa-solid fa-trash-can"></i> Hapus
+                <div class="pt-4 border-t border-gray-100 flex justify-between items-center">
+                    <span class="text-[10px] text-gray-400 font-mono">ID: #{{ acc.id }}</span>
+                    
+                    <button onclick="disconnectAccount('{{ acc.phone_number }}')" class="text-red-400 hover:text-red-600 text-xs font-bold flex items-center gap-1.5 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition">
+                        <i class="fa-solid fa-trash-can"></i> Putuskan
                     </button>
                 </div>
             </div>
         </div>
         {% else %}
+        
         <div class="col-span-full py-16 text-center bg-white rounded-2xl border-2 border-dashed border-gray-200">
             <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
                 <i class="fa-solid fa-plug-circle-xmark text-4xl"></i>
@@ -60,12 +80,14 @@
 
     </div>
     
-    <div class="mt-8 bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex gap-3 items-center max-w-2xl">
-        <i class="fa-solid fa-circle-info text-indigo-500 text-xl"></i>
+    <div class="mt-8 bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 items-center max-w-2xl">
+        <div class="bg-blue-100 p-2 rounded-full text-blue-600">
+            <i class="fa-solid fa-circle-info"></i>
+        </div>
         <div>
-            <h4 class="text-sm font-bold text-indigo-900">Informasi Paket</h4>
-            <p class="text-xs text-indigo-700 mt-0.5">
-                Paket Free/Basic saat ini mendukung maksimal <b>3 Akun Telegram</b>. Hubungi Admin untuk Enterprise.
+            <h4 class="text-sm font-bold text-blue-900">Multi-Akun Support</h4>
+            <p class="text-xs text-blue-700 mt-0.5">
+                Anda bisa menghubungkan maksimal <b>3 Akun Telegram</b>. Nama akun akan otomatis diperbarui saat login ulang.
             </p>
         </div>
     </div>
@@ -78,7 +100,7 @@
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-95 opacity-0" id="modalPanel">
             
             <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
-                <h3 class="text-white font-bold text-lg"><i class="fa-solid fa-link mr-2"></i> Tambah Akun</h3>
+                <h3 class="text-white font-bold text-lg"><i class="fa-brands fa-telegram mr-2"></i> Tambah Akun</h3>
                 <button onclick="closeModal()" class="text-indigo-200 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
 
@@ -89,7 +111,7 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span class="text-gray-500 font-bold text-sm">🇮🇩</span>
                         </div>
-                        <input type="text" id="phoneInput" placeholder="+628xxx" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-mono">
+                        <input type="text" id="phoneInput" placeholder="+628xxx" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-mono text-gray-800 font-bold">
                     </div>
                     <button onclick="sendOtp()" id="btnSendOtp" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-indigo-200">
                         Kirim Kode OTP
@@ -102,10 +124,10 @@
                         <span>Kode dikirim ke aplikasi Telegram di HP Anda (Bukan SMS).</span>
                     </div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">Kode OTP</label>
-                    <input type="text" id="otpInput" placeholder="12345" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition text-center font-bold text-lg tracking-widest mb-4">
+                    <input type="text" id="otpInput" placeholder="12345" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition text-center font-bold text-2xl tracking-widest mb-4">
                     
                     <div id="passField" class="hidden mb-4 animate-enter">
-                        <label class="block text-sm font-bold text-gray-700 mb-2">Password 2FA (Jika ada)</label>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Password 2FA</label>
                         <input type="password" id="pwInput" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
                     </div>
 
@@ -121,22 +143,17 @@
 <div id="limitModal" class="fixed inset-0 z-[60] hidden">
     <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" onclick="closeLimitModal()"></div>
     <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center transform scale-100 transition-all">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center">
             <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
                 <i class="fa-solid fa-lock"></i>
             </div>
             <h3 class="text-xl font-extrabold text-gray-900 mb-2">Limit Tercapai!</h3>
             <p class="text-sm text-gray-500 mb-6">
-                Anda telah mencapai batas maksimal <b>3 Akun Telegram</b>. Untuk menambah lebih banyak, silakan hubungi admin untuk upgrade ke paket <b>Enterprise</b>.
+                Maksimal 3 Akun Telegram. Hubungi admin untuk upgrade Enterprise.
             </p>
-            <div class="space-y-3">
-                <a href="https://wa.me/628972996650?text=Halo%20Admin%2C%20saya%20mau%20upgrade%20slot%20akun%20Telegram%20dong!" target="_blank" class="block w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition">
-                    <i class="fa-brands fa-whatsapp mr-1"></i> Hubungi Admin
-                </a>
-                <button onclick="closeLimitModal()" class="block w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-200 transition">
-                    Nanti Saja
-                </button>
-            </div>
+            <a href="https://wa.me/628972996650" target="_blank" class="block w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition">
+                Hubungi Admin
+            </a>
         </div>
     </div>
 </div>
@@ -159,7 +176,6 @@
         panel.classList.add('scale-95', 'opacity-0');
         setTimeout(() => {
             modal.classList.add('hidden');
-            // Reset Steps
             document.getElementById('step1').classList.remove('hidden');
             document.getElementById('step2').classList.add('hidden');
             document.getElementById('passField').classList.add('hidden');
@@ -192,7 +208,7 @@
                 document.getElementById('step2').classList.remove('hidden');
             } else if (data.status === 'limit_reached') {
                 closeModal();
-                limitModal.classList.remove('hidden'); // Show Upselling Modal
+                limitModal.classList.remove('hidden');
             } else {
                 alert("Gagal: " + data.message);
             }
@@ -224,7 +240,7 @@
                 location.reload();
             } else if (data.status === '2fa') {
                 document.getElementById('passField').classList.remove('hidden');
-                alert("Akun ini pakai password 2FA. Masukkan password.");
+                alert("Masukkan Password 2FA.");
             } else {
                 alert("Gagal: " + data.message);
             }
@@ -237,23 +253,15 @@
     }
 
     async function disconnectAccount(phone) {
-        if(!confirm(`Yakin mau menghapus akun ${phone}?`)) return;
-        
+        if(!confirm(`Putuskan akun ${phone}?`)) return;
         try {
             const res = await fetch('/api/connect/disconnect', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({phone: phone})
             });
-            const data = await res.json();
-            if(data.status === 'success') {
-                location.reload();
-            } else {
-                alert("Gagal hapus: " + data.message);
-            }
-        } catch(e) {
-            alert("Error koneksi.");
-        }
+            location.reload();
+        } catch(e) { alert("Error koneksi."); }
     }
 </script>
 {% endblock %}
