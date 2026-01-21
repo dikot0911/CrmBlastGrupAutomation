@@ -2449,9 +2449,109 @@ def export_crm_csv():
         flash(f"Gagal export: {e}", "danger")
         return redirect(url_for('dashboard_crm'))
 
+# =====================================================================
+     SECTION 15 : crown job logic shere grup
+# =====================================================================
+async def cron_job(context: ContextTypes.DEFAULT_TYPE):
+    """
+    Dijalankan setiap menit untuk mengecek jadwal post di database.
+    DENGAN FITUR ANTI-FLOOD & BATCHING.
+    """
+    try:
+        conn = get_db_connection()
+        if not conn: return
+        
+        cur = conn.cursor()
+        
+        # Ambil jadwal yang statusnya pending dan waktunya <= sekarang
+        cur.execute("SELECT id, topic_id, file_id, file_type, target_chat_id FROM scheduled_posts WHERE status = 'pending' AND scheduled_time <= NOW()")
+        posts = cur.fetchall()
+        
+        if not posts: 
+            conn.close()
+            return
 
+        # Counter buat ngitung udah berapa post yang dikirim sesi ini
+        sent_count = 0 
+
+        for p in posts:
+            pid, tid, fid, ftype, target_id = p
+            final_target = int(target_id) if target_id else DEFAULT_GROUP_ID
+            
+            try:
+                # LOGIC COPY MESSAGE
+                if str(fid).isdigit() and int(fid) > 0:
+                    await context.bot.copy_message(
+                        chat_id=final_target, 
+                        message_thread_id=tid, 
+                        from_chat_id=STORAGE_CHANNEL_ID, 
+                        message_id=int(fid)
+                    )
+                else:
+                    try: 
+                        await context.bot.send_photo(chat_id=final_target, message_thread_id=tid, photo=fid)
+                    except: 
+                        await context.bot.send_video(chat_id=final_target, message_thread_id=tid, video=fid)
+                
+                # Update status jadi SENT
+                cur.execute("UPDATE scheduled_posts SET status='sent' WHERE id=%s", (pid,))
+                conn.commit() # Commit per pesan biar kalo putus di tengah jalan, yg udah keikirim tetep kecatet
+                
+                logger.info(f"✅ Post ID {pid} Sukses dikirim ke Topik {tid}!")
+                
+                # Nambah counter
+                sent_count += 1
+
+            except Exception as e:
+                err_msg = str(e)
+                logger.error(f"Post {pid} Gagal: {err_msg}")
+                
+                # Fallback ke General Topic
+                if "Message thread not found" in err_msg or "Topik Salah" in err_msg:
+                    try:
+                        logger.info(f"🔄 Fallback ke General untuk ID {pid}")
+                        if str(fid).isdigit() and int(fid) > 0:
+                            await context.bot.copy_message(chat_id=final_target, from_chat_id=STORAGE_CHANNEL_ID, message_id=int(fid))
+                        else:
+                            try: await context.bot.send_photo(chat_id=final_target, photo=fid)
+                            except: await context.bot.send_video(chat_id=final_target, video=fid)
+                        
+                        cur.execute("UPDATE scheduled_posts SET status='sent_general' WHERE id=%s", (pid,))
+                        conn.commit()
+                        sent_count += 1 # Hitung juga sebagai sent
+                    except Exception as e2:
+                        err_msg = f"Failed All: {e2}"
+                        cur.execute("UPDATE scheduled_posts SET status=%s WHERE id=%s", (err_msg[:50], pid))
+                        conn.commit()
+                else:
+                    cur.execute("UPDATE scheduled_posts SET status=%s WHERE id=%s", (err_msg[:50], pid))
+                    conn.commit()
+
+            # ========================================================
+            # 🛡️ LOGIC ANTI-BANNED / SAFETY DELAY
+            # ========================================================
+            
+            # 1. ISTIRAHAT PANJANG (Batching)
+            # Setiap 20 postingan, bot tidur 5 menit (300 detik)
+            if sent_count % 20 == 0:
+                logger.info("😴 Udah kirim 20 pesan. Istirahat 5 menit dulu biar ga kena FloodWait...")
+                await asyncio.sleep(300) 
+                
+            # 2. JEDA ANTAR PESAN (Random 3-7 detik)
+            # Biar kelihatan kayak manusia, bukan robot ngebut
+            else:
+                delay = random.randint(3, 7)
+                logger.info(f"⏳ Nunggu {delay} detik sebelum kirim next...")
+                await asyncio.sleep(delay)
+            # ========================================================
+        
+        cur.close()
+        conn.close()
+        
+    except Exception as e: 
+        logger.error(f"Cron Job Error: {e}")
 # ==============================================================================
-# SECTION 15: INITIALIZATION ROUTINE
+# SECTION 16: INITIALIZATION ROUTINE
 # ==============================================================================
 
 def init_system_check():
