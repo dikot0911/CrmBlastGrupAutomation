@@ -2,340 +2,205 @@
 {% block title %}Profil Saya{% endblock %}
 
 {% block content %}
-<!-- Page Header Animation -->
 <div class="animate-enter">
     
-    <!-- COVER IMAGE & PROFILE HEADER -->
-    <div class="relative mb-8">
-        <!-- Cover Image with Gradient overlay -->
-        <div class="h-48 w-full rounded-3xl overflow-hidden relative shadow-lg">
-            <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 opacity-90"></div>
-            <!-- Decorative Patterns -->
-            <div class="absolute top-0 left-0 w-full h-full opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-            <div class="absolute bottom-4 right-6 text-white text-right">
-                <p class="text-xs font-bold uppercase tracking-widest opacity-70">Member ID</p>
-                <p class="font-mono text-xl font-bold">#{{ user.id|string|zfill(6) }}</p>
-            </div>
+    <div class="relative mb-10">
+        <div class="h-56 w-full rounded-[2.5rem] overflow-hidden relative shadow-2xl">
+            <div class="absolute inset-0 bg-gradient-to-r from-gray-900 via-indigo-900 to-slate-900"></div>
+            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
+            <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-500/30 rounded-full blur-[100px] -mr-20 -mt-20"></div>
         </div>
 
-        <!-- Profile Card -->
-        <div class="absolute -bottom-16 left-6 md:left-10 flex items-end">
-            <div class="relative">
-                <!-- Avatar Circle (Click to Upload) -->
-                <div class="w-32 h-32 bg-white rounded-2xl p-1 shadow-2xl group">
-                    <div class="w-full h-full bg-gray-100 rounded-xl flex items-center justify-center text-4xl font-bold text-gray-400 border-2 border-dashed border-gray-300 relative overflow-hidden cursor-pointer hover:border-indigo-400 transition" onclick="document.getElementById('avatarUpload').click()">
-                        
-                        <!-- Image Preview -->
-                        <img id="avatarPreview" class="hidden w-full h-full object-cover">
-                        
-                        <!-- Placeholder Text -->
-                        <span id="avatarPlaceholder" class="group-hover:opacity-0 transition">{{ user.email[0]|upper }}</span>
-                        
-                        <!-- Hover Overlay -->
-                        <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-white text-sm font-medium">
-                            <i class="fa-solid fa-camera mr-1"></i> Ubah
+        <div class="absolute -bottom-10 left-0 w-full px-8 md:px-12 flex items-end">
+            <div class="flex flex-col md:flex-row items-end gap-6 w-full">
+                
+                <div class="relative group">
+                    <div class="w-32 h-32 md:w-40 md:h-40 bg-white rounded-[2rem] p-1.5 shadow-2xl rotate-2 group-hover:rotate-0 transition-transform duration-300 ease-out">
+                        <div class="w-full h-full bg-gray-100 rounded-[1.8rem] flex items-center justify-center text-5xl font-black text-gray-300 border-2 border-dashed border-gray-300 relative overflow-hidden cursor-pointer hover:border-indigo-500 transition-colors" onclick="document.getElementById('avatarUpload').click()">
+                            <img id="avatarPreview" class="hidden w-full h-full object-cover">
+                            <span id="avatarPlaceholder" class="group-hover:opacity-0 transition duration-300">{{ user.email[0]|upper }}</span>
+                            <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition backdrop-blur-sm">
+                                <i class="fa-solid fa-camera text-white text-2xl mb-1"></i>
+                                <span class="text-white text-[10px] font-bold uppercase">Ubah</span>
+                            </div>
+                            <input type="file" id="avatarUpload" class="hidden" accept="image/*" onchange="previewAvatar(event)">
                         </div>
-                        
-                        <!-- Hidden Input File -->
-                        <input type="file" id="avatarUpload" class="hidden" accept="image/*" onchange="previewAvatar(event)">
+                    </div>
+                    
+                    <div class="absolute -bottom-2 -right-2 w-8 h-8 md:w-10 md:h-10 bg-green-500 rounded-full border-4 border-white flex items-center justify-center text-white shadow-lg" title="Active">
+                        <i class="fa-solid fa-check text-xs md:text-sm"></i>
                     </div>
                 </div>
-                
-                <!-- Status Badge -->
-                <div class="absolute -bottom-2 -right-2 z-10">
-                    {% if user.is_banned %}
-                        <span class="flex h-8 w-8 relative" title="Akun Banned">
-                            <span class="relative inline-flex rounded-full h-8 w-8 bg-red-500 border-4 border-white items-center justify-center text-white text-sm shadow-md">
-                                <i class="fa-solid fa-ban"></i>
-                            </span>
+
+                <div class="mb-2 md:mb-4 flex-1">
+                    <h2 class="text-3xl md:text-4xl font-black text-gray-900 flex items-center gap-3 drop-shadow-sm">
+                        {{ user.email.split('@')[0]|title }}
+                        {% if user.is_admin %}
+                            <span class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] px-3 py-1 rounded-full shadow-md uppercase tracking-wider transform -translate-y-1">Admin</span>
+                        {% endif %}
+                    </h2>
+                    <div class="flex flex-wrap items-center gap-4 mt-2">
+                        <span class="text-gray-500 text-sm font-medium bg-white/80 backdrop-blur-md px-3 py-1 rounded-lg shadow-sm border border-gray-100">
+                            {{ user.email }}
                         </span>
-                    {% else %}
-                        <span class="flex h-8 w-8 relative" title="Akun Aktif">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-8 w-8 bg-green-500 border-4 border-white items-center justify-center text-white text-sm shadow-md">
-                                <i class="fa-solid fa-check"></i>
-                            </span>
+                        <span class="text-indigo-600 text-xs font-bold bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
+                            Member since {{ user.created_at[:4] }}
                         </span>
-                    {% endif %}
+                    </div>
                 </div>
-            </div>
-            
-            <div class="mb-4 ml-6 pb-2">
-                <h2 class="text-3xl font-bold text-gray-800 flex items-center gap-2">
-                    {{ user.email.split('@')[0]|title }}
-                    {% if user.is_admin %}
-                        <span class="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full border border-purple-200 shadow-sm">
-                            <i class="fa-solid fa-crown text-[10px] mr-1"></i> Super Admin
-                        </span>
-                    {% endif %}
-                </h2>
-                <p class="text-gray-500 font-medium text-sm flex items-center gap-2">
-                    <i class="fa-regular fa-envelope"></i> {{ user.email }}
-                </p>
             </div>
         </div>
     </div>
 
-    <!-- Spacer -->
-    <div class="h-16 mb-6"></div>
-
-    <!-- MAIN GRID LAYOUT -->
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-
-        <!-- LEFT COLUMN: MENU & QUICK STATS -->
-        <div class="space-y-8">
+    <div class="h-12 md:h-6"></div> <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start mt-8">
+        
+        <div class="xl:col-span-4 space-y-6 sticky top-8">
             
-            <!-- Quick Menu -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
-                <div class="p-5 border-b border-gray-100 bg-gray-50/50">
-                    <h3 class="font-bold text-gray-800">Navigasi Profil</h3>
-                </div>
-                <div class="p-2">
-                    <button onclick="scrollToSection('personal-info')" class="w-full text-left px-4 py-3 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition flex items-center gap-3 text-sm font-medium text-gray-600 group">
-                        <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition"><i class="fa-regular fa-id-card"></i></div>
-                        Data Pribadi
-                    </button>
-                    <button onclick="scrollToSection('subscription')" class="w-full text-left px-4 py-3 rounded-xl hover:bg-green-50 hover:text-green-600 transition flex items-center gap-3 text-sm font-medium text-gray-600 group">
-                        <div class="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center group-hover:scale-110 transition"><i class="fa-solid fa-receipt"></i></div>
-                        Langganan & Billing
-                    </button>
-                    <button onclick="scrollToSection('telegram-connection')" class="w-full text-left px-4 py-3 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition flex items-center gap-3 text-sm font-medium text-gray-600 group">
-                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center group-hover:scale-110 transition"><i class="fa-brands fa-telegram"></i></div>
-                        Koneksi Telegram
-                    </button>
-                    <button onclick="scrollToSection('security')" class="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 hover:text-red-600 transition flex items-center gap-3 text-sm font-medium text-gray-600 group">
-                        <div class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center group-hover:scale-110 transition"><i class="fa-solid fa-shield-halved"></i></div>
-                        Keamanan & Login
-                    </button>
-                </div>
-            </div>
-
-            <!-- Account Summary Card -->
-            <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-16 -mt-16 blur-xl"></div>
-                <div class="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500 opacity-20 rounded-full -ml-16 -mb-16 blur-2xl"></div>
-
-                <div class="relative z-10">
-                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Statistik Akun</h4>
-                    
-                    <div class="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
-                        <span class="text-sm text-gray-300">Bergabung Sejak</span>
-                        <span class="font-mono font-bold">{{ user.created_at[:10] }}</span>
-                    </div>
-                    
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="text-sm text-gray-300">Tipe Akun</span>
-                        <span class="bg-indigo-600 px-3 py-1 rounded-full text-xs font-bold border border-indigo-400">PRO PLAN</span>
-                    </div>
-
-                    <div class="mt-6">
-                        <div class="flex justify-between text-xs mb-2">
-                            <span class="text-gray-400">Kuota Blast Harian</span>
-                            <span class="font-bold text-white">Unlimited</span>
+            <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-2 space-y-1">
+                    <button onclick="scrollToSection('personal-info')" class="w-full text-left px-5 py-4 rounded-2xl hover:bg-gray-50 transition flex items-center gap-4 group">
+                        <div class="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition shadow-sm"><i class="fa-regular fa-user"></i></div>
+                        <div class="flex-1">
+                            <span class="block text-sm font-bold text-gray-700">Data Pribadi</span>
+                            <span class="block text-xs text-gray-400">Edit informasi akun</span>
                         </div>
-                        <div class="w-full bg-gray-700 rounded-full h-2">
-                            <div class="bg-green-400 h-2 rounded-full" style="width: 100%"></div>
+                    </button>
+
+                    <button onclick="scrollToSection('subscription')" class="w-full text-left px-5 py-4 rounded-2xl hover:bg-gray-50 transition flex items-center gap-4 group">
+                        <div class="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition shadow-sm"><i class="fa-solid fa-gem"></i></div>
+                        <div class="flex-1">
+                            <span class="block text-sm font-bold text-gray-700">Langganan</span>
+                            <span class="block text-xs text-gray-400">Status paket aktif</span>
                         </div>
-                    </div>
+                    </button>
+
+                    <button onclick="scrollToSection('telegram-connection')" class="w-full text-left px-5 py-4 rounded-2xl hover:bg-gray-50 transition flex items-center gap-4 group">
+                        <div class="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition shadow-sm"><i class="fa-brands fa-telegram"></i></div>
+                        <div class="flex-1">
+                            <span class="block text-sm font-bold text-gray-700">Koneksi</span>
+                            <span class="block text-xs text-gray-400">Kelola akun terhubung</span>
+                        </div>
+                    </button>
+                    
+                     <button onclick="scrollToSection('security')" class="w-full text-left px-5 py-4 rounded-2xl hover:bg-gray-50 transition flex items-center gap-4 group">
+                        <div class="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition shadow-sm"><i class="fa-solid fa-lock"></i></div>
+                        <div class="flex-1">
+                            <span class="block text-sm font-bold text-gray-700">Keamanan</span>
+                            <span class="block text-xs text-gray-400">Password & Privasi</span>
+                        </div>
+                    </button>
                 </div>
             </div>
 
         </div>
 
-        <!-- CENTER/RIGHT COLUMN: DETAIL SECTIONS -->
-        <div class="xl:col-span-2 space-y-8">
-
-            <!-- SECTION 1: PERSONAL INFO -->
-            <div id="personal-info" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 scroll-mt-24">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <span class="w-1 h-6 bg-indigo-600 rounded-full"></span> Data Pribadi
-                    </h3>
-                    <button type="button" onclick="toggleEditMode()" id="btn-edit-profile" class="text-sm text-indigo-600 font-bold hover:underline bg-indigo-50 px-3 py-1.5 rounded-lg transition">
-                        <i class="fa-solid fa-pen-to-square mr-1"></i> Edit Data
+        <div class="xl:col-span-8 space-y-8">
+            
+            <div id="personal-info" class="bg-white rounded-[2rem] border border-gray-200 p-8 shadow-sm scroll-mt-24 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fa-regular fa-id-card text-9xl text-gray-300"></i></div>
+                
+                <div class="flex justify-between items-center mb-8 relative z-10">
+                    <h3 class="text-xl font-extrabold text-gray-900">Data Pribadi</h3>
+                    <button onclick="toggleEditMode()" id="btn-edit-profile" class="text-indigo-600 text-sm font-bold hover:bg-indigo-50 px-4 py-2 rounded-lg transition border border-indigo-100">
+                        Edit Data
                     </button>
                 </div>
 
-                <form id="profileForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form id="profileForm" class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nama Lengkap</label>
-                        <input type="text" value="User BlastPro" class="profile-input w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition disabled:opacity-60 disabled:cursor-not-allowed" disabled>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Email</label>
+                        <input type="email" value="{{ user.email }}" class="profile-input w-full px-5 py-3.5 bg-gray-50 border-none rounded-xl text-gray-600 font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 transition" disabled>
                     </div>
-                    
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
-                        <input type="email" value="{{ user.email }}" class="profile-input w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition disabled:opacity-60 disabled:cursor-not-allowed" disabled>
+                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">WhatsApp</label>
+                        <input type="text" placeholder="+62..." class="profile-input w-full px-5 py-3.5 bg-gray-50 border-none rounded-xl text-gray-600 font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 transition" disabled>
                     </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nomor WhatsApp</label>
-                        <input type="text" placeholder="+62..." class="profile-input w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition disabled:opacity-60 disabled:cursor-not-allowed" disabled>
+                    <div class="md:col-span-2">
+                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nama Bisnis</label>
+                        <input type="text" placeholder="Contoh: Baba Parfume Store" class="profile-input w-full px-5 py-3.5 bg-gray-50 border-none rounded-xl text-gray-600 font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 transition" disabled>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nama Bisnis / Toko</label>
-                        <input type="text" placeholder="Baba Parfume ..." class="profile-input w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition disabled:opacity-60 disabled:cursor-not-allowed" disabled>
-                    </div>
-                    
-                    <div class="md:col-span-2 flex justify-end mt-4 hidden" id="save-profile-container">
-                        <button type="button" class="bg-gray-200 text-gray-600 px-4 py-2.5 rounded-xl font-bold mr-2 hover:bg-gray-300 transition" onclick="toggleEditMode()">Batal</button>
-                        <button type="button" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200" onclick="alert('Data berhasil disimpan (Simulasi)')">
-                            Simpan Perubahan
-                        </button>
+                    <div class="md:col-span-2 flex justify-end gap-3 mt-2 hidden animate-enter" id="save-profile-container">
+                        <button type="button" class="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100" onclick="toggleEditMode()">Batal</button>
+                        <button type="button" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg" onclick="alert('Data tersimpan!')">Simpan</button>
                     </div>
                 </form>
             </div>
 
-            <!-- SECTION 2: TELEGRAM CONNECTION STATUS -->
-            <div id="telegram-connection" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 relative overflow-hidden scroll-mt-24">
-                <!-- Background Decor -->
-                <div class="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full -mr-32 -mt-32 opacity-50 blur-3xl pointer-events-none"></div>
+            <div id="subscription" class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden scroll-mt-24">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-green-500/20 rounded-full blur-[80px] -mr-16 -mt-16"></div>
                 
-                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-6">
-                    <span class="w-1 h-6 bg-blue-500 rounded-full"></span> Status Telegram
-                </h3>
-
-                <div class="flex flex-col md:flex-row gap-8 items-center">
-                    <!-- Icon Status -->
-                    <div class="w-24 h-24 flex-shrink-0 rounded-full flex items-center justify-center relative {{ 'bg-green-50' if user.telegram_account.is_active else 'bg-red-50' }}">
-                        {% if user.telegram_account.is_active %}
-                            <div class="absolute inset-0 border-4 border-green-100 rounded-full animate-pulse"></div>
-                            <i class="fa-brands fa-telegram text-5xl text-green-500"></i>
-                            <div class="absolute bottom-1 right-1 w-7 h-7 bg-green-500 border-4 border-white rounded-full flex items-center justify-center text-[10px] text-white shadow-sm">
-                                <i class="fa-solid fa-check"></i>
-                            </div>
-                        {% else %}
-                            <i class="fa-solid fa-link-slash text-4xl text-red-500 opacity-50"></i>
-                        {% endif %}
+                <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div>
+                        <span class="inline-block px-3 py-1 rounded-lg bg-green-500/20 text-green-300 text-[10px] font-bold uppercase tracking-wider border border-green-500/30 mb-3">Status Langganan</span>
+                        <h3 class="text-3xl font-black mb-1">UMKM PRO</h3>
+                        <p class="text-gray-400 text-sm">Fitur premium aktif sepenuhnya.</p>
                     </div>
-
-                    <!-- Details -->
-                    <div class="flex-1 w-full">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                            <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <span class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Nomor Terhubung</span>
-                                <div class="text-lg font-mono font-bold text-gray-800">
-                                    {{ user.telegram_account.phone_number if user.telegram_account else '-' }}
-                                </div>
-                            </div>
-                            <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <span class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Status Sesi</span>
-                                <div>
-                                    {% if user.telegram_account.is_active %}
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-green-100 text-green-700 border border-green-200">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-green-600"></span> AKTIF
-                                        </span>
-                                    {% else %}
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-red-100 text-red-700 border border-red-200">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-red-600"></span> TERPUTUS
-                                        </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="flex gap-3">
-                            {% if user.telegram_account.is_active %}
-                                <button class="px-5 py-2.5 border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-50 transition flex items-center gap-2" onclick="window.location.href='/dashboard/connection'">
-                                    <i class="fa-solid fa-power-off"></i> Putuskan
-                                </button>
-                                <button class="px-5 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition flex items-center gap-2 border border-blue-100">
-                                    <i class="fa-solid fa-rotate"></i> Refresh Status
-                                </button>
-                            {% else %}
-                                <button class="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2" onclick="window.location.href='/dashboard/connection'">
-                                    <i class="fa-solid fa-plug"></i> Hubungkan Telegram
-                                </button>
-                            {% endif %}
-                        </div>
-                    </div>
+                    
+                    <a href="/payment.html" class="px-6 py-3 bg-white text-gray-900 rounded-xl font-bold text-sm hover:bg-green-400 transition shadow-lg shadow-white/10 flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Upgrade Paket
+                    </a>
                 </div>
-            </div>
 
-            <!-- SECTION 3: SUBSCRIPTION -->
-            <div id="subscription" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 scroll-mt-24">
-                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-6">
-                    <span class="w-1 h-6 bg-green-500 rounded-full"></span> Paket Langganan
-                </h3>
-
-                <div class="flex flex-col md:flex-row gap-6">
-                    <!-- Current Plan -->
-                    <div class="flex-1 bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 rounded-2xl p-6 relative overflow-hidden">
-                        <div class="relative z-10">
-                            <span class="bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Paket Saat Ini</span>
-                            <h4 class="text-3xl font-extrabold text-green-900 mt-3 mb-1">UMKM PRO</h4>
-                            <p class="text-green-700 text-sm mb-6 opacity-80">Fitur penuh, tanpa batasan blast.</p>
-                            
-                            <div class="flex items-end gap-1 mb-2">
-                                <span class="text-4xl font-bold text-green-800">28</span>
-                                <span class="text-sm text-green-700 mb-1 font-bold">Hari Lagi</span>
-                            </div>
-                            
-                            <!-- Progress Bar -->
-                            <div class="w-full bg-white/50 rounded-full h-2.5 mb-2 backdrop-blur-sm">
-                                <div class="bg-green-500 h-2.5 rounded-full" style="width: 25%"></div>
-                            </div>
-                            <p class="text-xs text-green-800 font-medium">Berakhir: 12 Desember 2026</p>
-                        </div>
-                        
-                        <i class="fa-solid fa-leaf absolute -bottom-4 -right-4 text-9xl text-green-600 opacity-10 rotate-12"></i>
-                    </div>
-
-                    <!-- Billing History -->
-                    <div class="flex-1 border border-gray-100 rounded-2xl p-5 flex flex-col">
-                        <div class="flex justify-between items-center mb-4">
-                            <h5 class="font-bold text-gray-700 text-sm">Riwayat Tagihan</h5>
-                            <button class="text-xs text-indigo-600 font-bold hover:underline">Lihat Semua</button>
-                        </div>
-                        <ul class="space-y-3 flex-1">
-                            <li class="flex justify-between items-center text-sm p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-lg bg-white border border-gray-200 text-green-600 flex items-center justify-center shadow-sm"><i class="fa-solid fa-receipt"></i></div>
-                                    <div>
-                                        <p class="font-bold text-gray-800">Invoice #INV-001</p>
-                                        <p class="text-xs text-gray-400">14 Jan 2026</p>
-                                    </div>
-                                </div>
-                                <span class="font-bold text-gray-700">Rp 99.000</span>
-                            </li>
-                        </ul>
-                        <button class="w-full mt-4 py-2.5 text-sm text-indigo-600 font-bold hover:bg-indigo-50 rounded-xl transition border border-dashed border-indigo-200 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-download"></i> Download Invoice
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 4: SECURITY -->
-            <div id="security" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 scroll-mt-24">
-                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2 mb-6">
-                    <span class="w-1 h-6 bg-red-500 rounded-full"></span> Keamanan
-                </h3>
-
-                <div class="space-y-6">
-                    <div class="flex flex-col md:flex-row justify-between items-center pb-6 border-b border-gray-100 gap-4">
+                <div class="mt-8 bg-white/5 rounded-2xl p-6 border border-white/10 backdrop-blur-sm">
+                    <div class="flex justify-between items-end mb-3">
                         <div>
-                            <h5 class="font-bold text-gray-800 text-sm">Password Login</h5>
-                            <p class="text-sm text-gray-500">Update password Anda secara berkala untuk keamanan.</p>
+                            <p class="text-xs text-gray-400 font-bold uppercase">Masa Aktif</p>
+                            <p class="text-2xl font-mono font-bold text-green-400 mt-1">28 Hari Lagi</p>
                         </div>
-                        <button class="w-full md:w-auto px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition shadow-sm">
-                            Ubah Password
-                        </button>
+                        <p class="text-[10px] text-gray-500">Berakhir 12 Des 2026</p>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                        <div class="bg-gradient-to-r from-green-400 to-emerald-500 h-full rounded-full" style="width: 25%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="telegram-connection" class="bg-white rounded-[2rem] border border-gray-200 p-8 shadow-sm scroll-mt-24">
+                 <h3 class="text-xl font-extrabold text-gray-900 mb-6">Koneksi Telegram</h3>
+                 
+                 <div class="flex items-center gap-6 p-6 rounded-2xl border {{ 'border-green-200 bg-green-50/50' if user.telegram_account.is_active else 'border-red-200 bg-red-50/50' }}">
+                     <div class="w-16 h-16 rounded-full flex items-center justify-center text-3xl {{ 'bg-green-100 text-green-600' if user.telegram_account.is_active else 'bg-red-100 text-red-600' }}">
+                         <i class="fa-brands fa-telegram"></i>
+                     </div>
+                     <div class="flex-1">
+                         <p class="text-xs font-bold uppercase tracking-wider {{ 'text-green-700' if user.telegram_account.is_active else 'text-red-700' }}">
+                             {{ 'TERHUBUNG' if user.telegram_account.is_active else 'TERPUTUS' }}
+                         </p>
+                         <p class="text-lg font-bold text-gray-800 font-mono mt-1">
+                             {{ user.telegram_account.phone_number if user.telegram_account else 'Belum ada akun' }}
+                         </p>
+                     </div>
+                     <a href="/dashboard/connection" class="px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold hover:border-indigo-500 hover:text-indigo-600 transition shadow-sm">
+                         Kelola
+                     </a>
+                 </div>
+            </div>
+
+            <div id="security" class="bg-white rounded-[2rem] border border-gray-200 p-8 shadow-sm scroll-mt-24">
+                <h3 class="text-xl font-extrabold text-gray-900 mb-6">Keamanan</h3>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 rounded-xl hover:bg-gray-50 transition cursor-pointer group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition"><i class="fa-solid fa-key"></i></div>
+                            <div>
+                                <p class="font-bold text-gray-800 text-sm">Ganti Password</p>
+                                <p class="text-xs text-gray-400">Terakhir diubah 30 hari lalu</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-gray-600"></i>
                     </div>
 
-                    <div class="pt-2">
-                        <div class="bg-red-50 border border-red-100 rounded-xl p-5 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center justify-between p-4 rounded-xl hover:bg-red-50 transition cursor-pointer group border border-transparent hover:border-red-100">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center group-hover:bg-red-100 transition"><i class="fa-solid fa-trash-can"></i></div>
                             <div>
-                                <h5 class="font-bold text-red-700 text-sm flex items-center gap-2">
-                                    <i class="fa-solid fa-triangle-exclamation"></i> Danger Zone
-                                </h5>
-                                <p class="text-sm text-red-600/80 mt-1">Menghapus akun bersifat permanen dan tidak bisa dibatalkan.</p>
+                                <p class="font-bold text-red-600 text-sm">Hapus Akun</p>
+                                <p class="text-xs text-red-400">Tindakan ini permanen</p>
                             </div>
-                            <button onclick="if(confirm('PERINGATAN: Aksi ini permanen. Lanjutkan?')) alert('Hubungi Super Admin.')" class="w-full md:w-auto bg-white text-red-600 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-red-100 transition border border-red-200 shadow-sm">
-                                Hapus Akun
-                            </button>
                         </div>
+                        <button class="text-xs font-bold text-red-500 bg-white border border-red-200 px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition">Hapus</button>
                     </div>
                 </div>
             </div>
@@ -348,40 +213,47 @@
 {% block scripts %}
 <script>
     function scrollToSection(id) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            
-            // Highlight Animation
-            element.classList.add('ring-4', 'ring-indigo-100', 'transition-all', 'duration-500');
-            setTimeout(() => {
-                element.classList.remove('ring-4', 'ring-indigo-100');
-            }, 1500);
+        const el = document.getElementById(id);
+        if(el) {
+            const y = el.getBoundingClientRect().top + window.pageYOffset - 100;
+            window.scrollTo({top: y, behavior: 'smooth'});
+            el.classList.add('ring-4', 'ring-indigo-100');
+            setTimeout(() => el.classList.remove('ring-4', 'ring-indigo-100'), 1000);
         }
     }
 
     function toggleEditMode() {
-        // Logic toggle disabled input (sama seperti sebelumnya)
         const inputs = document.querySelectorAll('.profile-input');
-        const saveContainer = document.getElementById('save-profile-container');
+        const saveBox = document.getElementById('save-profile-container');
         const btn = document.getElementById('btn-edit-profile');
-        let isDisabled = inputs[0].disabled;
-        inputs.forEach(i => i.disabled = !isDisabled);
-        saveContainer.classList.toggle('hidden');
-        btn.classList.toggle('hidden');
+        
+        let disabled = inputs[0].disabled;
+        inputs.forEach(i => {
+            i.disabled = !disabled;
+            if(!disabled) { i.classList.remove('bg-gray-50'); i.classList.add('bg-white', 'ring-4', 'ring-indigo-50'); }
+            else { i.classList.add('bg-gray-50'); i.classList.remove('bg-white', 'ring-4', 'ring-indigo-50'); }
+        });
+
+        if(disabled) {
+            saveBox.classList.remove('hidden');
+            btn.classList.add('hidden');
+            inputs[0].focus();
+        } else {
+            saveBox.classList.add('hidden');
+            btn.classList.remove('hidden');
+        }
     }
 
-    function previewAvatar(event) {
-        const file = event.target.files[0];
-        if (file) {
+    function previewAvatar(e) {
+        const file = e.target.files[0];
+        if(file) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function(ev) {
                 const img = document.getElementById('avatarPreview');
-                const placeholder = document.getElementById('avatarPlaceholder');
-                
-                img.src = e.target.result;
+                const ph = document.getElementById('avatarPlaceholder');
+                img.src = ev.target.result;
                 img.classList.remove('hidden');
-                placeholder.classList.add('hidden');
+                ph.classList.add('hidden');
             }
             reader.readAsDataURL(file);
         }
