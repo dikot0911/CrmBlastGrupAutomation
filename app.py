@@ -285,28 +285,31 @@ class MessageTemplateManager:
             # Tangkap Error Lainnya
             return False, f"⚠️ System Error: {str(e)}"
 # ==============================================================================
-# SECTION 4.6: SCHEDULER & AUTO-BLAST WORKER (NEW FEATURE)
+# SECTION 4.6: SCHEDULER & AUTO-BLAST WORKER (HUMAN MODE v4)
 # ==============================================================================
-# Worker ini akan berjalan di background untuk mengecek jadwal setiap menit.
-# Ini melengkapi fitur "Jadwal" yang sebelumnya hanya menyimpan data.
+from concurrent.futures import ThreadPoolExecutor
 
 class SchedulerWorker:
     """
-    Worker cerdas dengan TIMEZONE WIB (Asia/Jakarta).
-    Anti-Drama UTC. Input jam 7, jalan jam 7 WIB.
+    Worker Cerdas v4:
+    - Timezone WIB
+    - Human Delay (3-10s)
+    - Batch Rest (10-15 posts -> sleep 3-5 mins)
+    - 4-Stage Smart Retry Logic
     """
-    
+    # Batasi worker biar server gak meledak (Max 5 tugas barengan)
+    executor = ThreadPoolExecutor(max_workers=5)
+
     @staticmethod
     def start():
         threading.Thread(target=SchedulerWorker._loop, daemon=True, name="SchedulerEngine").start()
-        logger.info("🕒 Scheduler Engine Started (Timezone: Asia/Jakarta)")
+        logger.info("🕒 Scheduler Engine Started (Human Mode v4 Active)")
 
     @staticmethod
     def _loop():
-        """Main Loop: Cek setiap detik ke-00"""
         while True:
             try:
-                # 1. Ambil Waktu Sekarang tapi PAKSA ke WIB
+                # 1. Waktu WIB
                 tz_indo = pytz.timezone('Asia/Jakarta')
                 now_indo = datetime.now(tz_indo)
 
@@ -314,8 +317,7 @@ class SchedulerWorker:
                 if supabase:
                     SchedulerWorker._process_schedules(now_indo)
                 
-                # 3. Logic Sleep Pintar (Biar pas di detik 00 menit berikutnya)
-                # Biar CPU gak panas ngecek mulu, tapi akurat
+                # 3. Sleep Pintar (Tunggu detik 00 menit berikutnya)
                 sleep_time = 60 - datetime.now().second
                 time.sleep(sleep_time)
                 
@@ -325,16 +327,10 @@ class SchedulerWorker:
 
     @staticmethod
     def _process_schedules(current_time_indo):
-        """Logika inti pengecekan jadwal"""
         try:
-            # Ambil Jam & Menit versi INDONESIA
             current_hour = current_time_indo.hour
             current_minute = current_time_indo.minute
             
-            # Debug log (biar lu tau server lagi mikir jam berapa)
-            # logger.info(f"Checking Schedule for: {current_hour}:{current_minute} WIB")
-
-            # Query ke Database (Cari yang jam & menitnya SAMA PERSIS)
             res = supabase.table('blast_schedules').select("*")\
                 .eq('is_active', True)\
                 .eq('run_hour', current_hour)\
@@ -342,73 +338,53 @@ class SchedulerWorker:
                 .execute()
                 
             schedules = res.data
-            
-            if not schedules:
-                return # Gak ada jadwal di menit ini
+            if not schedules: return
                 
-            logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal untuk jam {current_hour}:{current_minute} WIB")
+            logger.info(f"🚀 EXECUTE: {len(schedules)} tasks queued for {current_hour}:{current_minute}")
             
             for task in schedules:
-                threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
+                SchedulerWorker.executor.submit(SchedulerWorker._execute_task, task)
                 
         except Exception as e:
             logger.error(f"Scheduler Process Error: {e}")
 
     @staticmethod
     def _execute_task(task):
-        """
-        Eksekusi satu task jadwal dengan dukungan Multi-Account & Forum Topic.
-        Logika: Cek dulu sender_phone, kalau ada pakai itu. Kalau mati/gak ada, pakai akun default.
-        """
         user_id = task['user_id']
         template_id = task.get('template_id') 
         target_group_id = task.get('target_group_id') 
-        sender_phone = task.get('sender_phone') # [NEW] Ambil preferensi akun pengirim
+        sender_phone = task.get('sender_phone')
         
-        # 1. Siapkan Pesan & Media
+        # Siapkan Konten
         message_content = "Halo! Ini pesan terjadwal otomatis."
         source_media = None
-        
         if template_id:
             tmpl = MessageTemplateManager.get_template_by_id(template_id)
             if tmpl:
                 message_content = tmpl['message_text']
-                # Cek Reference Media (Untuk forward media dari cloud)
                 if tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
                     source_media = {'chat': int(tmpl['source_chat_id']), 'id': int(tmpl['source_message_id'])}
 
-        # 2. Worker Async (Core Logic)
+        # --- LOGIC UTAMA ASYNC ---
         async def _async_send():
             client = None
-            
-            # [LOGIC BARU: PILIH AKUN PENGIRIM]
-            # Jika user memilih nomor spesifik di jadwal, kita coba connect pakai nomor itu
+            # [Logic Switch Akun]
             if sender_phone and sender_phone != 'auto':
                 try:
-                    # Ambil session string khusus akun tersebut dari database
                     res = supabase.table('telegram_accounts').select("session_string")\
-                        .eq('user_id', user_id)\
-                        .eq('phone_number', sender_phone)\
-                        .eq('is_active', True)\
-                        .execute()
-                    
+                        .eq('user_id', user_id).eq('phone_number', sender_phone).eq('is_active', True).execute()
                     if res.data:
-                        # Connect manual pakai session string akun tsb
-                        session_str = res.data[0]['session_string']
-                        client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
+                        client = TelegramClient(StringSession(res.data[0]['session_string']), API_ID, API_HASH)
                         await client.connect()
-                except Exception as e:
-                    print(f"⚠️ Gagal switch ke akun {sender_phone}: {e}")
+                except Exception: pass
 
-            # Fallback: Kalau akun spesifik mati atau user pilih 'Auto', pakai akun default (yg pertama aktif)
             if not client or not await client.is_user_authorized():
                 client = await get_active_client(user_id)
             
-            # Kalau semua akun mati, nyerah.
             if not client: return 
             
             try:
-                # Load Media dari Cloud Telegram (jika ada di template)
+                # Load Media
                 media_obj = None
                 if source_media:
                     try:
@@ -416,70 +392,185 @@ class SchedulerWorker:
                         if src_msg and src_msg.media: media_obj = src_msg.media
                     except: pass
 
-                # Ambil Target Audience
+                # Ambil Target
                 targets_query = supabase.table('blast_targets').select("*").eq('user_id', user_id)
-                # Filter jika user memilih grup target spesifik
                 if target_group_id: targets_query = targets_query.eq('id', target_group_id)
                 targets = targets_query.execute().data
                 
-                # Loop kirim ke setiap target
-                for tg in targets:
-                    try:
-                        entity = await client.get_entity(int(tg['group_id']))
-                        
-                        # Handling Topik Forum
-                        topic_ids = []
-                        if tg.get('topic_ids'):
-                            try: topic_ids = [int(x.strip()) for x in str(tg['topic_ids']).split(',') if x.strip().isdigit()]
-                            except: pass
-                        
-                        # Jika ada topik, kirim ke masing-masing topik. Jika tidak, kirim ke General (None)
-                        destinations = topic_ids if topic_ids else [None]
-                        
-                        for top_id in destinations:
-                            final_msg = message_content.replace("{name}", tg.get('group_name') or "Kak")
-                            
-                            # Eksekusi Kirim
-                            if media_obj:
-                                await client.send_file(entity, media_obj, caption=final_msg, reply_to=top_id)
-                            else:
-                                await client.send_message(entity, final_msg, reply_to=top_id)
-                            
-                            # Catat Log Sukses
-                            # Info sender dicatat biar user tau "Oh ini dikirim sama akun B"
-                            sender_info = f"via {sender_phone}" if sender_phone else "via Default"
-                            topik_info = f" (Topic: {top_id})" if top_id else ""
-                            
-                            supabase.table('blast_logs').insert({
-                                "user_id": user_id, 
-                                "group_name": f"{tg['group_name']}{topik_info} ({sender_info})",
-                                "group_id": tg['group_id'], 
-                                "status": "SUCCESS", 
-                                "created_at": datetime.utcnow().isoformat()
-                            }).execute()
-                            
-                            # Jeda random biar aman (Anti-Flood)
-                            await asyncio.sleep(random.randint(5, 10)) 
+                # --- VARIABEL KONTROL HUMANIS ---
+                sent_count = 0
+                failed_queue = [] # Penampung untuk Retry Tahap 2, 3, 4
+                
+                # Target Batching Random (10-15 pesan)
+                next_rest_target = random.randint(10, 15)
 
-                    except Exception as e:
-                        # Log Gagal
-                        supabase.table('blast_logs').insert({
-                            "user_id": user_id, 
-                            "group_name": tg.get('group_name', '?'),
-                            "status": "FAILED", 
-                            "error_message": str(e), 
-                            "created_at": datetime.utcnow().isoformat()
-                        }).execute()
+                # ==========================================
+                # FASE 1: KIRIM UTAMA (Percobaan 1)
+                # ==========================================
+                for tg in targets:
+                    # 1. Istirahat Panjang (Batching)
+                    if sent_count >= next_rest_target:
+                        rest_sec = random.randint(180, 300) # 3 - 5 Menit
+                        logger.info(f"☕ [Scheduler] Target {next_rest_target} tercapai. Istirahat {rest_sec}s...")
+                        await asyncio.sleep(rest_sec)
+                        
+                        # Reset Counter
+                        sent_count = 0
+                        next_rest_target = random.randint(10, 15)
+
+                    # 2. Proses Kirim
+                    success = await SchedulerWorker._send_one_message(
+                        client, tg, message_content, media_obj, user_id, sender_phone
+                    )
+
+                    if success:
+                        sent_count += 1
+                        # 3. Jeda Micro Antar Grup (3-10 detik)
+                        delay = random.randint(3, 10)
+                        logger.info(f"⏳ [Scheduler] Jeda aman {delay}s...")
+                        await asyncio.sleep(delay)
+                    else:
+                        # Auto-Skip & Masukkan Antrean Belakang
+                        logger.warning(f"⚠️ [Scheduler] Gagal ke {tg.get('group_name')}, masuk antrean Retry-2.")
+                        failed_queue.append(tg)
+                
+                # ==========================================
+                # FASE 2: RETRY IMMEDIATE (Percobaan 2 - Belakang Antrean)
+                # ==========================================
+                retry_later_list = [] # Untuk percobaan 3 & 4 (Long Term)
+
+                if failed_queue:
+                    logger.info(f"🔄 [Retry-2] Mencoba ulang {len(failed_queue)} grup gagal...")
+                    await asyncio.sleep(15) # Napas dulu
+                    
+                    for tg in failed_queue:
+                        success = await SchedulerWorker._send_one_message(
+                            client, tg, message_content, media_obj, user_id, sender_phone, attempt_label="Retry-2"
+                        )
+                        if success:
+                            await asyncio.sleep(random.randint(5, 12))
+                        else:
+                            # Masih gagal? Lempar ke Long Retry
+                            retry_later_list.append(tg)
+
+                # ==========================================
+                # FASE 3 & 4: LONG DELAY RETRY (Background Task)
+                # ==========================================
+                if retry_later_list:
+                    # Jalankan di background task terpisah agar tidak memblokir worker utama terlalu lama
+                    # Ini akan jalan: Tunggu 10 menit -> Coba -> Tunggu 5 menit -> Coba Final
+                    asyncio.create_task(SchedulerWorker._long_retry_process(
+                        user_id, sender_phone, retry_later_list, message_content, source_media
+                    ))
+
             finally: 
                 await client.disconnect()
         
-        # Jalankan worker async di event loop baru
         run_async(_async_send())
 
+    @staticmethod
+    async def _send_one_message(client, tg, content, media, user_id, sender_phone, attempt_label=""):
+        """Helper: Kirim pesan tunggal dengan Error Handling & Logging"""
+        try:
+            entity = await client.get_entity(int(tg['group_id']))
+            
+            # Handle Topics
+            topic_ids = []
+            if tg.get('topic_ids'):
+                try: topic_ids = [int(x.strip()) for x in str(tg['topic_ids']).split(',') if x.strip().isdigit()]
+                except: pass
+            destinations = topic_ids if topic_ids else [None]
+            
+            for top_id in destinations:
+                final_msg = content.replace("{name}", tg.get('group_name') or "Kak")
+                
+                if media:
+                    await client.send_file(entity, media, caption=final_msg, reply_to=top_id)
+                else:
+                    await client.send_message(entity, final_msg, reply_to=top_id)
+                
+                # Log Database
+                sender_info = f"via {sender_phone}" if sender_phone else "via Default"
+                status_txt = "SUCCESS" if not attempt_label else f"SUCCESS ({attempt_label})"
+                
+                supabase.table('blast_logs').insert({
+                    "user_id": user_id, 
+                    "group_name": f"{tg['group_name']} ({sender_info})",
+                    "group_id": tg['group_id'], 
+                    "status": status_txt, 
+                    "created_at": datetime.utcnow().isoformat()
+                }).execute()
+            return True
 
-# Jalankan Scheduler saat app start
-if supabase:
-    SchedulerWorker.start()
+        except Exception as e:
+            err_msg = str(e)
+            # Handle FloodWait Khusus
+            if "FloodWait" in err_msg:
+                import re
+                wait = int(re.search(r'\d+', err_msg).group()) if re.search(r'\d+', err_msg) else 10
+                # Jika disuruh nunggu < 2 menit, kita tungguin aja. Kalau kelamaan, skip.
+                if wait <= 120: 
+                    await asyncio.sleep(wait)
+            return False
+
+    @staticmethod
+    async def _long_retry_process(user_id, sender_phone, targets, content, source_media):
+        """
+        Background Task untuk Percobaan ke-3 (10 menit) dan ke-4 (5 menit setelahnya).
+        """
+        client = None
+        try:
+            # Re-connect client baru (karena yg lama udah disconnect)
+            client = await get_active_client(user_id) 
+            if not client: return
+
+            # --- PERCOBAAN KE-3 (Tunggu 10 Menit) ---
+            logger.info(f"⏳ [LongRetry] Menunggu 10 menit untuk percobaan ke-3...")
+            await asyncio.sleep(600) 
+
+            final_failed_round_3 = []
+            
+            # Re-fetch Media
+            media_obj = None
+            if source_media:
+                try:
+                    src = await client.get_messages(source_media['chat'], ids=source_media['id'])
+                    if src and src.media: media_obj = src.media
+                except: pass
+
+            for tg in targets:
+                success = await SchedulerWorker._send_one_message(
+                    client, tg, content, media_obj, user_id, sender_phone, attempt_label="Retry-3"
+                )
+                if not success: final_failed_round_3.append(tg)
+                else: await asyncio.sleep(random.randint(5, 10))
+
+            if not final_failed_round_3: return
+
+            # --- PERCOBAAN KE-4 (Tunggu 5 Menit lagi) ---
+            logger.info(f"⏳ [LongRetry] Menunggu 5 menit untuk percobaan FINAL...")
+            await asyncio.sleep(300)
+
+            for tg in final_failed_round_3:
+                success = await SchedulerWorker._send_one_message(
+                    client, tg, content, media_obj, user_id, sender_phone, attempt_label="Retry-4 (Final)"
+                )
+                if not success:
+                    # GAGAL TOTAL
+                    supabase.table('blast_logs').insert({
+                        "user_id": user_id, 
+                        "group_name": tg.get('group_name'),
+                        "status": "FAILED (Final)", 
+                        "error_message": "Gagal setelah 4x percobaan (Scheduler).", 
+                        "created_at": datetime.utcnow().isoformat()
+                    }).execute()
+                else:
+                    await asyncio.sleep(random.randint(5, 10))
+
+        except Exception as e:
+            logger.error(f"Long Retry Error: {e}")
+        finally:
+            if client: await client.disconnect()
 
 # ==============================================================================
 # SECTION 5: DATA ACCESS LAYER (DAL)
@@ -1793,25 +1884,20 @@ def fetch_telegram_message():
     return run_async(_fetch())
 
 # ==============================================================================
-# SECTION 11: BROADCAST SYSTEM (REAL-TIME STREAMING & HUMAN MODE)
+# SECTION 11: BROADCAST SYSTEM (REAL-TIME STREAMING & HUMAN MODE v4)
 # ==============================================================================
 
 # Global State buat kontrol Stop/Pause
-# Format: {'user_id': 'running'} atau {'user_id': 'stopped'}
 broadcast_states = {}
 
 def process_spintax(text):
-    """
-    Fitur Anti-Spam: Mengacak kata dalam kurung kurawal.
-    Contoh: "{Halo|Hai|Pagi} Kak" -> Output bisa "Halo Kak", "Hai Kak", dll.
-    """
+    """Fitur Anti-Spam: Mengacak kata dalam kurung kurawal."""
     import re
     if not text: return ""
     pattern = r'\{([^{}]+)\}'
     while True:
         match = re.search(pattern, text)
-        if not match:
-            break
+        if not match: break
         options = match.group(1).split('|')
         choice = random.choice(options)
         text = text[:match.start()] + choice + text[match.end():]
@@ -1821,141 +1907,129 @@ def process_spintax(text):
 @login_required
 def start_broadcast():
     """
-    Broadcast Engine v3.0 (Ultimate).
-    Fitur: Real-time Stream, Multi-Account Switcher, Spintax, DB Logging, Stop Signal.
+    Broadcast Engine v4.0 (Human-Like).
+    Fitur Keamanan:
+    - Micro Jeda 3-8 detik per user.
+    - Istirahat 5-10 menit setiap 15-25 user.
     """
     user_id = session['user_id']
-    
-    # 1. Reset Status Broadcast jadi Running
     broadcast_states[user_id] = 'running'
 
-    # 2. Tangkap Input Form
+    # --- AMBIL DATA INPUT (Sama seperti sebelumnya) ---
     message_raw = request.form.get('message')
     template_id = request.form.get('template_id')
     selected_ids_str = request.form.get('selected_ids') 
     target_option = request.form.get('target_option')
-    sender_phone_req = request.form.get('sender_phone') # <--- Pilihan Akun
+    sender_phone_req = request.form.get('sender_phone')
     image_file = request.files.get('image')
     
-    # 3. Logic Content (Template vs Manual) & Cloud Media
     source_media = None
     final_message_template = message_raw
 
     if template_id:
         tmpl = MessageTemplateManager.get_template_by_id(template_id)
         if tmpl:
-            # Jika user tidak isi pesan manual, pakai dari template
-            if not final_message_template: 
-                final_message_template = tmpl['message_text']
-            
-            # Cek Cloud Media Reference
+            if not final_message_template: final_message_template = tmpl['message_text']
             if tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
-                source_media = {
-                    'chat': int(tmpl['source_chat_id']), 
-                    'id': int(tmpl['source_message_id'])
-                }
+                source_media = {'chat': int(tmpl['source_chat_id']), 'id': int(tmpl['source_message_id'])}
 
     if not final_message_template:
         return jsonify({"error": "Konten pesan tidak boleh kosong."})
 
-    # 4. Handle Local Image Upload
     manual_image_path = None
     if image_file and allowed_file(image_file.filename):
         filename = secure_filename(f"blast_{user_id}_{int(time.time())}_{image_file.filename}")
         manual_image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         image_file.save(manual_image_path)
 
-    # 5. Tentukan Target Audience
+    # Logic Target Audience
     targets = []
     if target_option == 'selected' and selected_ids_str:
-        # Kirim ke User yang dicentang saja
         target_ids = [int(x) for x in selected_ids_str.split(',') if x.strip().isdigit()]
         if target_ids:
             res = supabase.table('tele_users').select("*").in_('user_id', target_ids).eq('owner_id', user_id).execute()
             targets = res.data
     else:
-        # Kirim ke SEMUA (Global Blast) - Limit 5000 biar server aman
         res = supabase.table('tele_users').select("*").eq('owner_id', user_id).limit(5000).execute()
         targets = res.data
 
     if not targets:
         return jsonify({"error": "Target audiens kosong/tidak ditemukan."})
 
-    # 6. GENERATOR FUNCTION (The Engine)
+    # --- ENGINE UTAMA ---
     def generate():
         yield json.dumps({"type": "start", "total": len(targets)}) + "\n"
         
         async def _engine():
             client = None
-            
-            # --- [A] KONEKSI KE TELEGRAM ---
             try:
-                # Logic: Pilih akun sesuai request user
+                # 1. KONEKSI (Sama seperti sebelumnya)
                 if sender_phone_req and sender_phone_req != 'auto':
-                    # Cari session string akun tersebut
                     acc_res = supabase.table('telegram_accounts').select("session_string")\
                         .eq('user_id', user_id).eq('phone_number', sender_phone_req).eq('is_active', True).execute()
-                    
                     if acc_res.data:
                         session_str = acc_res.data[0]['session_string']
                         client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
                         await client.connect()
                     else:
-                        yield json.dumps({"type": "error", "msg": f"Akun {sender_phone_req} tidak aktif/hilang."}) + "\n"
+                        yield json.dumps({"type": "error", "msg": f"Akun {sender_phone_req} bermasalah."}) + "\n"
                         return
                 else:
-                    # Default / Auto
                     client = await get_active_client(user_id)
 
                 if not client or not await client.is_user_authorized():
                     yield json.dumps({"type": "error", "msg": "Gagal koneksi ke Telegram."}) + "\n"
                     return
 
-                # --- [B] PERSIAPAN MEDIA ---
+                # 2. MEDIA PREP
                 cloud_media_obj = None
                 if source_media:
                     try:
-                        # Fetch media object sekali aja di awal biar cepet
                         src_msg = await client.get_messages(source_media['chat'], ids=source_media['id'])
-                        if src_msg and src_msg.media: 
-                            cloud_media_obj = src_msg.media
+                        if src_msg and src_msg.media: cloud_media_obj = src_msg.media
                     except Exception as e:
-                        yield json.dumps({"type": "progress", "log": f"⚠️ Gagal load Cloud Media: {e}", "status": "warning"}) + "\n"
+                        yield json.dumps({"type": "progress", "log": f"⚠️ Media Error: {e}", "status": "warning"}) + "\n"
 
-                # --- [C] LOOPING PENGIRIMAN ---
+                # 3. LOOPING KIRIM (DENGAN HUMAN LOGIC v4)
                 success_count = 0
                 fail_count = 0
                 
+                # Variabel Kontrol Batching
+                batch_counter = 0
+                next_rest_at = random.randint(15, 25) # Target istirahat pertama (15-25 user)
+
                 for idx, user in enumerate(targets):
                     
-                    # 1. CEK SIGNAL STOP (Real-time)
+                    # A. Cek Stop
                     if broadcast_states.get(user_id) == 'stopped':
-                        yield json.dumps({"type": "error", "msg": "⛔ Broadcast Dihentikan Paksa oleh User."}) + "\n"
+                        yield json.dumps({"type": "error", "msg": "⛔ Broadcast Dihentikan."}) + "\n"
                         break
 
-                    # 2. SAFETY BREAK (Anti-Flood)
-                    # Istirahat 3-5 menit setiap 50 pesan
-                    if idx > 0 and idx % 50 == 0:
-                        rest_time = random.randint(180, 300)
+                    # B. LOGIC ISTIRAHAT PANJANG (HUMAN REST)
+                    # Jika sudah mencapai target batch (15-25 user), tidur dulu.
+                    if batch_counter >= next_rest_at:
+                        rest_sec = random.randint(300, 600) # 5 s.d 10 Menit
+                        mins = rest_sec // 60
+                        
                         yield json.dumps({
                             "type": "progress", "current": idx, "total": len(targets),
-                            "status": "warning", "log": f"☕ Cooling Down {rest_time}s (Anti-Ban Protocol)...",
+                            "status": "warning", 
+                            "log": f"☕ Mode Humanis: Istirahat {mins} menit dulu biar aman...",
                             "success": success_count, "failed": fail_count
                         }) + "\n"
-                        await asyncio.sleep(rest_time)
+                        
+                        await asyncio.sleep(rest_sec)
+                        
+                        # Reset counter dan tentukan target istirahat berikutnya
+                        batch_counter = 0
+                        next_rest_at = random.randint(15, 25)
 
-                    # 3. PERSONALISASI & SPINTAX
-                    # Replace {name} dan acak kata {Halo|Hai}
-                    # Gunakan .get() dengan default value biar gak error kalau field kosong
-                    u_name = user.get('first_name') or "Kak"
-                    personalized_msg = final_message_template.replace("{name}", u_name)
-                    personalized_msg = process_spintax(personalized_msg) 
-
-                    # 4. EKSEKUSI KIRIM
-                    log_status = "FAILED"
-                    error_msg = None
-                    
+                    # C. Kirim Pesan
                     try:
+                        u_name = user.get('first_name') or "Kak"
+                        personalized_msg = final_message_template.replace("{name}", u_name)
+                        personalized_msg = process_spintax(personalized_msg) 
+
                         entity = await client.get_input_entity(int(user['user_id']))
                         
                         if cloud_media_obj:
@@ -1966,61 +2040,52 @@ def start_broadcast():
                             await client.send_message(entity, personalized_msg)
                         
                         success_count += 1
-                        log_status = "SUCCESS"
-                        ui_log = f"Terkirim ke {u_name} ({user['user_id']})"
-                        ui_status = "success"
+                        batch_counter += 1
+                        
+                        # Log DB
+                        try:
+                            supabase.table('blast_logs').insert({
+                                "user_id": user_id, "group_name": f"{u_name} (Private)",
+                                "group_id": user['user_id'], "status": "SUCCESS",
+                                "created_at": datetime.utcnow().isoformat()
+                            }).execute()
+                        except: pass
+
+                        yield json.dumps({
+                            "type": "progress", "current": idx + 1, "total": len(targets),
+                            "status": "success", "log": f"Terkirim ke {u_name}",
+                            "success": success_count, "failed": fail_count
+                        }) + "\n"
 
                     except Exception as e:
                         fail_count += 1
-                        error_msg = str(e)
-                        ui_log = f"Gagal ke {user.get('user_id')}: {error_msg[:20]}..."
-                        ui_status = "failed"
+                        err_msg = str(e)
                         
-                        # Handle FloodWait (Wajib!)
-                        if "FloodWait" in error_msg:
-                            wait_sec = int(re.search(r'\d+', error_msg).group()) if re.search(r'\d+', error_msg) else 60
-                            yield json.dumps({"type": "progress", "log": f"⏳ Kena FloodWait Telegram. Tidur {wait_sec}s...", "status": "warning"}) + "\n"
-                            await asyncio.sleep(wait_sec)
+                        # Handle FloodWait
+                        if "FloodWait" in err_msg:
+                            wait = int(re.search(r'\d+', err_msg).group()) if re.search(r'\d+', err_msg) else 60
+                            yield json.dumps({"type": "progress", "log": f"⏳ Kena FloodWait. Tidur {wait}s...", "status": "warning"}) + "\n"
+                            await asyncio.sleep(wait)
+                        
+                        yield json.dumps({
+                            "type": "progress", "current": idx + 1, "total": len(targets),
+                            "status": "failed", "log": f"Gagal ke {u_name}: {err_msg[:15]}...",
+                            "success": success_count, "failed": fail_count
+                        }) + "\n"
 
-                    # 5. CATAT KE DATABASE (Blast Logs)
-                    # Biar history-nya muncul di Dashboard Ringkasan
-                    try:
-                        supabase.table('blast_logs').insert({
-                            "user_id": user_id,
-                            "group_name": f"{u_name} (Private)", # Reuse kolom group_name buat nama user
-                            "group_id": user['user_id'],
-                            "status": log_status,
-                            "error_message": error_msg,
-                            "created_at": datetime.utcnow().isoformat()
-                        }).execute()
-                    except: pass # Jangan stop blast cuma gara2 gagal log DB
-
-                    # 6. UPDATE UI
-                    yield json.dumps({
-                        "type": "progress",
-                        "current": idx + 1,
-                        "total": len(targets),
-                        "status": ui_status,
-                        "log": ui_log,
-                        "success": success_count,
-                        "failed": fail_count
-                    }) + "\n"
-
-                    # 7. RANDOM DELAY (Human Behavior)
-                    # Delay acak 2.5s s/d 5.5s
-                    await asyncio.sleep(random.uniform(2.5, 5.5))
+                    # D. MICRO DELAY ANTAR USER (3-8 Detik)
+                    delay = random.uniform(3, 8)
+                    await asyncio.sleep(delay)
 
             except Exception as e:
                 yield json.dumps({"type": "error", "msg": f"System Error: {str(e)}"}) + "\n"
-            
             finally:
                 if client: await client.disconnect()
                 if manual_image_path and os.path.exists(manual_image_path):
                     os.remove(manual_image_path)
-                
                 yield json.dumps({"type": "done", "success": success_count, "failed": fail_count}) + "\n"
 
-        # Async Bridge Loop
+        # Async Bridge
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
@@ -2028,10 +2093,8 @@ def start_broadcast():
             while True:
                 try:
                     yield loop.run_until_complete(runner.__anext__())
-                except StopAsyncIteration:
-                    break
-        finally:
-            loop.close()
+                except StopAsyncIteration: break
+        finally: loop.close()
 
     return Response(stream_with_context(generate()), mimetype='application/json')
 
@@ -2449,109 +2512,8 @@ def export_crm_csv():
         flash(f"Gagal export: {e}", "danger")
         return redirect(url_for('dashboard_crm'))
 
-# =====================================================================
-     SECTION 15 : crown job logic shere grup
-# =====================================================================
-async def cron_job(context: ContextTypes.DEFAULT_TYPE):
-    """
-    Dijalankan setiap menit untuk mengecek jadwal post di database.
-    DENGAN FITUR ANTI-FLOOD & BATCHING.
-    """
-    try:
-        conn = get_db_connection()
-        if not conn: return
-        
-        cur = conn.cursor()
-        
-        # Ambil jadwal yang statusnya pending dan waktunya <= sekarang
-        cur.execute("SELECT id, topic_id, file_id, file_type, target_chat_id FROM scheduled_posts WHERE status = 'pending' AND scheduled_time <= NOW()")
-        posts = cur.fetchall()
-        
-        if not posts: 
-            conn.close()
-            return
-
-        # Counter buat ngitung udah berapa post yang dikirim sesi ini
-        sent_count = 0 
-
-        for p in posts:
-            pid, tid, fid, ftype, target_id = p
-            final_target = int(target_id) if target_id else DEFAULT_GROUP_ID
-            
-            try:
-                # LOGIC COPY MESSAGE
-                if str(fid).isdigit() and int(fid) > 0:
-                    await context.bot.copy_message(
-                        chat_id=final_target, 
-                        message_thread_id=tid, 
-                        from_chat_id=STORAGE_CHANNEL_ID, 
-                        message_id=int(fid)
-                    )
-                else:
-                    try: 
-                        await context.bot.send_photo(chat_id=final_target, message_thread_id=tid, photo=fid)
-                    except: 
-                        await context.bot.send_video(chat_id=final_target, message_thread_id=tid, video=fid)
-                
-                # Update status jadi SENT
-                cur.execute("UPDATE scheduled_posts SET status='sent' WHERE id=%s", (pid,))
-                conn.commit() # Commit per pesan biar kalo putus di tengah jalan, yg udah keikirim tetep kecatet
-                
-                logger.info(f"✅ Post ID {pid} Sukses dikirim ke Topik {tid}!")
-                
-                # Nambah counter
-                sent_count += 1
-
-            except Exception as e:
-                err_msg = str(e)
-                logger.error(f"Post {pid} Gagal: {err_msg}")
-                
-                # Fallback ke General Topic
-                if "Message thread not found" in err_msg or "Topik Salah" in err_msg:
-                    try:
-                        logger.info(f"🔄 Fallback ke General untuk ID {pid}")
-                        if str(fid).isdigit() and int(fid) > 0:
-                            await context.bot.copy_message(chat_id=final_target, from_chat_id=STORAGE_CHANNEL_ID, message_id=int(fid))
-                        else:
-                            try: await context.bot.send_photo(chat_id=final_target, photo=fid)
-                            except: await context.bot.send_video(chat_id=final_target, video=fid)
-                        
-                        cur.execute("UPDATE scheduled_posts SET status='sent_general' WHERE id=%s", (pid,))
-                        conn.commit()
-                        sent_count += 1 # Hitung juga sebagai sent
-                    except Exception as e2:
-                        err_msg = f"Failed All: {e2}"
-                        cur.execute("UPDATE scheduled_posts SET status=%s WHERE id=%s", (err_msg[:50], pid))
-                        conn.commit()
-                else:
-                    cur.execute("UPDATE scheduled_posts SET status=%s WHERE id=%s", (err_msg[:50], pid))
-                    conn.commit()
-
-            # ========================================================
-            # 🛡️ LOGIC ANTI-BANNED / SAFETY DELAY
-            # ========================================================
-            
-            # 1. ISTIRAHAT PANJANG (Batching)
-            # Setiap 20 postingan, bot tidur 5 menit (300 detik)
-            if sent_count % 20 == 0:
-                logger.info("😴 Udah kirim 20 pesan. Istirahat 5 menit dulu biar ga kena FloodWait...")
-                await asyncio.sleep(300) 
-                
-            # 2. JEDA ANTAR PESAN (Random 3-7 detik)
-            # Biar kelihatan kayak manusia, bukan robot ngebut
-            else:
-                delay = random.randint(3, 7)
-                logger.info(f"⏳ Nunggu {delay} detik sebelum kirim next...")
-                await asyncio.sleep(delay)
-            # ========================================================
-        
-        cur.close()
-        conn.close()
-        
-    except Exception as e: 
-        logger.error(f"Cron Job Error: {e}")
 # ==============================================================================
-# SECTION 16: INITIALIZATION ROUTINE
+# SECTION 15: INITIALIZATION ROUTINE
 # ==============================================================================
 
 def init_system_check():
