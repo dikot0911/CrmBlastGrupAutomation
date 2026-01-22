@@ -172,6 +172,41 @@ def allowed_file(filename):
     """Cek ekstensi file yang diizinkan untuk upload gambar"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# --- "Trigger BOT TELEGRAM
+
+def send_telegram_alert(user_id, message):
+    """
+    Fungsi Kurir: Ngirim pesan dari Web ke Bot Telegram User.
+    Pake HTTP Request biasa biar enteng dan gak nungguin botnya.
+    """
+    try:
+        # 1. Cari tau ID Chat Telegram user ini siapa
+        res = supabase.table('users').select("notification_chat_id").eq('id', user_id).execute()
+        
+        # Kalau user belum connect bot (kolomnya kosong), yaudah skip
+        if not res.data or not res.data[0]['notification_chat_id']:
+            return 
+            
+        chat_id = res.data[0]['notification_chat_id']
+        
+        # 2. Ambil Token Bot Notifikasi dari .env
+        notif_token = os.getenv("NOTIF_BOT_TOKEN")
+        if not notif_token: return
+
+        # 3. Tembak API Telegram (Fire and Forget)
+        url = f"https://api.telegram.org/bot{notif_token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "Markdown"
+        }
+        # Timeout 5 detik, kalau macet tinggalin aja
+        httpx.post(url, json=payload, timeout=5)
+        
+    except Exception as e:
+        # Jangan sampe error notif bikin aplikasi crash
+        print(f"⚠️ Gagal kirim notif ke user {user_id}: {e}")
+
 # ==============================================================================
 # SECTION 4.5: MESSAGE TEMPLATE MANAGER (NEW FEATURE)
 # ==============================================================================
@@ -324,15 +359,25 @@ class SchedulerWorker:
     @staticmethod
     def _process_schedules(current_time_indo):
         try:
-            current_hour = current_time_indo.hour
-            current_minute = current_time_indo.minute
+            # --- [FITUR BARU] NOTIFIKASI 5 MENIT SEBELUM ---
+            future_time = current_time_indo + timedelta(minutes=5)
+            f_hour = future_time.hour
+            f_minute = future_time.minute
             
-            # Cari jadwal yang match jam & menit
-            res = supabase.table('blast_schedules').select("*")\
+            upcoming = supabase.table('blast_schedules').select("user_id")\
                 .eq('is_active', True)\
-                .eq('run_hour', current_hour)\
-                .eq('run_minute', current_minute)\
-                .execute()
+                .eq('run_hour', f_hour)\
+                .eq('run_minute', f_minute)\
+                .execute().data
+                
+            for job in upcoming:
+                msg = (
+                    "⏳ **PENGINGAT JADWAL**\n\n"
+                    f"Jadwal Blast akan berjalan dalam **5 menit lagi** "
+                    f"(Pukul {f_hour}:{f_minute:02d} WIB).\n\n"
+                    "Pastikan akun Telegram pengirim (Sender) Anda aktif/online agar proses lancar."
+                )
+                threading.Thread(target=send_telegram_alert, args=(job['user_id'], msg)).start()
                 
             schedules = res.data
             if not schedules: return
@@ -1110,13 +1155,33 @@ def disconnect_account():
 @app.route('/dashboard/profile')
 @login_required
 def dashboard_profile():
-    """Halaman Profile User Lengkap"""
+    """Halaman Profile dengan Logic Deep Linking Bot"""
     user = get_user_data(session['user_id'])
     if not user: return redirect(url_for('login'))
     
-    # Render template profil yang baru dibuat
-    return render_template('dashboard/profile.html', user=user, active_page='profile')
+    # 1. Generate Token Unik buat Deep Linking
+    import uuid
+    verify_token = str(uuid.uuid4())
+    
+    # 2. Simpan Token ke DB
+    supabase.table('users').update({'verification_token': verify_token}).eq('id', user.id).execute()
+    
+    # 3. Bikin Link Bot (Ambil username bot dari env)
+    bot_username = os.getenv('NOTIF_BOT_USERNAME', 'NamaBotLu_bot') 
+    bot_link = f"https://t.me/{bot_username}?start={verify_token}"
+    
+    # 4. Cek Status Koneksi Notif (User udah connect bot belum?)
+    # Kita cek manual field notification_chat_id dari database raw karena di wrapper get_user_data mungkin belum ada
+    raw_user = supabase.table('users').select("notification_chat_id").eq('id', user.id).execute()
+    is_notif_connected = False
+    if raw_user.data and raw_user.data[0]['notification_chat_id']:
+        is_notif_connected = True
 
+    return render_template('dashboard/profile.html', 
+                           user=user, 
+                           active_page='profile',
+                           bot_link=bot_link,
+                           is_notif_connected=is_notif_connected)
 @app.route('/dashboard/payment')
 @login_required
 def dashboard_payment():
