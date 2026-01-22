@@ -34,6 +34,12 @@ except ImportError:
     # Fallback aman jika file demo_routes.py belum ada di environment baru
     demo_bp = None
 
+try:
+    from bot import run_bot_process
+except ImportError:
+    logger.warning("⚠️ Modul bot.py tidak ditemukan atau error.")
+    run_bot_process = None
+
 # ==============================================================================
 # SECTION 1: SYSTEM CONFIGURATION & ENVIRONMENT SETUP
 # ==============================================================================
