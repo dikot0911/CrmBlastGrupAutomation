@@ -2249,15 +2249,22 @@ def update_template():
 def super_admin_dashboard():
     try:
         # Stats Logic
-        users_res = supabase.table('users').select("id, is_banned", count='exact').execute()
+        users_res = supabase.table('users').select("id, is_banned, plan_tier", count='exact').execute()
         bots_res = supabase.table('telegram_accounts').select("id", count='exact').eq('is_active', True).execute()
         
-        users_data = supabase.table('users').select("*").order('created_at', desc=True).execute().data
-        
+        # Hitung User per Paket
+        users_data = users_res.data
+        plan_stats = {
+            'starter': sum(1 for u in users_data if u.get('plan_tier') == 'Starter'),
+            'pro': sum(1 for u in users_data if u.get('plan_tier') == 'UMKM PRO'),
+            'agency': sum(1 for u in users_data if u.get('plan_tier') == 'Agency')
+        }
+
         stats = {
             'total_users': users_res.count or 0,
             'active_bots': bots_res.count or 0,
-            'banned_users': sum(1 for u in users_data if u.get('is_banned'))
+            'banned_users': sum(1 for u in users_data if u.get('is_banned')),
+            'plans': plan_stats
         }
         
         return render_template('admin/index.html', stats=stats, active_page='dashboard')
@@ -2268,19 +2275,23 @@ def super_admin_dashboard():
 @admin_required
 def super_admin_users():
     try:
+        # Fetch Users dengan sorting terbaru
         users = supabase.table('users').select("*").order('created_at', desc=True).execute().data
         final_list = []
         
         for u in users:
+            # Fetch Telegram Info
             tele = supabase.table('telegram_accounts').select("*").eq('user_id', u['id']).execute().data
             
-            # Wrapper Class
+            # Wrapper Class biar enak di HTML
             class UserW:
                 def __init__(self, d, t):
                     self.id = d['id']
                     self.email = d['email']
                     self.is_admin = d.get('is_admin')
                     self.is_banned = d.get('is_banned')
+                    self.plan_tier = d.get('plan_tier', 'Starter')
+                    self.sub_end = d.get('subscription_end')
                     
                     raw_date = d.get('created_at')
                     try:
@@ -2298,19 +2309,92 @@ def super_admin_users():
     except Exception as e:
         return f"User List Error: {e}"
 
+# --- [FITUR BARU] DETAIL USER (GOD VIEW) ---
+@app.route('/super-admin/user/<int:user_id>')
+@admin_required
+def super_admin_user_detail(user_id):
+    """Halaman detail untuk kontrol penuh satu user"""
+    try:
+        # Ambil Data User
+        u_res = supabase.table('users').select("*").eq('id', user_id).execute()
+        if not u_res.data: return "User not found"
+        user = u_res.data[0]
+        
+        # Ambil Data Telegram
+        t_res = supabase.table('telegram_accounts').select("*").eq('user_id', user_id).execute()
+        tele = t_res.data[0] if t_res.data else None
+        
+        # Ambil Statistik Blast
+        logs_res = supabase.table('blast_logs').select("*").eq('user_id', user_id).order('created_at', desc=True).limit(20).execute()
+        logs = logs_res.data if logs_res.data else []
+        
+        # Ambil Statistik Jadwal
+        sched_res = supabase.table('blast_schedules').select("id", count='exact').eq('user_id', user_id).eq('is_active', True).execute()
+        active_schedules = sched_res.count or 0
+
+        return render_template('admin/user_detail.html', 
+                               user=user, 
+                               tele=tele, 
+                               logs=logs,
+                               active_schedules=active_schedules,
+                               active_page='users')
+    except Exception as e:
+        return f"Detail Error: {e}"
+
+# --- [FITUR BARU] MANAGE PLAN MANUAL ---
+@app.route('/super-admin/update-plan/<int:user_id>', methods=['POST'])
+@admin_required
+def super_admin_update_plan(user_id):
+    """Admin bisa tembak paket langsung (Upgrade/Downgrade)"""
+    plan = request.form.get('plan') # Starter, UMKM PRO, Agency
+    days = int(request.form.get('days', 30))
+    
+    try:
+        new_expiry = (datetime.now() + timedelta(days=days)).isoformat()
+        
+        supabase.table('users').update({
+            'plan_tier': plan,
+            'subscription_end': new_expiry
+        }).eq('id', user_id).execute()
+        
+        flash(f"Berhasil update user #{user_id} ke paket {plan} ({days} hari).", 'success')
+    except Exception as e:
+        flash(f"Gagal update plan: {e}", 'danger')
+        
+    return redirect(url_for('super_admin_user_detail', user_id=user_id))
+
+# --- [FITUR BARU] RESET SESI TELEGRAM ---
+@app.route('/super-admin/reset-session/<int:user_id>', methods=['POST'])
+@admin_required
+def super_admin_reset_session(user_id):
+    """Paksa logout bot user kalau nyangkut"""
+    try:
+        # Set is_active = False di database
+        supabase.table('telegram_accounts').update({
+            'is_active': False,
+            'session_string': None # Opsional: Hapus session string biar bersih total
+        }).eq('user_id', user_id).execute()
+        
+        flash(f"Sesi Telegram User #{user_id} berhasil di-reset paksa.", 'warning')
+    except Exception as e:
+        flash(f"Gagal reset sesi: {e}", 'danger')
+        
+    return redirect(url_for('super_admin_user_detail', user_id=user_id))
+
+# --- [FITUR LAMA] BAN USER ---
 @app.route('/super-admin/ban/<int:user_id>', methods=['POST'])
 @admin_required
 def ban_user(user_id):
+    # ... (Code lama lu biarin aja, udah oke) ...
+    # Cuma pastikan return-nya redirect ke halaman detail atau list yang sesuai
+    # ...
     try:
         u_data = supabase.table('users').select("is_banned").eq('id', user_id).execute().data
         if not u_data: return redirect(url_for('super_admin_users'))
         
-        current_val = u_data[0].get('is_banned', False)
-        new_val = not current_val
-        
+        new_val = not u_data[0].get('is_banned', False)
         supabase.table('users').update({'is_banned': new_val}).eq('id', user_id).execute()
         
-        # If banned, kill the bot session
         if new_val:
             supabase.table('telegram_accounts').update({'is_active': False}).eq('user_id', user_id).execute()
             
@@ -2318,12 +2402,8 @@ def ban_user(user_id):
     except Exception as e:
         flash(f"Gagal update status: {e}", 'danger')
         
-    return redirect(url_for('super_admin_users'))
-
-# --- PING ENDPOINT ---
-@app.route('/ping')
-def ping():
-    return jsonify({"status": "alive", "timestamp": datetime.utcnow().isoformat()}), 200
+    # Redirect balik ke halaman detail user biar enak
+    return redirect(url_for('super_admin_user_detail', user_id=user_id))
 
 # ==========================================
 # SECTION 14 : IMPORT & EXPORT CSV
