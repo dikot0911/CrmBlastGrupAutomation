@@ -161,11 +161,31 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_main_menu(update, user_id)
 
 # --- JALANKAN BOT ---
+# --- FUNGSI PENGGERAK UTAMA ---
+def run_bot_process():
+    """
+    Fungsi ini akan dipanggil oleh app.py biar jalan di background.
+    """
+    if not BOT_TOKEN or BOT_TOKEN == "DUMMY_TOKEN":
+        print("❌ BOT STOP: Token belum diisi.")
+        return
+
+    # Buat loop baru khusus untuk thread ini (PENTING untuk Asyncio di Thread)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    print("🚀 Bot Telegram Berhasil Dinyalakan (Background Mode)...")
+    
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    
+    # Daftarkan Handler
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("connect", start)) # Alias buat jaga2
+    application.add_handler(CallbackQueryHandler(button_handler))
+    
+    # Jalankan Polling
+    application.run_polling()
+
+# Block ini cuma jalan kalau lu run file ini sendirian (python bot.py)
 if __name__ == '__main__':
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    
-    print("🚀 Bot Notifikasi Siap Melayani (Polling Mode)...")
-    app.run_polling()
+    run_bot_process()
