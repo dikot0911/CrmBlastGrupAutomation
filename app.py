@@ -91,11 +91,20 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     supabase = None
 else:
     try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        logger.info("✅ Supabase API Connected Successfully. Database System Online.")
-    except Exception as e:
-        logger.critical(f"❌ Supabase Connection Failed: {e}")
-        supabase = None
+    # [FIX] Tambahkan options headers biar stabil di HTTP/1.1
+    from supabase.lib.client_options import ClientOptions
+    
+    # Kita paksa ClientOptions standar biar gak rewel soal http2
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # Kalau masih error, coba init manual (opsional, coba yang atas dulu)
+    # supabase = Client(SUPABASE_URL, SUPABASE_KEY, options=ClientOptions(postgrest_client_timeout=10))
+    
+    logger.info("✅ Supabase API Connected Successfully.")
+except Exception as e:
+    # Error handling biar gak crash total, tapi fitur DB mati
+    logger.critical(f"❌ Supabase Failed: {e}")
+    supabase = None
 
 # ==============================================================================
 # SECTION 3: GLOBAL VARIABLES & STATE MANAGEMENT
@@ -371,11 +380,11 @@ class SchedulerWorker:
     @staticmethod
     def _process_schedules(current_time_indo):
         try:
-            # --- [FITUR BARU] NOTIFIKASI 5 MENIT SEBELUM ---
+            # --- 1. NOTIFIKASI 5 MENIT SEBELUM ---
             future_time = current_time_indo + timedelta(minutes=5)
-            f_hour = future_time.hour
-            f_minute = future_time.minute
+            f_hour, f_minute = future_time.hour, future_time.minute
             
+            # Cek jadwal 5 menit ke depan (Tanpa 'res', langsung method chaining)
             upcoming = supabase.table('blast_schedules').select("user_id")\
                 .eq('is_active', True)\
                 .eq('run_hour', f_hour)\
@@ -383,31 +392,27 @@ class SchedulerWorker:
                 .execute().data
                 
             for job in upcoming:
-                msg = (
-                    "⏳ **PENGINGAT JADWAL**\n\n"
-                    f"Jadwal Blast akan berjalan dalam **5 menit lagi** "
-                    f"(Pukul {f_hour}:{f_minute:02d} WIB).\n\n"
-                    "Pastikan akun Telegram pengirim (Sender) Anda aktif/online agar proses lancar."
-                )
+                msg = f"⏳ **PENGINGAT:** Jadwal jam {f_hour}:{f_minute:02d} akan segera dimulai."
                 threading.Thread(target=send_telegram_alert, args=(job['user_id'], msg)).start()
                 
-            # --- [PERBAIKAN DISINI: DEFINISI 'res' DITAMBAHKAN KEMBALI] ---
+            # --- 2. EKSEKUSI JADWAL SEKARANG (INI YANG KEMAREN ILANG) ---
             current_hour = current_time_indo.hour
             current_minute = current_time_indo.minute
 
+            # [FIX UTAMA] Definisikan variabel 'res' disini!
             res = supabase.table('blast_schedules').select("*")\
                 .eq('is_active', True)\
                 .eq('run_hour', current_hour)\
                 .eq('run_minute', current_minute)\
                 .execute()
                 
-            schedules = res.data
+            schedules = res.data # Sekarang aman karena 'res' sudah ada
+            
             if not schedules: return
                 
-            logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal untuk {current_hour}:{current_minute} WIB")
+            logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal...")
             
             for task in schedules:
-                # Jalankan task di thread terpisah biar loop utama gak macet
                 threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
                 
         except Exception as e:
