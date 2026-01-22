@@ -332,7 +332,7 @@ class MessageTemplateManager:
             return False, f"⚠️ System Error: {str(e)}"
             
 # ==============================================================================
-# SECTION 4.6: SCHEDULER & AUTO-BLAST WORKER (HUMAN + SMART RETRY)
+# SECTION 4.6: SCHEDULER & AUTO-BLAST WORKER (HUMAN + SMART RETRY) - FIXED
 # ==============================================================================
 
 class SchedulerWorker:
@@ -361,6 +361,7 @@ class SchedulerWorker:
                 
                 # 3. Sleep Pintar (Sync ke detik 00)
                 sleep_time = 60 - datetime.now().second
+                if sleep_time < 0: sleep_time = 1
                 time.sleep(sleep_time)
                 
             except Exception as e:
@@ -390,12 +391,23 @@ class SchedulerWorker:
                 )
                 threading.Thread(target=send_telegram_alert, args=(job['user_id'], msg)).start()
                 
+            # --- [PERBAIKAN DISINI: DEFINISI 'res' DITAMBAHKAN KEMBALI] ---
+            current_hour = current_time_indo.hour
+            current_minute = current_time_indo.minute
+
+            res = supabase.table('blast_schedules').select("*")\
+                .eq('is_active', True)\
+                .eq('run_hour', current_hour)\
+                .eq('run_minute', current_minute)\
+                .execute()
+                
             schedules = res.data
             if not schedules: return
                 
             logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal untuk {current_hour}:{current_minute} WIB")
             
             for task in schedules:
+                # Jalankan task di thread terpisah biar loop utama gak macet
                 threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
                 
         except Exception as e:
@@ -427,13 +439,13 @@ class SchedulerWorker:
             client = None
             conn_error = None
             
-            # --- A. LOGIC KONEKSI "STRICT" (YANG DIPERBAIKI) ---
+            # --- A. LOGIC KONEKSI "STRICT" ---
             try:
                 # Cek apakah user milih akun SPESIFIK atau AUTO?
                 is_specific_sender = (sender_phone and sender_phone != 'auto')
 
                 if is_specific_sender:
-                    # KASUS 1: USER MILIH AKUN SPESIFIK (Misal: Akun Makanan)
+                    # KASUS 1: USER MILIH AKUN SPESIFIK
                     res = supabase.table('telegram_accounts').select("session_string")\
                         .eq('user_id', user_id).eq('phone_number', sender_phone).eq('is_active', True).execute()
                     
@@ -441,11 +453,11 @@ class SchedulerWorker:
                         client = TelegramClient(StringSession(res.data[0]['session_string']), API_ID, API_HASH)
                         await client.connect()
                     else:
-                        # JIKA AKUN SPESIFIK MATI -> LANGSUNG STOP (JANGAN CARI PENGGANTI)
+                        # JIKA AKUN SPESIFIK MATI -> LANGSUNG STOP
                         conn_error = f"⛔ Akun {sender_phone} mati/logout. Task dibatalkan demi keamanan branding."
                 
                 else:
-                    # KASUS 2: USER MILIH "AUTO" (Bebas akun mana aja)
+                    # KASUS 2: USER MILIH "AUTO"
                     client = await get_active_client(user_id)
                     if not client:
                         conn_error = "Tidak ada akun Telegram yang aktif sama sekali."
@@ -504,7 +516,7 @@ class SchedulerWorker:
                             'group_name': tg.get('group_name', 'Unknown')
                         })
 
-                # --- C. PROCESS QUEUE (SAMA SEPERTI SEBELUMNYA) ---
+                # --- C. PROCESS QUEUE ---
                 async def process_queue(queue_list, attempt_phase):
                     next_retry_queue = []
                     success_count = 0
