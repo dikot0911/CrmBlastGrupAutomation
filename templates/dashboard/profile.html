@@ -2,205 +2,180 @@
 {% block title %}Profil Saya{% endblock %}
 
 {% block content %}
-<div class="animate-enter">
-    
+<div class="max-w-5xl mx-auto animate-enter pb-20">
+
+    <!-- HEADER PROFILE -->
     <div class="relative mb-10">
-        <div class="h-56 w-full rounded-[2.5rem] overflow-hidden relative shadow-2xl">
-            <div class="absolute inset-0 bg-gradient-to-r from-gray-900 via-indigo-900 to-slate-900"></div>
-            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-            <div class="absolute top-0 right-0 w-96 h-96 bg-indigo-500/30 rounded-full blur-[100px] -mr-20 -mt-20"></div>
+        <!-- Banner -->
+        <div class="h-48 w-full rounded-3xl bg-gradient-to-r from-gray-900 to-indigo-900 relative overflow-hidden shadow-lg">
+            <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+            <div class="absolute bottom-4 right-6 text-white text-right">
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-60">Member ID</p>
+                <p class="font-mono text-xl font-bold tracking-widest">#{{ user.id|string|zfill(6) }}</p>
+            </div>
         </div>
 
-        <div class="absolute -bottom-10 left-0 w-full px-8 md:px-12 flex items-end">
-            <div class="flex flex-col md:flex-row items-end gap-6 w-full">
-                
-                <div class="relative group">
-                    <div class="w-32 h-32 md:w-40 md:h-40 bg-white rounded-[2rem] p-1.5 shadow-2xl rotate-2 group-hover:rotate-0 transition-transform duration-300 ease-out">
-                        <div class="w-full h-full bg-gray-100 rounded-[1.8rem] flex items-center justify-center text-5xl font-black text-gray-300 border-2 border-dashed border-gray-300 relative overflow-hidden cursor-pointer hover:border-indigo-500 transition-colors" onclick="document.getElementById('avatarUpload').click()">
-                            <img id="avatarPreview" class="hidden w-full h-full object-cover">
-                            <span id="avatarPlaceholder" class="group-hover:opacity-0 transition duration-300">{{ user.email[0]|upper }}</span>
-                            <div class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition backdrop-blur-sm">
-                                <i class="fa-solid fa-camera text-white text-2xl mb-1"></i>
-                                <span class="text-white text-[10px] font-bold uppercase">Ubah</span>
-                            </div>
-                            <input type="file" id="avatarUpload" class="hidden" accept="image/*" onchange="previewAvatar(event)">
+        <!-- Avatar & Info -->
+        <div class="absolute -bottom-12 left-6 md:left-10 flex items-end">
+            <div class="relative group">
+                <div class="w-32 h-32 bg-white rounded-2xl p-1.5 shadow-xl">
+                    <div class="w-full h-full bg-indigo-50 rounded-xl flex items-center justify-center text-5xl font-bold text-indigo-300 border-2 border-dashed border-indigo-200 overflow-hidden cursor-pointer hover:border-indigo-400 transition relative">
+                        {% if user.email %}
+                            <span class="group-hover:opacity-20 transition">{{ user.email[0]|upper }}</span>
+                        {% else %}
+                            <i class="fa-solid fa-user"></i>
+                        {% endif %}
+                        
+                        <!-- Upload Overlay -->
+                        <div class="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300">
+                            <i class="fa-solid fa-camera text-indigo-600 mb-1"></i>
+                            <span class="text-[10px] text-indigo-600 font-bold">Ubah Foto</span>
                         </div>
                     </div>
-                    
-                    <div class="absolute -bottom-2 -right-2 w-8 h-8 md:w-10 md:h-10 bg-green-500 rounded-full border-4 border-white flex items-center justify-center text-white shadow-lg" title="Active">
-                        <i class="fa-solid fa-check text-xs md:text-sm"></i>
-                    </div>
                 </div>
-
-                <div class="mb-2 md:mb-4 flex-1">
-                    <h2 class="text-3xl md:text-4xl font-black text-gray-900 flex items-center gap-3 drop-shadow-sm">
-                        {{ user.email.split('@')[0]|title }}
-                        {% if user.is_admin %}
-                            <span class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] px-3 py-1 rounded-full shadow-md uppercase tracking-wider transform -translate-y-1">Admin</span>
-                        {% endif %}
-                    </h2>
-                    <div class="flex flex-wrap items-center gap-4 mt-2">
-                        <span class="text-gray-500 text-sm font-medium bg-white/80 backdrop-blur-md px-3 py-1 rounded-lg shadow-sm border border-gray-100">
-                            {{ user.email }}
-                        </span>
-                        <span class="text-indigo-600 text-xs font-bold bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
-                            Member since {{ user.created_at[:4] }}
-                        </span>
-                    </div>
+                
+                <!-- Status Badge -->
+                <div class="absolute -bottom-2 -right-2">
+                    {% if user.is_banned %}
+                        <div class="w-8 h-8 bg-red-500 rounded-full border-4 border-white flex items-center justify-center text-white shadow-md" title="Banned">
+                            <i class="fa-solid fa-ban text-xs"></i>
+                        </div>
+                    {% else %}
+                        <div class="w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center text-white shadow-md" title="Verified Member">
+                            <i class="fa-solid fa-check text-xs"></i>
+                        </div>
+                    {% endif %}
                 </div>
+            </div>
+            
+            <div class="mb-2 ml-5 pb-1">
+                <h1 class="text-3xl font-bold text-gray-800 flex items-center gap-2">
+                    {{ user.email.split('@')[0]|title }}
+                    {% if user.is_admin %}
+                        <span class="bg-yellow-100 text-yellow-700 text-[10px] px-2 py-0.5 rounded-full border border-yellow-200 shadow-sm align-middle flex items-center gap-1">
+                            <i class="fa-solid fa-crown"></i> Admin
+                        </span>
+                    {% endif %}
+                </h1>
+                <p class="text-gray-500 text-sm flex items-center gap-2">
+                    <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-xs font-mono">{{ user.email }}</span>
+                </p>
             </div>
         </div>
     </div>
 
-    <div class="h-12 md:h-6"></div> <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start mt-8">
+    <div class="h-16"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        <div class="xl:col-span-4 space-y-6 sticky top-8">
-            
-            <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+        <!-- SIDE MENU -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-4 bg-gray-50 border-b border-gray-100">
+                    <h3 class="font-bold text-gray-700 text-sm">Menu Akun</h3>
+                </div>
                 <div class="p-2 space-y-1">
-                    <button onclick="scrollToSection('personal-info')" class="w-full text-left px-5 py-4 rounded-2xl hover:bg-gray-50 transition flex items-center gap-4 group">
-                        <div class="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition shadow-sm"><i class="fa-regular fa-user"></i></div>
-                        <div class="flex-1">
-                            <span class="block text-sm font-bold text-gray-700">Data Pribadi</span>
-                            <span class="block text-xs text-gray-400">Edit informasi akun</span>
-                        </div>
+                    <button onclick="switchSection('profile')" id="btn-profile" class="w-full text-left px-4 py-3 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center gap-3 transition">
+                        <i class="fa-regular fa-id-card w-5"></i> Data Diri
                     </button>
-
-                    <button onclick="scrollToSection('subscription')" class="w-full text-left px-5 py-4 rounded-2xl hover:bg-gray-50 transition flex items-center gap-4 group">
-                        <div class="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition shadow-sm"><i class="fa-solid fa-gem"></i></div>
-                        <div class="flex-1">
-                            <span class="block text-sm font-bold text-gray-700">Langganan</span>
-                            <span class="block text-xs text-gray-400">Status paket aktif</span>
-                        </div>
+                    <button onclick="window.location.href='/dashboard/payment'" class="w-full text-left px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-indigo-600 font-medium text-sm flex items-center gap-3 transition">
+                        <i class="fa-solid fa-receipt w-5"></i> Langganan & Tagihan
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-auto opacity-50"></i>
                     </button>
-
-                    <button onclick="scrollToSection('telegram-connection')" class="w-full text-left px-5 py-4 rounded-2xl hover:bg-gray-50 transition flex items-center gap-4 group">
-                        <div class="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition shadow-sm"><i class="fa-brands fa-telegram"></i></div>
-                        <div class="flex-1">
-                            <span class="block text-sm font-bold text-gray-700">Koneksi</span>
-                            <span class="block text-xs text-gray-400">Kelola akun terhubung</span>
-                        </div>
-                    </button>
-                    
-                     <button onclick="scrollToSection('security')" class="w-full text-left px-5 py-4 rounded-2xl hover:bg-gray-50 transition flex items-center gap-4 group">
-                        <div class="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition shadow-sm"><i class="fa-solid fa-lock"></i></div>
-                        <div class="flex-1">
-                            <span class="block text-sm font-bold text-gray-700">Keamanan</span>
-                            <span class="block text-xs text-gray-400">Password & Privasi</span>
-                        </div>
+                    <button onclick="switchSection('security')" id="btn-security" class="w-full text-left px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-indigo-600 font-medium text-sm flex items-center gap-3 transition">
+                        <i class="fa-solid fa-shield-halved w-5"></i> Keamanan
                     </button>
                 </div>
             </div>
 
+            <!-- Telegram Status Mini -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">Status Bot</h4>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 {{ 'bg-green-100 text-green-600' if user.telegram_account.is_active else 'bg-red-100 text-red-600' }} rounded-lg flex items-center justify-center text-xl">
+                        <i class="fa-brands fa-telegram"></i>
+                    </div>
+                    <div class="flex-1 overflow-hidden">
+                        <p class="text-sm font-bold text-gray-800 truncate">
+                            {{ user.telegram_account.phone_number if user.telegram_account else 'Belum Terhubung' }}
+                        </p>
+                        <p class="text-[10px] {{ 'text-green-600' if user.telegram_account.is_active else 'text-red-500' }} font-bold">
+                            {{ '● ONLINE' if user.telegram_account.is_active else '● OFFLINE' }}
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="xl:col-span-8 space-y-8">
+        <!-- MAIN CONTENT FORM -->
+        <div class="lg:col-span-2">
             
-            <div id="personal-info" class="bg-white rounded-[2rem] border border-gray-200 p-8 shadow-sm scroll-mt-24 relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fa-regular fa-id-card text-9xl text-gray-300"></i></div>
-                
-                <div class="flex justify-between items-center mb-8 relative z-10">
-                    <h3 class="text-xl font-extrabold text-gray-900">Data Pribadi</h3>
-                    <button onclick="toggleEditMode()" id="btn-edit-profile" class="text-indigo-600 text-sm font-bold hover:bg-indigo-50 px-4 py-2 rounded-lg transition border border-indigo-100">
+            <!-- SECTION: DATA DIRI -->
+            <div id="section-profile" class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-gray-800">Informasi Pribadi</h3>
+                    <button onclick="toggleEdit()" id="btnEdit" class="text-sm text-indigo-600 font-bold hover:underline bg-indigo-50 px-4 py-2 rounded-lg transition">
                         Edit Data
                     </button>
                 </div>
 
-                <form id="profileForm" class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Email</label>
-                        <input type="email" value="{{ user.email }}" class="profile-input w-full px-5 py-3.5 bg-gray-50 border-none rounded-xl text-gray-600 font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 transition" disabled>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">WhatsApp</label>
-                        <input type="text" placeholder="+62..." class="profile-input w-full px-5 py-3.5 bg-gray-50 border-none rounded-xl text-gray-600 font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 transition" disabled>
-                    </div>
-                    <div class="md:col-span-2">
-                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nama Bisnis</label>
-                        <input type="text" placeholder="Contoh: Baba Parfume Store" class="profile-input w-full px-5 py-3.5 bg-gray-50 border-none rounded-xl text-gray-600 font-bold focus:bg-white focus:ring-2 focus:ring-indigo-500 transition" disabled>
+                <form class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Email (Tidak dapat diubah)</label>
+                        <div class="relative">
+                            <i class="fa-regular fa-envelope absolute left-4 top-3.5 text-gray-400"></i>
+                            <input type="text" value="{{ user.email }}" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 font-medium text-sm cursor-not-allowed" disabled>
+                        </div>
                     </div>
 
-                    <div class="md:col-span-2 flex justify-end gap-3 mt-2 hidden animate-enter" id="save-profile-container">
-                        <button type="button" class="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100" onclick="toggleEditMode()">Batal</button>
-                        <button type="button" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg" onclick="alert('Data tersimpan!')">Simpan</button>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nama Lengkap</label>
+                        <input type="text" value="User BlastPro" class="profile-input w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-gray-50 disabled:text-gray-400" disabled>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">No. WhatsApp</label>
+                        <input type="text" placeholder="+62..." class="profile-input w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-gray-50 disabled:text-gray-400" disabled>
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nama Bisnis / Toko</label>
+                        <input type="text" placeholder="Contoh: Baba Parfume Store" class="profile-input w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition disabled:bg-gray-50 disabled:text-gray-400" disabled>
+                    </div>
+
+                    <!-- Tombol Simpan (Hidden) -->
+                    <div class="col-span-2 flex justify-end gap-3 mt-2 hidden" id="actionButtons">
+                        <button type="button" onclick="toggleEdit()" class="px-5 py-2.5 rounded-xl text-gray-500 font-bold hover:bg-gray-100 transition text-sm">Batal</button>
+                        <button type="button" onclick="saveProfile()" class="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition shadow-lg text-sm">Simpan Perubahan</button>
                     </div>
                 </form>
             </div>
 
-            <div id="subscription" class="bg-gradient-to-br from-gray-900 to-gray-800 rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden scroll-mt-24">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-green-500/20 rounded-full blur-[80px] -mr-16 -mt-16"></div>
+            <!-- SECTION: SECURITY (Hidden by default) -->
+            <div id="section-security" class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hidden">
+                <h3 class="text-lg font-bold text-gray-800 mb-6">Keamanan Akun</h3>
                 
-                <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div>
-                        <span class="inline-block px-3 py-1 rounded-lg bg-green-500/20 text-green-300 text-[10px] font-bold uppercase tracking-wider border border-green-500/30 mb-3">Status Langganan</span>
-                        <h3 class="text-3xl font-black mb-1">UMKM PRO</h3>
-                        <p class="text-gray-400 text-sm">Fitur premium aktif sepenuhnya.</p>
-                    </div>
-                    
-                    <a href="/payment.html" class="px-6 py-3 bg-white text-gray-900 rounded-xl font-bold text-sm hover:bg-green-400 transition shadow-lg shadow-white/10 flex items-center gap-2">
-                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Upgrade Paket
-                    </a>
-                </div>
-
-                <div class="mt-8 bg-white/5 rounded-2xl p-6 border border-white/10 backdrop-blur-sm">
-                    <div class="flex justify-between items-end mb-3">
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between pb-6 border-b border-gray-100">
                         <div>
-                            <p class="text-xs text-gray-400 font-bold uppercase">Masa Aktif</p>
-                            <p class="text-2xl font-mono font-bold text-green-400 mt-1">28 Hari Lagi</p>
+                            <h5 class="font-bold text-gray-700 text-sm">Password Login</h5>
+                            <p class="text-xs text-gray-400 mt-1">Disarankan mengganti password setiap 3 bulan.</p>
                         </div>
-                        <p class="text-[10px] text-gray-500">Berakhir 12 Des 2026</p>
+                        <button class="px-4 py-2 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50">Ubah Password</button>
                     </div>
-                    <div class="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-                        <div class="bg-gradient-to-r from-green-400 to-emerald-500 h-full rounded-full" style="width: 25%"></div>
-                    </div>
-                </div>
-            </div>
 
-            <div id="telegram-connection" class="bg-white rounded-[2rem] border border-gray-200 p-8 shadow-sm scroll-mt-24">
-                 <h3 class="text-xl font-extrabold text-gray-900 mb-6">Koneksi Telegram</h3>
-                 
-                 <div class="flex items-center gap-6 p-6 rounded-2xl border {{ 'border-green-200 bg-green-50/50' if user.telegram_account.is_active else 'border-red-200 bg-red-50/50' }}">
-                     <div class="w-16 h-16 rounded-full flex items-center justify-center text-3xl {{ 'bg-green-100 text-green-600' if user.telegram_account.is_active else 'bg-red-100 text-red-600' }}">
-                         <i class="fa-brands fa-telegram"></i>
-                     </div>
-                     <div class="flex-1">
-                         <p class="text-xs font-bold uppercase tracking-wider {{ 'text-green-700' if user.telegram_account.is_active else 'text-red-700' }}">
-                             {{ 'TERHUBUNG' if user.telegram_account.is_active else 'TERPUTUS' }}
-                         </p>
-                         <p class="text-lg font-bold text-gray-800 font-mono mt-1">
-                             {{ user.telegram_account.phone_number if user.telegram_account else 'Belum ada akun' }}
-                         </p>
-                     </div>
-                     <a href="/dashboard/connection" class="px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold hover:border-indigo-500 hover:text-indigo-600 transition shadow-sm">
-                         Kelola
-                     </a>
-                 </div>
-            </div>
-
-            <div id="security" class="bg-white rounded-[2rem] border border-gray-200 p-8 shadow-sm scroll-mt-24">
-                <h3 class="text-xl font-extrabold text-gray-900 mb-6">Keamanan</h3>
-                
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between p-4 rounded-xl hover:bg-gray-50 transition cursor-pointer group">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition"><i class="fa-solid fa-key"></i></div>
+                    <div class="pt-2">
+                        <div class="bg-red-50 border border-red-100 rounded-xl p-5 flex flex-col md:flex-row justify-between items-center gap-4">
                             <div>
-                                <p class="font-bold text-gray-800 text-sm">Ganti Password</p>
-                                <p class="text-xs text-gray-400">Terakhir diubah 30 hari lalu</p>
+                                <h5 class="font-bold text-red-800 text-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> Hapus Akun
+                                </h5>
+                                <p class="text-xs text-red-600/70 mt-1">Menghapus akun akan menghilangkan semua data secara permanen.</p>
                             </div>
+                            <button onclick="alert('Hubungi admin untuk penghapusan permanen.')" class="px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50">
+                                Hapus Permanen
+                            </button>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-gray-300 group-hover:text-gray-600"></i>
-                    </div>
-
-                    <div class="flex items-center justify-between p-4 rounded-xl hover:bg-red-50 transition cursor-pointer group border border-transparent hover:border-red-100">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center group-hover:bg-red-100 transition"><i class="fa-solid fa-trash-can"></i></div>
-                            <div>
-                                <p class="font-bold text-red-600 text-sm">Hapus Akun</p>
-                                <p class="text-xs text-red-400">Tindakan ini permanen</p>
-                            </div>
-                        </div>
-                        <button class="text-xs font-bold text-red-500 bg-white border border-red-200 px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition">Hapus</button>
                     </div>
                 </div>
             </div>
@@ -208,55 +183,55 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
 <script>
-    function scrollToSection(id) {
-        const el = document.getElementById(id);
-        if(el) {
-            const y = el.getBoundingClientRect().top + window.pageYOffset - 100;
-            window.scrollTo({top: y, behavior: 'smooth'});
-            el.classList.add('ring-4', 'ring-indigo-100');
-            setTimeout(() => el.classList.remove('ring-4', 'ring-indigo-100'), 1000);
-        }
+    function switchSection(section) {
+        // Toggle Menu Active State
+        document.getElementById('btn-profile').className = section === 'profile' ? 
+            'w-full text-left px-4 py-3 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center gap-3 transition' : 
+            'w-full text-left px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-indigo-600 font-medium text-sm flex items-center gap-3 transition';
+            
+        document.getElementById('btn-security').className = section === 'security' ? 
+            'w-full text-left px-4 py-3 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center gap-3 transition' : 
+            'w-full text-left px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-indigo-600 font-medium text-sm flex items-center gap-3 transition';
+
+        // Toggle Content
+        document.getElementById('section-profile').classList.add('hidden');
+        document.getElementById('section-security').classList.add('hidden');
+        
+        document.getElementById('section-' + section).classList.remove('hidden');
+        document.getElementById('section-' + section).classList.add('animate-enter');
     }
 
-    function toggleEditMode() {
+    function toggleEdit() {
         const inputs = document.querySelectorAll('.profile-input');
-        const saveBox = document.getElementById('save-profile-container');
-        const btn = document.getElementById('btn-edit-profile');
+        const actions = document.getElementById('actionButtons');
+        const btnEdit = document.getElementById('btnEdit');
         
-        let disabled = inputs[0].disabled;
-        inputs.forEach(i => {
-            i.disabled = !disabled;
-            if(!disabled) { i.classList.remove('bg-gray-50'); i.classList.add('bg-white', 'ring-4', 'ring-indigo-50'); }
-            else { i.classList.add('bg-gray-50'); i.classList.remove('bg-white', 'ring-4', 'ring-indigo-50'); }
+        let isDisabled = inputs[0].disabled;
+        
+        inputs.forEach(input => {
+            input.disabled = !isDisabled;
+            if(!isDisabled) input.focus();
         });
 
-        if(disabled) {
-            saveBox.classList.remove('hidden');
-            btn.classList.add('hidden');
-            inputs[0].focus();
+        if(isDisabled) {
+            actions.classList.remove('hidden');
+            btnEdit.classList.add('hidden');
         } else {
-            saveBox.classList.add('hidden');
-            btn.classList.remove('hidden');
+            actions.classList.add('hidden');
+            btnEdit.classList.remove('hidden');
         }
     }
 
-    function previewAvatar(e) {
-        const file = e.target.files[0];
-        if(file) {
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                const img = document.getElementById('avatarPreview');
-                const ph = document.getElementById('avatarPlaceholder');
-                img.src = ev.target.result;
-                img.classList.remove('hidden');
-                ph.classList.add('hidden');
-            }
-            reader.readAsDataURL(file);
-        }
+    function saveProfile() {
+        const btn = event.target;
+        btn.innerText = 'Menyimpan...';
+        setTimeout(() => {
+            alert('Data berhasil diperbarui!');
+            toggleEdit();
+            btn.innerText = 'Simpan Perubahan';
+        }, 800);
     }
 </script>
 {% endblock %}
