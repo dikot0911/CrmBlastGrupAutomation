@@ -91,20 +91,16 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     supabase = None
 else:
     try:
-    # [FIX] Tambahkan options headers biar stabil di HTTP/1.1
-    from supabase.lib.client_options import ClientOptions
-    
-    # Kita paksa ClientOptions standar biar gak rewel soal http2
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    
-    # Kalau masih error, coba init manual (opsional, coba yang atas dulu)
-    # supabase = Client(SUPABASE_URL, SUPABASE_KEY, options=ClientOptions(postgrest_client_timeout=10))
-    
-    logger.info("✅ Supabase API Connected Successfully.")
-except Exception as e:
-    # Error handling biar gak crash total, tapi fitur DB mati
-    logger.critical(f"❌ Supabase Failed: {e}")
-    supabase = None
+        # [FIX] Perhatikan spasi di baris bawah ini! (Harus menjorok ke dalam)
+        from supabase.lib.client_options import ClientOptions
+        
+        # Inisialisasi Client
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        
+        logger.info("✅ Supabase API Connected Successfully.")
+    except Exception as e:
+        logger.critical(f"❌ Supabase Failed: {e}")
+        supabase = None
 
 # ==============================================================================
 # SECTION 3: GLOBAL VARIABLES & STATE MANAGEMENT
