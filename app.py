@@ -531,8 +531,7 @@ if supabase:
 
 def get_user_data(user_id):
     """
-    Mengambil data User lengkap dengan status Telegram Account.
-    Menggunakan Wrapper Class agar kompatibel dengan template Jinja2 (dot notation).
+    Mengambil data User lengkap dengan status Subscription & Telegram.
     """
     if not supabase: return None
     try:
@@ -541,7 +540,7 @@ def get_user_data(user_id):
         if not u_res.data: return None
         user_raw = u_res.data[0]
         
-        # 2. Fetch Telegram Account Data
+        # 2. Fetch Telegram Account
         t_res = supabase.table('telegram_accounts').select("*").eq('user_id', user_id).execute()
         tele_raw = t_res.data[0] if t_res.data else None
         
@@ -552,16 +551,49 @@ def get_user_data(user_id):
                 self.email = u_data['email']
                 self.is_admin = u_data.get('is_admin', False)
                 self.is_banned = u_data.get('is_banned', False)
-                self.created_at = u_data.get('created_at')
                 
+                # Parsing Tanggal Join
+                raw_created = u_data.get('created_at')
+                try:
+                    self.created_at = datetime.fromisoformat(raw_created.replace('Z', '+00:00')) if raw_created else datetime.now()
+                except:
+                    self.created_at = datetime.now()
+
+                # --- LOGIC BARU: SUBSCRIPTION ---
+                self.plan_tier = u_data.get('plan_tier', 'Starter') # Default Starter
+                
+                # Hitung Sisa Hari
+                raw_sub_end = u_data.get('subscription_end')
+                self.days_remaining = 0
+                self.subscription_status = 'Expired'
+                self.sub_end_date = None
+
+                if raw_sub_end:
+                    try:
+                        # Parsing tanggal expire
+                        end_date = datetime.fromisoformat(raw_sub_end.replace('Z', '+00:00'))
+                        self.sub_end_date = end_date
+                        
+                        # Hitung selisih hari dari SEKARANG (UTC)
+                        now = datetime.now(pytz.utc)
+                        delta = end_date - now
+                        
+                        if delta.days >= 0:
+                            self.days_remaining = delta.days
+                            self.subscription_status = 'Active'
+                        else:
+                            self.days_remaining = 0
+                            self.plan_tier = 'Starter' # Downgrade otomatis visualnya
+                    except Exception as e:
+                        logger.error(f"Date Parse Error: {e}")
+
                 # Nested Object for Telegram Info
                 self.telegram_account = None
                 if t_data:
                     self.telegram_account = type('TeleInfo', (object,), {
                         'phone_number': t_data.get('phone_number'),
                         'is_active': t_data.get('is_active', False),
-                        'session_string': t_data.get('session_string'),
-                        'created_at': t_data.get('created_at')
+                        'session_string': t_data.get('session_string')
                     })
         
         return UserEntity(user_raw, tele_raw)
@@ -1084,6 +1116,15 @@ def dashboard_profile():
     
     # Render template profil yang baru dibuat
     return render_template('dashboard/profile.html', user=user, active_page='profile')
+
+@app.route('/dashboard/payment')
+@login_required
+def dashboard_payment():
+    """Halaman Pilihan Paket & Pembayaran"""
+    user = get_user_data(session['user_id'])
+    if not user: return redirect(url_for('login'))
+    
+    return render_template('dashboard/payment.html', user=user, active_page='payment')
 
 # ==============================================================================
 # SECTION 9: TELEGRAM AUTHENTICATION (CORE LOGIC & STATELESS)
