@@ -2729,6 +2729,16 @@ if supabase:
 start_self_ping()
     
 # --- [BATAS SUCI] --
+if os.getenv("NOTIF_BOT_TOKEN"): # Cek kalo token ada
+    try:
+        # Jalankan bot di thread terpisah biar ga ganggu website
+        bot_thread = threading.Thread(target=run_bot_process, name="TelegramBot", daemon=True)
+        bot_thread.start()
+        print("✅ [BOOT] Sinyal Start Bot Terkirim.", flush=True)
+    except Exception as e:
+        print(f"❌ [BOOT] Gagal Start Bot: {e}", flush=True)
+
+# ... (Baru masuk ke app.run) ...
 if __name__ == '__main__':
-    # Run App
-    app.run(debug=True, port=5000, use_reloader=False)
+    app.run(debug=True, port=5000, use_reloader=False) 
+    # use_reloader=False PENTING biar bot ga jalan 2x (double process)
