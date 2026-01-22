@@ -160,7 +160,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = data.split('_')[1]
         await show_main_menu(update, user_id)
 
-# --- JALANKAN BOT ---
 # --- FUNGSI PENGGERAK UTAMA ---
 def run_bot_process():
     """
@@ -170,7 +169,7 @@ def run_bot_process():
         print("❌ BOT STOP: Token belum diisi.")
         return
 
-    # Buat loop baru khusus untuk thread ini (PENTING untuk Asyncio di Thread)
+    # Buat loop baru khusus untuk thread ini
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
@@ -180,12 +179,11 @@ def run_bot_process():
     
     # Daftarkan Handler
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("connect", start)) # Alias buat jaga2
+    application.add_handler(CommandHandler("connect", start))
     application.add_handler(CallbackQueryHandler(button_handler))
     
-    # Jalankan Polling
-    application.run_polling()
+    # [FIX PENTING] Matikan stop_signals agar jalan mulus di Thread
+    application.run_polling(stop_signals=None) 
 
-# Block ini cuma jalan kalau lu run file ini sendirian (python bot.py)
 if __name__ == '__main__':
     run_bot_process()
