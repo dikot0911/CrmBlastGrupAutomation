@@ -1,271 +1,249 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Profil Saya{% endblock %}
+{% block title %}Akun Saya{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto animate-enter pb-24">
+<div class="max-w-7xl mx-auto animate-enter pb-24">
 
-    <div class="relative mb-12">
-        <div class="h-56 w-full rounded-3xl bg-gradient-to-r from-gray-900 via-indigo-900 to-violet-900 relative overflow-hidden shadow-2xl">
-            <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-            
-            <div class="absolute top-6 right-6 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl text-right">
-                <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-200">Member ID</p>
-                <p class="font-mono text-xl font-bold text-white tracking-widest">#{{ '%06d' % user.id }}</p>
-            </div>
-        </div>
+    <div class="relative rounded-3xl overflow-hidden shadow-2xl mb-10 bg-gray-900 group">
+        <div class="absolute inset-0 bg-gradient-to-r from-gray-900 via-indigo-950 to-gray-900 opacity-90"></div>
+        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay"></div>
+        <div class="absolute -right-20 -top-20 w-96 h-96 bg-indigo-500 rounded-full blur-[128px] opacity-20 group-hover:opacity-30 transition duration-1000"></div>
 
-        <div class="absolute -bottom-10 left-6 md:left-12 flex items-end">
-            <div class="relative group">
-                <div class="w-32 h-32 md:w-36 md:h-36 bg-white rounded-2xl p-1.5 shadow-2xl ring-4 ring-white/50">
-                    <div class="w-full h-full bg-indigo-50 rounded-xl flex items-center justify-center text-5xl font-bold text-indigo-300 border-2 border-dashed border-indigo-200 overflow-hidden cursor-pointer hover:border-indigo-400 transition relative" onclick="document.getElementById('avatarUpload').click()">
+        <div class="relative p-8 md:p-12 flex flex-col md:flex-row items-center md:items-end gap-8">
+            <div class="relative">
+                <div class="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-indigo-400 to-pink-500 shadow-lg shadow-indigo-500/30">
+                    <div class="w-full h-full bg-gray-800 rounded-full flex items-center justify-center overflow-hidden border-4 border-gray-900 cursor-pointer relative group/avatar">
                         {% if user.avatar_url %}
                             <img src="{{ user.avatar_url }}" class="w-full h-full object-cover">
-                        {% elif user.email %}
-                            <span class="group-hover:opacity-20 transition select-none">{{ user.email[0]|upper }}</span>
                         {% else %}
-                            <i class="fa-solid fa-user"></i>
+                            <span class="text-4xl font-bold text-gray-400 select-none">{{ user.email[0]|upper }}</span>
                         {% endif %}
-                        
-                        <div class="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 bg-white/80 backdrop-blur-sm">
-                            <i class="fa-solid fa-camera text-indigo-600 mb-1 text-xl"></i>
-                            <span class="text-[10px] text-indigo-600 font-bold uppercase tracking-wide">Ubah Foto</span>
+                        <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition backdrop-blur-[2px]">
+                            <i class="fa-solid fa-camera text-white"></i>
                         </div>
-                        <input type="file" id="avatarUpload" class="hidden" accept="image/*" onchange="previewAvatar(event)">
                     </div>
                 </div>
-                
-                <div class="absolute -bottom-2 -right-2 transform translate-x-1/4">
+                <div class="absolute bottom-2 right-2 w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center border border-gray-700">
                     {% if user.is_banned %}
-                        <div class="w-10 h-10 bg-red-500 rounded-full border-4 border-white flex items-center justify-center text-white shadow-lg animate-pulse" title="Banned">
-                            <i class="fa-solid fa-ban"></i>
-                        </div>
+                        <i class="fa-solid fa-ban text-red-500 text-sm"></i>
                     {% else %}
-                        <div class="w-10 h-10 bg-green-500 rounded-full border-4 border-white flex items-center justify-center text-white shadow-lg" title="Verified Member">
-                            <i class="fa-solid fa-check"></i>
-                        </div>
+                        <i class="fa-solid fa-check-circle text-green-400 text-lg shadow-[0_0_10px_#4ade80]"></i>
                     {% endif %}
                 </div>
             </div>
-            
-            <div class="mb-3 ml-6 pb-1">
-                <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800 flex items-center gap-3">
-                    {{ user.email.split('@')[0]|title }}
-                    {% if user.is_admin %}
-                        <span class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] px-2.5 py-1 rounded-full border border-white/30 shadow-sm align-middle flex items-center gap-1.5 uppercase tracking-wide font-bold">
-                            <i class="fa-solid fa-crown"></i> Super Admin
-                        </span>
+
+            <div class="flex-1 text-center md:text-left space-y-2">
+                <div class="flex items-center justify-center md:justify-start gap-3">
+                    <h1 class="text-3xl font-bold text-white tracking-tight">{{ user.email.split('@')[0]|title }}</h1>
+                    {% if user.plan_tier == 'UMKM PRO' %}
+                        <span class="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/50 text-indigo-300 text-xs font-bold uppercase tracking-wider shadow-[0_0_15px_rgba(99,102,241,0.3)]">PRO</span>
+                    {% elif user.plan_tier == 'Agency' %}
+                        <span class="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/50 text-purple-300 text-xs font-bold uppercase tracking-wider shadow-[0_0_15px_rgba(168,85,247,0.3)]">AGENCY</span>
+                    {% else %}
+                        <span class="px-3 py-1 rounded-full bg-gray-700 text-gray-400 text-xs font-bold uppercase">STARTER</span>
                     {% endif %}
-                </h1>
-                <p class="text-gray-500 font-medium flex items-center gap-2 mt-1">
-                    <i class="fa-regular fa-envelope text-indigo-400"></i> {{ user.email }}
-                    <span class="text-gray-300">|</span>
-                    <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded border border-indigo-100 font-bold">
-                        {{ user.plan_tier|upper }} PLAN
-                    </span>
+                </div>
+                <p class="text-gray-400 font-mono text-sm flex items-center justify-center md:justify-start gap-4">
+                    <span><i class="fa-regular fa-envelope mr-1"></i> {{ user.email }}</span>
+                    <span class="opacity-30">|</span>
+                    <span><i class="fa-solid fa-fingerprint mr-1"></i> ID: #{{ '%06d' % user.id }}</span>
                 </p>
+            </div>
+
+            <div class="flex gap-4">
+                <div class="text-right">
+                    <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Saldo Affiliate</p>
+                    <p class="text-2xl font-bold text-emerald-400 font-mono">Rp {{ "{:,.0f}".format(user.wallet_balance).replace(',', '.') }}</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="h-16 md:h-20"></div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 px-2">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         <div class="lg:col-span-4 space-y-6">
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden">
-                <div class="absolute -right-4 -top-4 text-9xl text-white opacity-10 rotate-12"><i class="fa-brands fa-telegram"></i></div>
-                <div class="relative z-10">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-sm font-bold uppercase tracking-wider opacity-90">Koneksi Telegram</h4>
-                        <div class="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-[10px] font-bold border border-white/20">
-                            {{ 'TERHUBUNG' if user.telegram_account and user.telegram_account.is_active else 'TERPUTUS' }}
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 bg-blue-50 w-32 h-32 rounded-full opacity-50 group-hover:scale-110 transition duration-500"></div>
+                
+                <h3 class="font-bold text-gray-800 flex items-center gap-2 mb-4 relative z-10">
+                    <i class="fa-brands fa-telegram text-blue-500 text-xl"></i> Notifikasi Bot
+                </h3>
+                
+                {% if is_notif_connected %}
+                    <div class="bg-green-50 border border-green-100 rounded-xl p-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                                <i class="fa-solid fa-bell"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-green-800">Aktif & Terhubung</p>
+                                <p class="text-xs text-green-600/80">Laporan dikirim otomatis.</p>
+                            </div>
                         </div>
                     </div>
-                    
-                    <p class="font-mono text-lg font-bold truncate mb-1">
-                        {{ user.telegram_account.phone_number if user.telegram_account else '-' }}
-                    </p>
-                    <p class="text-xs opacity-75 mb-4">Pastikan nomor selalu aktif untuk notifikasi.</p>
-                    
-                    <button onclick="window.location.href='/dashboard/connection'" class="w-full py-2.5 bg-white text-blue-600 font-bold rounded-xl text-xs hover:bg-blue-50 transition shadow-sm">
-                        {{ 'Atur Koneksi' if user.telegram_account and user.telegram_account.is_active else 'Hubungkan Sekarang' }}
-                    </button>
-                </div>
+                    <a href="https://t.me/{{ bot_username }}" target="_blank" class="block w-full py-2.5 text-center rounded-xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition">
+                        Buka Bot <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-xs"></i>
+                    </a>
+                {% else %}
+                    <p class="text-sm text-gray-500 mb-4 relative z-10">Hubungkan akun ke bot untuk mendapatkan notifikasi jadwal real-time (5 menit sebelum broadcast).</p>
+                    <a href="{{ bot_link }}" target="_blank" class="relative z-10 flex items-center justify-center w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-lg shadow-blue-200 group-hover:shadow-blue-300">
+                        <i class="fa-solid fa-plug mr-2"></i> Hubungkan Sekarang
+                    </a>
+                    <p class="text-[10px] text-center text-gray-400 mt-2">Klik akan membuka Telegram App</p>
+                {% endif %}
             </div>
-            
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
-                <div class="p-5 border-b border-gray-100 bg-gray-50/50">
-                    <h3 class="font-bold text-gray-800 text-sm uppercase tracking-wide">Navigasi Profil</h3>
-                </div>
-                <div class="p-3 space-y-1">
-                    <button onclick="switchSection('profile')" id="btn-profile" class="w-full text-left px-4 py-3.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center gap-3 transition-all duration-200 border border-indigo-100 shadow-sm">
-                        <div class="w-8 h-8 rounded-lg bg-indigo-200 text-indigo-700 flex items-center justify-center"><i class="fa-regular fa-id-card"></i></div>
-                        Informasi Pribadi
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <nav class="flex flex-col p-2 space-y-1">
+                    <button onclick="switchTab('profile')" id="tab-profile" class="nav-item active w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition">
+                        <div class="icon-box w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-500 transition"><i class="fa-regular fa-user"></i></div>
+                        Data Pribadi
                     </button>
-                    
-                    <button onclick="switchSection('subscription')" id="btn-subscription" class="w-full text-left px-4 py-3.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm flex items-center gap-3 transition-all duration-200 border border-transparent">
-                        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-receipt"></i></div>
-                        Langganan & Tagihan
-                        {% if user.plan_tier == 'Starter' %}
-                            <span class="ml-auto bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full">UPGRADE</span>
-                        {% endif %}
+                    <button onclick="switchTab('affiliate')" id="tab-affiliate" class="nav-item w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition">
+                        <div class="icon-box w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-500 transition"><i class="fa-solid fa-money-bill-trend-up"></i></div>
+                        Program Affiliate <span class="ml-auto text-[10px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-bold">25%</span>
                     </button>
-                    
-                    <button onclick="switchSection('security')" id="btn-security" class="w-full text-left px-4 py-3.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm flex items-center gap-3 transition-all duration-200 border border-transparent">
-                        <div class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center"><i class="fa-solid fa-shield-halved"></i></div>
-                        Keamanan Akun
+                    <button onclick="switchTab('subscription')" id="tab-subscription" class="nav-item w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition">
+                        <div class="icon-box w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-500 transition"><i class="fa-solid fa-receipt"></i></div>
+                        Langganan
                     </button>
-                </div>
+                    <button onclick="switchTab('security')" id="tab-security" class="nav-item w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition">
+                        <div class="icon-box w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-500 transition"><i class="fa-solid fa-lock"></i></div>
+                        Keamanan
+                    </button>
+                </nav>
             </div>
         </div>
 
         <div class="lg:col-span-8">
             
-            <div id="section-profile" class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 transition-all duration-300">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-                    <div>
-                        <h3 class="text-xl font-bold text-gray-800">Edit Profil</h3>
-                        <p class="text-sm text-gray-500 mt-1">Kelola informasi dasar akun Anda.</p>
+            <div id="content-profile" class="tab-content transition-all duration-300">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-gray-800">Edit Informasi</h3>
                     </div>
-                    <button onclick="toggleEdit()" id="btnEdit" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-5 py-2.5 rounded-xl transition flex items-center gap-2">
-                        <i class="fa-solid fa-pen-to-square"></i> Edit
-                    </button>
-                </div>
-
-                <form class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="col-span-2">
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wide">Email Akun</label>
-                        <div class="relative group">
-                            <i class="fa-regular fa-envelope absolute left-4 top-3.5 text-gray-400 group-hover:text-indigo-400 transition"></i>
-                            <input type="text" value="{{ user.email }}" class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 font-medium text-sm cursor-not-allowed focus:outline-none" disabled>
-                            <div class="absolute right-4 top-3.5 text-xs text-gray-400 italic">Tidak dapat diubah</div>
+                    <form class="space-y-5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Email</label>
+                                <input type="text" value="{{ user.email }}" disabled class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 text-sm font-bold cursor-not-allowed">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nama Lengkap</label>
+                                <input type="text" placeholder="Masukkan nama..." class="w-full p-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">No. WhatsApp</label>
+                                <input type="text" placeholder="+62..." class="w-full p-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nama Bisnis</label>
+                                <input type="text" placeholder="Contoh: Toko Berkah" class="w-full p-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition">
+                            </div>
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wide">Nama Lengkap</label>
-                        <input type="text" value="User BlastPro" class="profile-input w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm font-medium focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition disabled:bg-gray-50 disabled:text-gray-400" disabled>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wide">No. WhatsApp</label>
-                        <input type="text" placeholder="+62..." class="profile-input w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm font-medium focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition disabled:bg-gray-50 disabled:text-gray-400" disabled>
-                    </div>
-
-                    <div class="col-span-2">
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-wide">Nama Toko / Bisnis</label>
-                        <input type="text" placeholder="Contoh: Baba Parfume Store" class="profile-input w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm font-medium focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition disabled:bg-gray-50 disabled:text-gray-400" disabled>
-                    </div>
-
-                    <div class="col-span-2 flex justify-end gap-3 mt-4 hidden" id="actionButtons">
-                        <button type="button" onclick="toggleEdit()" class="px-6 py-3 rounded-xl text-gray-500 font-bold hover:bg-gray-50 transition text-sm">Batal</button>
-                        <button type="button" onclick="saveProfile()" class="px-8 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 text-sm flex items-center gap-2">
-                            <i class="fa-solid fa-check"></i> Simpan
-                        </button>
-                    </div>
-                </form>
+                        <div class="flex justify-end pt-4">
+                            <button type="button" onclick="alert('Data Tersimpan!')" class="bg-gray-900 hover:bg-black text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg transition">Simpan Perubahan</button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
-            <div id="section-subscription" class="hidden space-y-8 animate-enter">
-                
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-full -mr-20 -mt-20 opacity-70 pointer-events-none"></div>
+            <div id="content-affiliate" class="tab-content hidden transition-all duration-300">
+                <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden mb-6">
+                    <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fa-solid fa-sack-dollar fa-8x"></i></div>
                     
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 relative z-10">
-                        <div>
-                            <span class="text-xs font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-wider border border-indigo-100">Paket Aktif</span>
-                            <h2 class="text-3xl font-extrabold text-gray-900 mt-3">{{ user.plan_tier|upper }} PLAN</h2>
-                            <p class="text-gray-500 text-sm mt-1">
-                                {% if user.plan_tier == 'Starter' %}
-                                    Fitur dasar. Upgrade untuk akses penuh.
-                                {% else %}
-                                    Fitur Pro aktif. Nikmati automasi tanpa batas.
-                                {% endif %}
-                            </p>
-                        </div>
-                        <button onclick="window.location.href='/dashboard/payment'" class="mt-4 md:mt-0 bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-xl font-bold transition shadow-lg flex items-center gap-2 transform hover:-translate-y-1">
-                            <i class="fa-solid fa-rocket text-yellow-400"></i> Upgrade Paket
-                        </button>
-                    </div>
-
-                    {% if user.plan_tier != 'Starter' and user.sub_end_date %}
-                    <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 relative z-10">
-                        <div class="flex justify-between items-end mb-3">
-                            <div>
-                                <p class="text-xs font-bold text-gray-400 uppercase">Sisa Masa Aktif</p>
-                                <p class="text-2xl font-bold text-indigo-600">{{ user.days_remaining }} <span class="text-sm text-gray-500 font-medium">Hari</span></p>
+                    <div class="relative z-10">
+                        <h3 class="text-xl font-bold mb-1">Affiliate Partner</h3>
+                        <p class="text-indigo-200 text-sm mb-6 max-w-md">Bagikan link referral Anda dan dapatkan komisi 25% dari setiap pembayaran user yang mendaftar melalui link Anda.</p>
+                        
+                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+                            <div class="flex-1 w-full">
+                                <p class="text-[10px] text-indigo-200 uppercase font-bold mb-1">Link Referral Anda</p>
+                                <div class="flex items-center gap-2 bg-black/20 rounded-lg px-3 py-2">
+                                    <code class="text-sm font-mono text-white truncate flex-1" id="refLink">https://{{ request.host }}/register?ref={{ user.referral_code }}</code>
+                                    <button onclick="copyRef()" class="text-indigo-300 hover:text-white transition"><i class="fa-regular fa-copy"></i></button>
+                                </div>
                             </div>
-                            <p class="text-xs text-gray-500 font-medium">Berakhir: {{ user.sub_end_date.strftime('%d %b %Y') }}</p>
-                        </div>
-                        {% set percent = (user.days_remaining / 30) * 100 %}
-                        <div class="w-full bg-gray-200 rounded-full h-3">
-                            <div class="bg-indigo-500 h-3 rounded-full transition-all duration-1000 relative" style="width: {{ percent }}%">
-                                <div class="absolute right-0 top-0 h-3 w-3 bg-white rounded-full shadow border border-indigo-500"></div>
+                            <div class="text-center md:text-right px-4 border-l border-white/10">
+                                <p class="text-[10px] text-indigo-200 uppercase font-bold">Kode Unik</p>
+                                <p class="text-2xl font-bold font-mono tracking-widest">{{ user.referral_code }}</p>
                             </div>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="bg-yellow-50 rounded-xl p-5 border border-yellow-100 relative z-10 flex items-start gap-4">
-                        <i class="fa-solid fa-circle-info text-yellow-600 text-xl mt-0.5"></i>
-                        <div>
-                            <h5 class="font-bold text-yellow-800 text-sm">Mode Gratis (Terbatas)</h5>
-                            <p class="text-xs text-yellow-700 mt-1">Anda menggunakan versi gratis. Batas 1 akun Telegram dan 10 jadwal per hari.</p>
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
 
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <h3 class="font-bold text-gray-800">Riwayat Transaksi</h3>
-                        <button class="text-xs text-indigo-600 font-bold hover:underline">Lihat Semua</button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-gray-500 text-xs font-bold uppercase">Dompet Komisi</p>
+                                <h3 class="text-3xl font-extrabold text-gray-800">Rp {{ "{:,.0f}".format(user.wallet_balance).replace(',', '.') }}</h3>
+                            </div>
+                            <div class="p-3 bg-green-50 text-green-600 rounded-xl"><i class="fa-solid fa-wallet text-xl"></i></div>
+                        </div>
+                        <button class="w-full py-2.5 border border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-bold rounded-xl text-sm transition">
+                            Request Withdraw
+                        </button>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
-                                <tr>
-                                    <th class="px-6 py-4">Invoice</th>
-                                    <th class="px-6 py-4">Tanggal</th>
-                                    <th class="px-6 py-4">Paket</th>
-                                    <th class="px-6 py-4">Total</th>
-                                    <th class="px-6 py-4">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                <tr>
-                                    <td colspan="5" class="px-6 py-8 text-center text-gray-400 italic">
-                                        Belum ada riwayat transaksi.
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-gray-500 text-xs font-bold uppercase">Total Member</p>
+                                <h3 class="text-3xl font-extrabold text-gray-800">0 <span class="text-sm text-gray-400 font-normal">Orang</span></h3>
+                            </div>
+                            <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-users-line text-xl"></i></div>
+                        </div>
+                        <p class="text-xs text-gray-400">Total user yang mendaftar menggunakan kode Anda.</p>
                     </div>
                 </div>
             </div>
 
-            <div id="section-security" class="hidden bg-white p-8 rounded-2xl shadow-sm border border-gray-100 animate-enter">
-                <h3 class="text-lg font-bold text-gray-800 mb-6">Keamanan Akun</h3>
-                
-                <div class="space-y-6">
-                    <div class="flex items-center justify-between pb-6 border-b border-gray-100">
-                        <div>
-                            <h5 class="font-bold text-gray-700 text-sm">Password Login</h5>
-                            <p class="text-xs text-gray-400 mt-1">Disarankan mengganti password setiap 3 bulan.</p>
-                        </div>
-                        <button class="px-4 py-2 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition">Ubah Password</button>
+            <div id="content-subscription" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-gray-800">Paket Aktif</h3>
+                        <a href="/dashboard/payment" class="text-xs bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 transition">Upgrade Paket</a>
                     </div>
-
-                    <div class="pt-2">
-                        <div class="bg-red-50 border border-red-100 rounded-xl p-5 flex flex-col md:flex-row justify-between items-center gap-4">
+                    
+                    <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                        <div class="flex justify-between items-center">
                             <div>
-                                <h5 class="font-bold text-red-800 text-sm flex items-center gap-2">
-                                    <i class="fa-solid fa-triangle-exclamation"></i> Hapus Akun
-                                </h5>
-                                <p class="text-xs text-red-600/70 mt-1">Menghapus akun akan menghilangkan semua data secara permanen.</p>
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Plan</span>
+                                <h2 class="text-3xl font-extrabold text-indigo-600 mt-1">{{ user.plan_tier|upper }}</h2>
                             </div>
-                            <button onclick="alert('Fitur ini dinonaktifkan demi keamanan. Hubungi Admin.')" class="px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 transition">
-                                Hapus Permanen
+                            <div class="text-right">
+                                <p class="text-xs text-gray-500">Status</p>
+                                {% if user.plan_tier == 'Starter' %}
+                                    <span class="inline-block px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-xs font-bold">FREE TIER</span>
+                                {% else %}
+                                    <span class="inline-block px-3 py-1 bg-green-100 text-green-600 rounded-full text-xs font-bold animate-pulse">ACTIVE</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="content-security" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                    <h3 class="text-lg font-bold text-gray-800 mb-6">Keamanan Akun</h3>
+                    
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
+                            <div>
+                                <p class="font-bold text-gray-700 text-sm">Ganti Password</p>
+                                <p class="text-xs text-gray-500">Disarankan ganti password tiap 3 bulan.</p>
+                            </div>
+                            <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition">Update</button>
+                        </div>
+
+                        <div class="bg-red-50 p-5 rounded-xl border border-red-100 mt-8">
+                            <h4 class="text-red-700 font-bold text-sm mb-2 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> Hapus Akun Permanen</h4>
+                            <p class="text-red-600/70 text-xs mb-4">Tindakan ini tidak dapat dibatalkan. Semua data akan hilang.</p>
+                            
+                            <button onclick="confirmDelete()" class="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-600 hover:text-white rounded-lg text-xs font-bold transition">
+                                Hapus Akun Saya
                             </button>
                         </div>
                     </div>
@@ -276,80 +254,71 @@
     </div>
 </div>
 
-{% endblock %}
+<div id="deleteModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-2">Konfirmasi Hapus</h3>
+        <p class="text-sm text-gray-500 mb-4">Masukkan password Anda untuk melanjutkan penghapusan akun.</p>
+        
+        <input type="password" id="deletePass" placeholder="Password Anda" class="w-full p-3 border border-gray-300 rounded-lg text-sm mb-4 focus:ring-2 focus:ring-red-500 outline-none">
+        
+        <div class="flex gap-3">
+            <button onclick="document.getElementById('deleteModal').classList.add('hidden')" class="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl text-sm">Batal</button>
+            <button onclick="processDelete()" class="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl text-sm hover:bg-red-700">Hapus</button>
+        </div>
+    </div>
+</div>
 
-{% block scripts %}
 <script>
-    function switchSection(section) {
-        // Reset all buttons style
-        const buttons = ['btn-profile', 'btn-subscription', 'btn-security'];
-        buttons.forEach(btnId => {
-            const btn = document.getElementById(btnId);
-            if(btn) {
-                btn.className = 'w-full text-left px-4 py-3.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm flex items-center gap-3 transition-all duration-200 border border-transparent';
-            }
+    function switchTab(tabName) {
+        // Reset Nav Items
+        document.querySelectorAll('.nav-item').forEach(el => {
+            el.classList.remove('bg-indigo-50', 'text-indigo-700');
+            el.classList.add('text-gray-600', 'hover:bg-gray-50');
+            el.querySelector('.icon-box').classList.remove('bg-indigo-100', 'text-indigo-600');
+            el.querySelector('.icon-box').classList.add('bg-gray-100', 'text-gray-500');
         });
 
-        // Active Button Style
-        const activeBtn = document.getElementById('btn-' + section);
-        if(activeBtn) {
-            activeBtn.className = 'w-full text-left px-4 py-3.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center gap-3 transition-all duration-200 border border-indigo-100 shadow-sm';
-        }
+        // Activate Selected Nav
+        const activeBtn = document.getElementById('tab-' + tabName);
+        activeBtn.classList.remove('text-gray-600', 'hover:bg-gray-50');
+        activeBtn.classList.add('bg-indigo-50', 'text-indigo-700');
+        activeBtn.querySelector('.icon-box').classList.remove('bg-gray-100', 'text-gray-500');
+        activeBtn.querySelector('.icon-box').classList.add('bg-indigo-100', 'text-indigo-600');
 
-        // Toggle Content Sections
-        document.getElementById('section-profile').classList.add('hidden');
-        document.getElementById('section-subscription').classList.add('hidden');
-        document.getElementById('section-security').classList.add('hidden');
-        
-        const targetSection = document.getElementById('section-' + section);
-        if(targetSection) {
-            targetSection.classList.remove('hidden');
-        }
+        // Toggle Content
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        const content = document.getElementById('content-' + tabName);
+        content.classList.remove('hidden');
+        content.classList.add('animate-enter');
     }
 
-    function toggleEdit() {
-        const inputs = document.querySelectorAll('.profile-input');
-        const actions = document.getElementById('actionButtons');
-        const btnEdit = document.getElementById('btnEdit');
-        
-        if(inputs.length > 0) {
-            let isDisabled = inputs[0].disabled;
-            inputs.forEach(input => {
-                input.disabled = !isDisabled;
-                if(!isDisabled) {
-                    input.classList.remove('bg-white');
-                    input.classList.add('bg-indigo-50');
-                } else {
-                    input.classList.add('bg-white');
-                    input.classList.remove('bg-indigo-50');
-                }
-            });
-
-            if(isDisabled) {
-                if(actions) actions.classList.remove('hidden');
-                if(btnEdit) btnEdit.classList.add('hidden');
-                inputs[0].focus();
-            } else {
-                if(actions) actions.classList.add('hidden');
-                if(btnEdit) btnEdit.classList.remove('hidden');
-            }
-        }
+    function copyRef() {
+        const text = document.getElementById('refLink').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Link Referral tersalin!");
+        });
     }
 
-    function saveProfile() {
-        const btn = event.target;
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menyimpan...';
-        
-        setTimeout(() => {
-            alert('Data berhasil diperbarui! (Simulasi)');
-            toggleEdit();
-            btn.innerHTML = originalText;
-        }, 1000);
+    // Safety Delete Logic
+    function confirmDelete() {
+        document.getElementById('deleteModal').classList.remove('hidden');
     }
 
-    function previewAvatar(event) {
-        alert("Fitur upload akan aktif setelah integrasi Storage.");
+    function processDelete() {
+        const pass = document.getElementById('deletePass').value;
+        if(!pass) return alert("Password wajib diisi!");
+        
+        // Simulasi Hapus (Nanti di-connect ke backend API real)
+        alert("Permintaan penghapusan dikirim. Admin akan memproses 1x24 jam.");
+        document.getElementById('deleteModal').classList.add('hidden');
     }
 </script>
+
+<style>
+    .animate-enter { animation: fadeInUp 0.5s ease-out forwards; }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
 {% endblock %}
