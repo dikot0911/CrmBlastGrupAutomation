@@ -13,6 +13,7 @@ import random
 import qrcode
 import base64
 import uuid
+import string
 from io import BytesIO
 from functools import wraps 
 from datetime import datetime, timedelta
@@ -206,6 +207,10 @@ def send_telegram_alert(user_id, message):
     except Exception as e:
         # Jangan sampe error notif bikin aplikasi crash
         print(f"⚠️ Gagal kirim notif ke user {user_id}: {e}")
+
+def generate_ref_code():
+    """Bikin kode unik 6 karakter, contoh: X7Y9Z1"""
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
 # ==============================================================================
 # SECTION 4.5: MESSAGE TEMPLATE MANAGER (NEW FEATURE)
@@ -767,36 +772,54 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    # Tangkap kode referral dari URL (misal: /register?ref=BABA123)
+    ref_param = request.args.get('ref')
+    
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
+        # Tangkap ref code dari form hidden input juga (kalau ada)
+        ref_code_input = request.form.get('referral_code') or ref_param
         
         try:
-            # Validasi Duplikat Email
+            # 1. Validasi Email Duplikat (Sama kayak lama)
             exist = supabase.table('users').select("id").eq('email', email).execute()
             if exist.data:
-                flash('Email ini sudah terdaftar. Silakan login.', 'warning')
+                flash('Email sudah terdaftar.', 'warning')
                 return redirect(url_for('register'))
             
-            # Create New User
+            # 2. Cek Upline (Siapa yang ngajak?)
+            upline_id = None
+            if ref_code_input:
+                upline_res = supabase.table('users').select("id").eq('referral_code', ref_code_input).execute()
+                if upline_res.data:
+                    upline_id = upline_res.data[0]['id']
+            
+            # 3. Create User Baru (+ Referral Code & Upline)
             hashed_pw = generate_password_hash(password)
+            new_ref_code = generate_ref_code() # Bikin kode unik buat dia
+            
             new_user = {
                 'email': email,
                 'password': hashed_pw,
                 'created_at': datetime.utcnow().isoformat(),
                 'is_admin': False,
-                'is_banned': False
+                'is_banned': False,
+                'plan_tier': 'Starter',
+                'referral_code': new_ref_code, # <--- INI BARU
+                'referred_by': upline_id,      # <--- INI BARU (Disimpan biar tau harus bagi komisi ke siapa)
+                'wallet_balance': 0
             }
             supabase.table('users').insert(new_user).execute()
             
-            flash('Pendaftaran Berhasil! Silakan masuk ke akun Anda.', 'success')
+            flash('Pendaftaran Berhasil! Silakan login.', 'success')
             return redirect(url_for('login'))
             
         except Exception as e:
-            logger.error(f"Register Exception: {e}")
-            flash('Gagal mendaftar. Silakan coba lagi.', 'danger')
+            logger.error(f"Register Error: {e}")
+            flash('Gagal mendaftar.', 'danger')
             
-    return render_template('auth/register.html')
+    return render_template('auth/register.html', ref=ref_param)
 
 @app.route('/logout')
 def logout():
