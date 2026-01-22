@@ -378,9 +378,10 @@ class SchedulerWorker:
         try:
             # --- 1. NOTIFIKASI 5 MENIT SEBELUM ---
             future_time = current_time_indo + timedelta(minutes=5)
-            f_hour, f_minute = future_time.hour, future_time.minute
+            f_hour = future_time.hour
+            f_minute = future_time.minute
             
-            # Cek jadwal 5 menit ke depan (Tanpa 'res', langsung method chaining)
+            # Cek jadwal 5 menit ke depan
             upcoming = supabase.table('blast_schedules').select("user_id")\
                 .eq('is_active', True)\
                 .eq('run_hour', f_hour)\
@@ -388,9 +389,14 @@ class SchedulerWorker:
                 .execute().data
                 
             for job in upcoming:
-                msg = f"⏳ **PENGINGAT:** Jadwal jam {f_hour}:{f_minute:02d} akan segera dimulai."
+                msg = (
+                    "⏳ **PENGINGAT JADWAL**\n\n"
+                    f"Jadwal Blast akan berjalan dalam **5 menit lagi** "
+                    f"(Pukul {f_hour}:{f_minute:02d} WIB).\n\n"
+                    "Pastikan akun Telegram pengirim (Sender) Anda aktif/online agar proses lancar."
+                )
                 threading.Thread(target=send_telegram_alert, args=(job['user_id'], msg)).start()
-                
+            
             # --- 2. EKSEKUSI JADWAL SEKARANG (INI YANG KEMAREN ILANG) ---
             current_hour = current_time_indo.hour
             current_minute = current_time_indo.minute
@@ -406,9 +412,10 @@ class SchedulerWorker:
             
             if not schedules: return
                 
-            logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal...")
+            logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal untuk {current_hour}:{current_minute} WIB")
             
             for task in schedules:
+                # Jalankan task di thread terpisah biar loop utama gak macet
                 threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
                 
         except Exception as e:
