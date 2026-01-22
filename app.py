@@ -602,6 +602,13 @@ def get_user_data(user_id):
                 self.is_admin = u_data.get('is_admin', False)
                 self.is_banned = u_data.get('is_banned', False)
                 
+                # ... (Kode lama parsing tanggal dll biarin aja) ...
+        
+                # --- [TAMBAHAN BARU] REFERRAL & WALLET ---
+                self.referral_code = u_data.get('referral_code', '-')
+                self.wallet_balance = u_data.get('wallet_balance', 0)
+                self.notification_chat_id = u_data.get('notification_chat_id') # Buat cek status bot
+                
                 # Parsing Tanggal Join
                 raw_created = u_data.get('created_at')
                 try:
