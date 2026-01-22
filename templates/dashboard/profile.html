@@ -11,7 +11,7 @@
             
             <div class="absolute top-6 right-6 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl text-right">
                 <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-200">Member ID</p>
-                <p class="font-mono text-xl font-bold text-white tracking-widest">#{{ user.id|string|zfill(6) }}</p>
+                <p class="font-mono text-xl font-bold text-white tracking-widest">#{{ '%06d' % user.id }}</p>
             </div>
         </div>
 
@@ -73,6 +73,27 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 px-2">
         
         <div class="lg:col-span-4 space-y-6">
+            <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 text-9xl text-white opacity-10 rotate-12"><i class="fa-brands fa-telegram"></i></div>
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-sm font-bold uppercase tracking-wider opacity-90">Koneksi Telegram</h4>
+                        <div class="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-[10px] font-bold border border-white/20">
+                            {{ 'TERHUBUNG' if user.telegram_account and user.telegram_account.is_active else 'TERPUTUS' }}
+                        </div>
+                    </div>
+                    
+                    <p class="font-mono text-lg font-bold truncate mb-1">
+                        {{ user.telegram_account.phone_number if user.telegram_account else '-' }}
+                    </p>
+                    <p class="text-xs opacity-75 mb-4">Pastikan nomor selalu aktif untuk notifikasi.</p>
+                    
+                    <button onclick="window.location.href='/dashboard/connection'" class="w-full py-2.5 bg-white text-blue-600 font-bold rounded-xl text-xs hover:bg-blue-50 transition shadow-sm">
+                        {{ 'Atur Koneksi' if user.telegram_account and user.telegram_account.is_active else 'Hubungkan Sekarang' }}
+                    </button>
+                </div>
+            </div>
+            
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
                 <div class="p-5 border-b border-gray-100 bg-gray-50/50">
                     <h3 class="font-bold text-gray-800 text-sm uppercase tracking-wide">Navigasi Profil</h3>
@@ -94,27 +115,6 @@
                     <button onclick="switchSection('security')" id="btn-security" class="w-full text-left px-4 py-3.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm flex items-center gap-3 transition-all duration-200 border border-transparent">
                         <div class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center"><i class="fa-solid fa-shield-halved"></i></div>
                         Keamanan Akun
-                    </button>
-                </div>
-            </div>
-
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden">
-                <div class="absolute -right-4 -top-4 text-9xl text-white opacity-10 rotate-12"><i class="fa-brands fa-telegram"></i></div>
-                <div class="relative z-10">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-sm font-bold uppercase tracking-wider opacity-90">Koneksi Telegram</h4>
-                        <div class="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-[10px] font-bold border border-white/20">
-                            {{ 'TERHUBUNG' if user.telegram_account.is_active else 'TERPUTUS' }}
-                        </div>
-                    </div>
-                    
-                    <p class="font-mono text-lg font-bold truncate mb-1">
-                        {{ user.telegram_account.phone_number if user.telegram_account else '-' }}
-                    </p>
-                    <p class="text-xs opacity-75 mb-4">Pastikan nomor selalu aktif untuk notifikasi.</p>
-                    
-                    <button onclick="window.location.href='/dashboard/connection'" class="w-full py-2.5 bg-white text-blue-600 font-bold rounded-xl text-xs hover:bg-blue-50 transition shadow-sm">
-                        {{ 'Atur Koneksi' if user.telegram_account.is_active else 'Hubungkan Sekarang' }}
                     </button>
                 </div>
             </div>
@@ -189,7 +189,7 @@
                         </button>
                     </div>
 
-                    {% if user.plan_tier != 'Starter' %}
+                    {% if user.plan_tier != 'Starter' and user.sub_end_date %}
                     <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 relative z-10">
                         <div class="flex justify-between items-end mb-3">
                             <div>
@@ -276,22 +276,25 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
     function switchSection(section) {
         // Reset all buttons style
         const buttons = ['btn-profile', 'btn-subscription', 'btn-security'];
         buttons.forEach(btnId => {
             const btn = document.getElementById(btnId);
-            btn.className = 'w-full text-left px-4 py-3.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm flex items-center gap-3 transition-all duration-200 border border-transparent';
-            
-            // Reset icon bg
-            const iconDiv = btn.querySelector('div');
-            // Biarkan warna icon statis sesuai kategori (udah di class HTML)
+            if(btn) {
+                btn.className = 'w-full text-left px-4 py-3.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm flex items-center gap-3 transition-all duration-200 border border-transparent';
+            }
         });
 
         // Active Button Style
         const activeBtn = document.getElementById('btn-' + section);
-        activeBtn.className = 'w-full text-left px-4 py-3.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center gap-3 transition-all duration-200 border border-indigo-100 shadow-sm';
+        if(activeBtn) {
+            activeBtn.className = 'w-full text-left px-4 py-3.5 rounded-xl bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center gap-3 transition-all duration-200 border border-indigo-100 shadow-sm';
+        }
 
         // Toggle Content Sections
         document.getElementById('section-profile').classList.add('hidden');
@@ -299,7 +302,9 @@
         document.getElementById('section-security').classList.add('hidden');
         
         const targetSection = document.getElementById('section-' + section);
-        targetSection.classList.remove('hidden');
+        if(targetSection) {
+            targetSection.classList.remove('hidden');
+        }
     }
 
     function toggleEdit() {
@@ -307,26 +312,27 @@
         const actions = document.getElementById('actionButtons');
         const btnEdit = document.getElementById('btnEdit');
         
-        let isDisabled = inputs[0].disabled;
-        
-        inputs.forEach(input => {
-            input.disabled = !isDisabled;
-            if(!isDisabled) {
-                input.classList.remove('bg-white');
-                input.classList.add('bg-indigo-50');
-            } else {
-                input.classList.add('bg-white');
-                input.classList.remove('bg-indigo-50');
-            }
-        });
+        if(inputs.length > 0) {
+            let isDisabled = inputs[0].disabled;
+            inputs.forEach(input => {
+                input.disabled = !isDisabled;
+                if(!isDisabled) {
+                    input.classList.remove('bg-white');
+                    input.classList.add('bg-indigo-50');
+                } else {
+                    input.classList.add('bg-white');
+                    input.classList.remove('bg-indigo-50');
+                }
+            });
 
-        if(isDisabled) {
-            actions.classList.remove('hidden');
-            btnEdit.classList.add('hidden');
-            inputs[0].focus();
-        } else {
-            actions.classList.add('hidden');
-            btnEdit.classList.remove('hidden');
+            if(isDisabled) {
+                if(actions) actions.classList.remove('hidden');
+                if(btnEdit) btnEdit.classList.add('hidden');
+                inputs[0].focus();
+            } else {
+                if(actions) actions.classList.add('hidden');
+                if(btnEdit) btnEdit.classList.remove('hidden');
+            }
         }
     }
 
@@ -343,7 +349,6 @@
     }
 
     function previewAvatar(event) {
-        // Logic preview avatar
         alert("Fitur upload akan aktif setelah integrasi Storage.");
     }
 </script>
