@@ -5,10 +5,10 @@
 <div class="flex justify-between items-center mb-6">
     <div>
         <h1 class="text-2xl font-bold text-white">Database Pengguna</h1>
-        <p class="text-gray-400 text-sm mt-1">Kelola akses dan status akun UMKM.</p>
+        <p class="text-gray-400 text-sm mt-1">Total Member: <span class="text-blue-400 font-mono font-bold">{{ users|length }}</span></p>
     </div>
     <div class="flex gap-2">
-        <input type="text" id="userSearch" placeholder="Cari email..." class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none w-64">
+        <input type="text" id="userSearch" placeholder="Cari email / ID..." class="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none w-64">
     </div>
 </div>
 
@@ -16,12 +16,12 @@
     <div class="overflow-x-auto">
         <table class="w-full text-left text-sm admin-table">
             <thead>
-                <tr>
-                    <th class="px-6 py-4">User Identity</th>
-                    <th class="px-6 py-4">Telegram Status</th>
-                    <th class="px-6 py-4">Account Status</th>
-                    <th class="px-6 py-4">Joined At</th>
-                    <th class="px-6 py-4 text-right">Actions</th>
+                <tr class="bg-gray-900/50 text-gray-400 border-b border-gray-700 uppercase text-xs tracking-wider">
+                    <th class="px-6 py-4">User Info</th>
+                    <th class="px-6 py-4">Paket (Plan)</th>
+                    <th class="px-6 py-4">Bot Status</th>
+                    <th class="px-6 py-4">Status Akun</th>
+                    <th class="px-6 py-4 text-right">Kontrol</th>
                 </tr>
             </thead>
             <tbody class="text-gray-300 divide-y divide-gray-800">
@@ -29,57 +29,61 @@
                 <tr class="hover:bg-gray-800/50 transition group">
                     <td class="px-6 py-4">
                         <div class="flex items-center">
-                            <div class="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 mr-3">
+                            <div class="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center text-xs font-bold text-white mr-3 shadow-lg">
                                 {{ user.email[0]|upper }}
                             </div>
                             <div>
-                                <div class="font-bold text-white">{{ user.email }}</div>
-                                <div class="text-xs text-gray-500 font-mono">ID: #{{ user.id }}</div>
+                                <div class="font-bold text-white group-hover:text-blue-400 transition">{{ user.email }}</div>
+                                <div class="text-[10px] text-gray-500 font-mono">ID: #{{ user.id }}</div>
                             </div>
                             {% if user.is_admin %}
-                                <span class="ml-2 badge-admin text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider">Admin</span>
+                                <span class="ml-2 bg-yellow-500/20 text-yellow-400 text-[9px] px-2 py-0.5 rounded border border-yellow-500/30 uppercase font-bold tracking-wider">GOD</span>
                             {% endif %}
                         </div>
                     </td>
+
+                    <td class="px-6 py-4">
+                        {% if user.plan_tier == 'Starter' %}
+                            <span class="text-gray-400 font-bold text-xs bg-gray-700/50 px-2 py-1 rounded">STARTER</span>
+                        {% elif user.plan_tier == 'UMKM PRO' %}
+                            <span class="text-indigo-300 font-bold text-xs bg-indigo-900/30 border border-indigo-500/30 px-2 py-1 rounded shadow shadow-indigo-500/20">PRO</span>
+                        {% elif user.plan_tier == 'Agency' %}
+                            <span class="text-purple-300 font-bold text-xs bg-purple-900/30 border border-purple-500/30 px-2 py-1 rounded shadow shadow-purple-500/20">AGENCY</span>
+                        {% endif %}
+                    </td>
+
                     <td class="px-6 py-4">
                         {% if user.telegram_account %}
                             <div class="flex items-center gap-2">
-                                <span class="text-green-400 font-mono">{{ user.telegram_account.phone_number }}</span>
                                 {% if user.telegram_account.is_active %}
-                                    <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" title="Active"></span>
+                                    <span class="relative flex h-2 w-2">
+                                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                      <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    <span class="text-green-400 text-xs font-mono">{{ user.telegram_account.phone_number }}</span>
                                 {% else %}
-                                    <span class="w-2 h-2 rounded-full bg-yellow-500" title="Inactive/Session Expired"></span>
+                                    <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                                    <span class="text-red-400 text-xs font-mono">Offline</span>
                                 {% endif %}
                             </div>
                         {% else %}
-                            <span class="text-gray-600 italic text-xs">Belum Terhubung</span>
+                            <span class="text-gray-600 italic text-xs">Kosong</span>
                         {% endif %}
                     </td>
+
                     <td class="px-6 py-4">
                         {% if user.is_banned %}
-                            <span class="badge-banned px-2 py-1 rounded text-xs font-bold uppercase">BANNED</span>
+                            <span class="bg-red-900/50 text-red-400 px-2 py-1 rounded text-[10px] font-bold uppercase border border-red-800">BANNED</span>
                         {% else %}
-                            <span class="badge-active px-2 py-1 rounded text-xs font-bold uppercase">ACTIVE</span>
+                            <span class="bg-green-900/30 text-green-400 px-2 py-1 rounded text-[10px] font-bold uppercase border border-green-900/50">ACTIVE</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 text-gray-500 font-mono text-xs">
-                        {{ user.created_at.strftime('%Y-%m-%d') }}
-                    </td>
+
                     <td class="px-6 py-4 text-right">
                         {% if not user.is_admin %}
-                            <form action="/super-admin/ban/{{ user.id }}" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin mengubah status user ini? Akses bot mereka akan terpengaruh.')">
-                                {% if user.is_banned %}
-                                    <button type="submit" class="text-green-400 hover:text-green-300 font-bold text-xs border border-green-900 bg-green-900/20 px-3 py-1.5 rounded hover:bg-green-900/40 transition">
-                                        <i class="fa-solid fa-unlock mr-1"></i> UNBAN
-                                    </button>
-                                {% else %}
-                                    <button type="submit" class="text-red-400 hover:text-red-300 font-bold text-xs border border-red-900 bg-red-900/20 px-3 py-1.5 rounded hover:bg-red-900/40 transition">
-                                        <i class="fa-solid fa-ban mr-1"></i> SUSPEND
-                                    </button>
-                                {% endif %}
-                            </form>
-                        {% else %}
-                            <span class="text-gray-600 text-xs cursor-not-allowed"><i class="fa-solid fa-lock"></i> Protected</span>
+                            <a href="/super-admin/user/{{ user.id }}" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-lg shadow-blue-900/20 flex items-center gap-2 ml-auto w-fit">
+                                <i class="fa-solid fa-sliders"></i> MANAGE
+                            </a>
                         {% endif %}
                     </td>
                 </tr>
@@ -87,7 +91,7 @@
                 <tr>
                     <td colspan="5" class="px-6 py-12 text-center text-gray-500">
                         <i class="fa-solid fa-ghost text-4xl mb-3 opacity-20"></i>
-                        <p>Belum ada user yang mendaftar.</p>
+                        <p>Database kosong.</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -97,20 +101,13 @@
 </div>
 
 <script>
-    // Simple Client-side Search
+    // Search Function
     document.getElementById('userSearch').addEventListener('keyup', function() {
         const value = this.value.toLowerCase();
         const rows = document.querySelectorAll('tbody tr');
-        
         rows.forEach(row => {
-            const email = row.querySelector('td:nth-child(1)').innerText.toLowerCase();
-            const phone = row.querySelector('td:nth-child(2)').innerText.toLowerCase();
-            
-            if (email.includes(value) || phone.includes(value)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(value) ? '' : 'none';
         });
     });
 </script>
