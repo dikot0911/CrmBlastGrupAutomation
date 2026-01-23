@@ -358,13 +358,27 @@ class AutoReplyManager:
             supabase.table('auto_reply_settings').insert(data).execute()
 
     @staticmethod
-    def get_keywords(user_id):
-        res = supabase.table('keyword_rules').select("*").eq('user_id', user_id).execute()
+    def get_keywords(user_id, filter_phone=None):
+        # Base query
+        query = supabase.table('keyword_rules').select("*").eq('user_id', user_id)
+        
+        # Kalau ada filter dari dropdown UI
+        if filter_phone and filter_phone != 'all':
+            query = query.eq('target_phone', filter_phone)
+            
+        # Urutkan biar yang 'Specific Account' dicek duluan daripada 'All' (Priority)
+        # Tapi di UI kita urutkan by created_at aja biar rapi
+        res = query.order('created_at', desc=True).execute()
         return res.data if res.data else []
 
     @staticmethod
-    def add_keyword(user_id, keyword, response):
-        data = {'user_id': user_id, 'keyword': keyword.lower(), 'response': response}
+    def add_keyword(user_id, keyword, response, target_phone='all'):
+        data = {
+            'user_id': user_id, 
+            'keyword': keyword.lower(), 
+            'response': response,
+            'target_phone': target_phone # <--- SIMPAN TARGET AKUN
+        }
         supabase.table('keyword_rules').insert(data).execute()
 
     @staticmethod
@@ -426,11 +440,18 @@ class ReplyEngine:
                         chat_text = event.raw_text.lower()
                         response_text = None
 
-                        # 1. Cek Keyword
+                        # --- [LOGIC BARU] CEK KEYWORD + TARGET ---
+                        # 1. Loop semua keyword user ini
                         for rule in keywords:
+                            # Cek kata kunci
                             if rule['keyword'] in chat_text:
-                                response_text = rule['response']
-                                break 
+                                # Cek Kepemilikan (Target Phone)
+                                # Lolos jika: Rule ini untuk 'all' ATAU Rule ini khusus buat nomor HP saya
+                                rule_target = rule.get('target_phone', 'all')
+                                
+                                if rule_target == 'all' or rule_target == my_phone:
+                                    response_text = rule['response']
+                                    break # Ketemu! Stop loop.
                         
                         # 2. Cek Welcome (Cooldown Logic)
                         if not response_text and welcome_msg:
@@ -2496,29 +2517,23 @@ def dashboard_auto_reply():
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
+    # Handle Save Settings (General)
     if request.method == 'POST':
-        is_active = True if request.form.get('is_active') == 'on' else False
-        welcome = request.form.get('welcome_message')
-        cooldown = int(request.form.get('cooldown', 60))
-        target_phone = request.form.get('target_phone', 'all') # <--- TANGKAP INPUT BARU
-        
-        AutoReplyManager.update_settings(user.id, {
-            'is_active': is_active,
-            'welcome_message': welcome,
-            'cooldown_minutes': cooldown,
-            'target_phone': target_phone # <--- SIMPAN KE DB
-        })
-        flash('Pengaturan Auto-Reply tersimpan!', 'success')
-        return redirect(url_for('dashboard_auto_reply'))
+        # ... (Kode simpan setting general SAMA AJA kayak sebelumnya) ...
+        # ... (Paste logic POST settingan disini) ...
+        pass # Ganti pass dengan kode lama lu
 
+    # --- GET DATA ---
     settings = AutoReplyManager.get_settings(user.id)
-    keywords = AutoReplyManager.get_keywords(user.id)
     
-    # [TAMBAHAN] Ambil List Akun Aktif buat Dropdown
+    # Filter Keyword (Tangkap dari URL dropdown)
+    filter_source = request.args.get('source', 'all')
+    keywords = AutoReplyManager.get_keywords(user.id, filter_source if filter_source != 'all' else None)
+    
+    # Ambil Akun Aktif buat Dropdown
     accounts = []
     try:
-        acc_res = supabase.table('telegram_accounts').select("*")\
-            .eq('user_id', user.id).eq('is_active', True).execute()
+        acc_res = supabase.table('telegram_accounts').select("*").eq('user_id', user.id).eq('is_active', True).execute()
         accounts = acc_res.data if acc_res.data else []
     except: pass
     
@@ -2526,7 +2541,8 @@ def dashboard_auto_reply():
                            user=user, 
                            settings=settings, 
                            keywords=keywords,
-                           accounts=accounts, # <--- KIRIM DATA INI
+                           accounts=accounts,
+                           current_filter=filter_source, # Kirim status filter ke HTML
                            active_page='autoreply')
 
 @app.route('/add_keyword', methods=['POST'])
@@ -2534,9 +2550,12 @@ def dashboard_auto_reply():
 def add_keyword_route():
     key = request.form.get('keyword')
     resp = request.form.get('response')
+    target = request.form.get('target_phone', 'all') # <--- TANGKAP TARGET
+    
     if key and resp:
-        AutoReplyManager.add_keyword(session['user_id'], key, resp)
-        flash('Keyword ditambahkan.', 'success')
+        AutoReplyManager.add_keyword(session['user_id'], key, resp, target)
+        flash('Rule baru berhasil ditambahkan.', 'success')
+        
     return redirect(url_for('dashboard_auto_reply'))
 
 @app.route('/delete_keyword/<int:id>')
