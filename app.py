@@ -815,7 +815,6 @@ async def get_active_client(user_id):
         await client.connect()
         
         # Security Check: Apakah sesi masih valid di server Telegram?
-        # Jika user logout dari HP, session string ini akan invalid.
         if not await client.is_user_authorized():
             logger.warning(f"Client Init: Session EXPIRED/REVOKED for UserID {user_id}")
             await client.disconnect()
@@ -823,19 +822,21 @@ async def get_active_client(user_id):
             # Auto-update status di DB jadi Inactive agar UI dashboard update
             supabase.table('telegram_accounts').update({'is_active': False}).eq('user_id', user_id).execute()
             return None
+
+        # --- [INI YANG BIKIN ERROR TADI - SEKARANG UDAH RAPI] ---
+        try:
+            # Pasang kuping Auto Reply di sini
+            if 'ReplyEngine' in globals() and ReplyEngine:
+                ReplyEngine.start_listener(user_id, client)
+        except Exception as e:
+            # Kalau listener gagal, jangan bikin aplikasi crash. Log aja warning.
+            logger.warning(f"AutoReply Listener Error: {e}")
             
         return client
+
     except Exception as e:
         logger.error(f"Client Init Error for UserID {user_id}: {e}")
         return None
-
-    try:
-            ReplyEngine.start_listener(user_id, client)
-        except Exception as e:
-            logger.warning(f"Listener Start Warning: {e}")
-    
-        return client
-    async def get_active_client(user_id):  
 
 # ==============================================================================
 # SECTION 6: MIDDLEWARE & DECORATORS
