@@ -1,110 +1,185 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Auto Reply & Keyword{% endblock %}
+{% block title %}Auto Reply & Intelligence{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto animate-fade-in pb-24">
 
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6 border-b border-gray-100 pb-8">
         <div>
-            <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight">🤖 Auto Reply & Keyword</h1>
-            <p class="text-gray-500 text-sm mt-1">Otomatisasi balasan chat personal agar customer tidak menunggu lama.</p>
+            <div class="flex items-center gap-3 mb-2">
+                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">🤖 Auto Reply Engine</h1>
+                {% if settings and settings.is_active %}
+                    <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-200 flex items-center gap-1.5 shadow-sm">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        System Active
+                    </span>
+                {% else %}
+                    <span class="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded-full border border-gray-200 flex items-center gap-1.5">
+                        <div class="w-2 h-2 rounded-full bg-gray-400"></div>
+                        System Paused
+                    </span>
+                {% endif %}
+            </div>
+            <p class="text-gray-500 text-sm max-w-2xl">
+                Otomatisasi layanan pelanggan 24/7. Bot akan membalas pesan personal berdasarkan kata kunci atau sapaan pertama.
+            </p>
         </div>
-        <div class="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-full">
-            <div class="w-2.5 h-2.5 rounded-full {{ 'bg-green-500 animate-pulse' if settings and settings.is_active else 'bg-gray-400' }}"></div>
-            <span class="text-xs font-bold {{ 'text-indigo-700' if settings and settings.is_active else 'text-gray-500' }}">
-                {{ 'Bot Aktif' if settings and settings.is_active else 'Bot Nonaktif' }}
-            </span>
+        
+        <div class="flex gap-4">
+            <div class="text-right hidden md:block">
+                <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Active Rules</p>
+                <p class="text-2xl font-bold text-indigo-600 font-mono">{{ keywords|length }}</p>
+            </div>
+            <div class="h-10 w-px bg-gray-200 hidden md:block"></div>
+            <div class="text-right hidden md:block">
+                <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Cooldown</p>
+                <p class="text-2xl font-bold text-gray-700 font-mono">{{ settings.cooldown_minutes if settings else 60 }}m</p>
+            </div>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         <div class="lg:col-span-4 space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
-                <div class="h-1.5 w-full bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+            
+            <div class="bg-white rounded-2xl shadow-lg shadow-gray-100/50 border border-gray-100 overflow-hidden relative group transition-all duration-300 hover:shadow-xl hover:shadow-indigo-100/20">
+                <div class="h-2 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
                 
                 <div class="p-6">
-                    <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <i class="fa-solid fa-sliders text-indigo-500"></i> Pengaturan Dasar
+                    <h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2 text-lg">
+                        <i class="fa-solid fa-sliders text-indigo-500"></i> Konfigurasi Bot
                     </h3>
                     
-                    <form action="/dashboard/auto-reply" method="POST">
+                    <form action="/dashboard/auto-reply" method="POST" class="space-y-6">
                         
-                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-6 group hover:border-indigo-200 transition">
+                        <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between transition-colors hover:border-indigo-200 hover:bg-indigo-50/30">
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 cursor-pointer" for="toggleActive">Status Auto Reply</label>
-                                <p class="text-[10px] text-gray-500">Aktifkan untuk mulai membalas otomatis.</p>
+                                <label for="toggleActive" class="block text-sm font-bold text-gray-700 cursor-pointer select-none">Status Auto Reply</label>
+                                <p class="text-[10px] text-gray-500 mt-0.5">Matikan jika ingin membalas manual.</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="toggleActive" name="is_active" class="sr-only peer" {{ 'checked' if settings and settings.is_active else '' }}>
-                                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                <div class="w-12 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600 shadow-inner"></div>
                             </label>
                         </div>
 
-                        <div class="mb-5">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Jeda Waktu (Cooldown)</label>
-                            <div class="relative">
-                                <input type="number" name="cooldown" value="{{ settings.cooldown_minutes if settings else 60 }}" 
-                                    class="w-full pl-4 pr-12 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition" required>
-                                <span class="absolute right-4 top-3.5 text-xs font-bold text-gray-400">Menit</span>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1 tracking-wide">
+                                Akun Penjawab (Resepsionis)
+                            </label>
+                            <div class="relative group">
+                                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 group-hover:text-indigo-500 transition">
+                                    <i class="fa-brands fa-telegram text-lg"></i>
+                                </div>
+                                <select name="target_phone" class="w-full pl-12 pr-10 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition appearance-none cursor-pointer hover:border-gray-300">
+                                    <option value="all" {{ 'selected' if settings and settings.target_phone == 'all' else '' }}>
+                                        🤖 Semua Akun Aktif (Multi-Agent)
+                                    </option>
+                                    
+                                    {% if accounts %}
+                                        <optgroup label="Akun Spesifik">
+                                            {% for acc in accounts %}
+                                            <option value="{{ acc.phone_number }}" {{ 'selected' if settings and settings.target_phone == acc.phone_number else '' }}>
+                                                👤 {{ acc.first_name }} ({{ acc.phone_number }})
+                                            </option>
+                                            {% endfor %}
+                                        </optgroup>
+                                    {% else %}
+                                        <option disabled>⚠️ Tidak ada akun aktif</option>
+                                    {% endif %}
+                                </select>
+                                <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
+                                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                                </div>
                             </div>
-                            <p class="text-[10px] text-gray-400 mt-1.5 ml-1 leading-relaxed">
-                                <i class="fa-regular fa-circle-question mr-0.5"></i> Bot tidak akan menyapa orang yang sama berkali-kali dalam kurun waktu ini.
+                            <p class="text-[10px] text-gray-400 mt-2 ml-1 leading-relaxed">
+                                <i class="fa-solid fa-circle-info mr-1"></i> Pilih <b>"Semua Akun"</b> jika ingin setiap bot membalas pesannya masing-masing. Pilih akun spesifik jika hanya ingin satu bot yang bekerja sebagai CS.
                             </p>
                         </div>
 
-                        <div class="mb-6">
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Pesan Chat Pertama (Welcome)</label>
-                            <textarea name="welcome_message" rows="5" placeholder="Halo kak! 👋&#10;Terima kasih sudah menghubungi kami.&#10;Ada yang bisa dibantu?" 
-                                class="w-full p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition resize-none leading-relaxed">{{ settings.welcome_message if settings else '' }}</textarea>
-                            <p class="text-[10px] text-gray-400 mt-1.5 ml-1">
-                                Pesan ini dikirim jika chat customer <b>tidak mengandung keyword</b> apapun.
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1 tracking-wide">Jeda Waktu (Cooldown)</label>
+                            <div class="relative group">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-hover:text-indigo-500 transition">
+                                    <i class="fa-solid fa-stopwatch"></i>
+                                </div>
+                                <input type="number" name="cooldown" value="{{ settings.cooldown_minutes if settings else 60 }}" 
+                                    class="w-full pl-12 pr-12 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition hover:border-gray-300" required min="1">
+                                <span class="absolute right-4 top-3.5 text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Menit</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1 tracking-wide flex justify-between">
+                                <span>Pesan Pembuka (Welcome)</span>
+                                <span class="text-[10px] font-normal text-indigo-500 cursor-pointer hover:underline" onclick="insertTemplate()">+ Insert Template</span>
+                            </label>
+                            <textarea id="welcomeMsg" name="welcome_message" rows="5" placeholder="Contoh: Halo kak! 👋&#10;Terima kasih sudah menghubungi kami.&#10;Ada yang bisa dibantu?" 
+                                class="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition resize-none leading-relaxed shadow-inner">{{ settings.welcome_message if settings else '' }}</textarea>
+                            <p class="text-[10px] text-gray-400 mt-2 ml-1 italic">
+                                *Pesan ini dikirim jika chat customer <b>tidak mengandung keyword</b> apapun.
                             </p>
                         </div>
 
-                        <button type="submit" class="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold rounded-xl shadow-lg shadow-gray-200 transition transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2">
-                            <i class="fa-regular fa-floppy-disk"></i> Simpan Pengaturan
-                        </button>
+                        <div class="pt-2">
+                            <button type="submit" class="w-full py-3.5 bg-gray-900 hover:bg-black text-white font-bold rounded-xl shadow-lg shadow-gray-200 transition transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 group">
+                                <i class="fa-regular fa-floppy-disk group-hover:animate-bounce"></i> Simpan Konfigurasi
+                            </button>
+                        </div>
                     </form>
                 </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-5">
+                <h4 class="text-blue-800 font-bold text-xs uppercase mb-2 flex items-center gap-2">
+                    <i class="fa-regular fa-lightbulb"></i> Tips Pro
+                </h4>
+                <p class="text-blue-700/80 text-xs leading-relaxed">
+                    Gunakan keyword yang pendek dan umum seperti <b>"harga"</b>, <b>"lokasi"</b>, atau <b>"cara order"</b> agar bot lebih sering merespon pelanggan.
+                </p>
             </div>
         </div>
 
         <div class="lg:col-span-8 space-y-6">
             
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-full -mr-16 -mt-16 opacity-50 pointer-events-none"></div>
+                
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 relative z-10">
                     <div>
-                        <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <h3 class="font-bold text-gray-800 flex items-center gap-2 text-lg">
                             <i class="fa-solid fa-key text-orange-500"></i> Keyword Trigger
                         </h3>
-                        <p class="text-xs text-gray-500 mt-1">Balas otomatis jika chat mengandung kata tertentu.</p>
+                        <p class="text-xs text-gray-500 mt-1">Bot akan memprioritaskan balasan keyword dibanding welcome message.</p>
                     </div>
-                    <span class="text-xs font-bold bg-orange-50 text-orange-600 px-3 py-1 rounded-full border border-orange-100">
-                        {{ keywords|length }} Rules Aktif
+                    <span class="text-xs font-bold bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg border border-orange-100 shadow-sm">
+                        {{ keywords|length }} Rules Active
                     </span>
                 </div>
 
-                <form action="/add_keyword" method="POST" class="bg-gray-50/50 p-1 rounded-2xl border border-gray-200 focus-within:border-indigo-300 focus-within:ring-4 focus-within:ring-indigo-50 transition-all duration-300">
+                <form action="/add_keyword" method="POST" class="bg-white p-1.5 rounded-2xl border-2 border-gray-100 focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-50 transition-all duration-300 shadow-sm relative z-10">
                     <div class="flex flex-col md:flex-row gap-0 md:gap-2">
-                        <div class="relative w-full md:w-1/3">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span class="text-gray-400 font-bold text-xs">JIKA:</span>
+                        <div class="relative w-full md:w-1/3 group">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider bg-gray-100 px-1.5 rounded">JIKA</span>
                             </div>
-                            <input type="text" name="keyword" required placeholder='ketik "harga"...' 
-                                class="w-full pl-12 pr-4 py-3 bg-transparent border-b md:border-b-0 md:border-r border-gray-200 text-sm font-bold text-gray-800 placeholder-gray-400 focus:outline-none">
+                            <input type="text" name="keyword" required placeholder='User ketik "info"...' 
+                                class="w-full pl-16 pr-4 py-3 bg-transparent border-b md:border-b-0 md:border-r border-gray-100 text-sm font-bold text-gray-800 placeholder-gray-300 focus:outline-none focus:bg-gray-50/50 rounded-xl transition">
                         </div>
                         
-                        <div class="relative w-full md:flex-1">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span class="text-gray-400 font-bold text-xs">MAKA:</span>
+                        <div class="relative w-full md:flex-1 group">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider bg-gray-100 px-1.5 rounded">MAKA</span>
                             </div>
-                            <input type="text" name="response" required placeholder="Balas: Produk ready kak, silakan order..." 
-                                class="w-full pl-14 pr-4 py-3 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none">
+                            <input type="text" name="response" required placeholder="Balas: Halo kak, info lengkap cek bio ya..." 
+                                class="w-full pl-16 pr-4 py-3 bg-transparent text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:bg-gray-50/50 rounded-xl transition">
                         </div>
 
-                        <button type="submit" class="m-1 px-6 py-2 bg-white text-indigo-600 border border-indigo-100 hover:bg-indigo-50 hover:border-indigo-200 font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2 whitespace-nowrap">
-                            <i class="fa-solid fa-plus"></i> <span class="hidden md:inline">Tambah</span>
+                        <button type="submit" class="m-1 px-6 py-2.5 bg-orange-500 text-white hover:bg-orange-600 font-bold rounded-xl shadow-md hover:shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap">
+                            <i class="fa-solid fa-plus"></i> <span class="hidden md:inline">Tambah Rule</span>
                         </button>
                     </div>
                 </form>
@@ -115,25 +190,33 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-gray-50 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wider">
-                                <th class="px-6 py-4 font-bold w-1/4">Jika User Ketik...</th>
-                                <th class="px-6 py-4 font-bold">Maka Bot Membalas...</th>
-                                <th class="px-6 py-4 font-bold text-right w-20">Aksi</th>
+                            <tr class="bg-gray-50/80 border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wider backdrop-blur-sm">
+                                <th class="px-6 py-4 font-bold w-1/4">Keyword (Trigger)</th>
+                                <th class="px-6 py-4 font-bold">Bot Response</th>
+                                <th class="px-6 py-4 font-bold text-right w-24">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50 text-sm">
                             {% for item in keywords %}
-                            <tr class="group hover:bg-indigo-50/30 transition-colors duration-200">
-                                <td class="px-6 py-4">
-                                    <div class="inline-flex items-center px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 font-bold font-mono text-xs shadow-sm group-hover:border-indigo-200 group-hover:text-indigo-700 transition">
+                            <tr class="group hover:bg-indigo-50/40 transition-colors duration-200">
+                                <td class="px-6 py-4 align-top">
+                                    <div class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 font-bold font-mono text-xs shadow-sm group-hover:border-indigo-200 group-hover:bg-white group-hover:text-indigo-600 transition">
+                                        <i class="fa-solid fa-quote-left text-[8px] text-gray-300 mr-1.5 -mt-1"></i>
                                         {{ item.keyword }}
                                     </div>
                                 </td>
-                                <td class="px-6 py-4">
-                                    <p class="text-gray-600 line-clamp-2 group-hover:text-gray-900 transition">{{ item.response }}</p>
+                                <td class="px-6 py-4 align-middle">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-600 text-xs mt-0.5">
+                                            <i class="fa-solid fa-robot"></i>
+                                        </div>
+                                        <div class="bg-gray-50 p-3 rounded-r-xl rounded-bl-xl text-gray-600 text-sm leading-relaxed border border-gray-100 group-hover:bg-white group-hover:border-indigo-100 transition">
+                                            {{ item.response }}
+                                        </div>
+                                    </div>
                                 </td>
-                                <td class="px-6 py-4 text-right">
-                                    <a href="/delete_keyword/{{ item.id }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition" title="Hapus Rule">
+                                <td class="px-6 py-4 text-right align-middle">
+                                    <a href="/delete_keyword/{{ item.id }}" onclick="return confirm('Hapus keyword ini?')" class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-100 transition shadow-sm" title="Hapus Rule">
                                         <i class="fa-regular fa-trash-can"></i>
                                     </a>
                                 </td>
@@ -142,13 +225,23 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 text-xs text-center text-gray-400">
+                    Menampilkan seluruh keyword aktif.
+                </div>
                 {% else %}
-                <div class="py-16 text-center flex flex-col items-center justify-center">
-                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                        <i class="fa-solid fa-wind text-2xl text-gray-300"></i>
+                <div class="py-20 text-center flex flex-col items-center justify-center">
+                    <div class="relative mb-6">
+                        <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-wind text-3xl text-gray-300"></i>
+                        </div>
+                        <div class="absolute -right-2 -bottom-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-100">
+                            <i class="fa-solid fa-plus text-orange-500 text-xs"></i>
+                        </div>
                     </div>
-                    <h3 class="text-gray-900 font-bold mb-1">Belum ada Keyword</h3>
-                    <p class="text-gray-500 text-sm max-w-sm mx-auto">Tambahkan kata kunci di atas agar bot bisa membalas pertanyaan pelanggan secara otomatis.</p>
+                    <h3 class="text-gray-900 font-bold text-lg mb-2">Belum ada Keyword</h3>
+                    <p class="text-gray-500 text-sm max-w-sm mx-auto leading-relaxed">
+                        Tambahkan kata kunci di atas agar bot bisa membalas pertanyaan umum pelanggan secara otomatis tanpa menunggu Anda.
+                    </p>
                 </div>
                 {% endif %}
             </div>
@@ -157,8 +250,16 @@
     </div>
 </div>
 
+<script>
+    function insertTemplate() {
+        const txt = document.getElementById('welcomeMsg');
+        txt.value = "Halo kak! 👋\nTerima kasih sudah menghubungi kami.\nAda yang bisa dibantu?";
+        txt.focus();
+    }
+</script>
+
 <style>
-    .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 {% endblock %}
