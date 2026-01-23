@@ -1042,65 +1042,73 @@ def get_dashboard_context():
 @app.route('/dashboard')
 @login_required
 def dashboard_overview():
-    """Halaman Utama Dashboard: Ringkasan Statistik dengan Pagination"""
+    """
+    Halaman Utama Dashboard User:
+    - Redirect Admin ke Super Admin Panel
+    - Statistik Ringkas
+    - Log Aktivitas dengan Pagination
+    """
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
+    
+    # [FIX 1] Redirect Super Admin supaya gak masuk sini
+    if user.is_admin:
+        return redirect(url_for('super_admin_dashboard'))
     
     uid = user.id
     
     # --- LOGIC PAGINATION ---
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
-    
-    # Hitung offset untuk database
     start = (page - 1) * per_page
     end = start + per_page - 1
     
     logs = []
     total_logs = 0
     total_pages = 0
-    
-    schedules = []
-    targets = []
-    crm_count = 0
+    stats = {} # [FIX 2] Container untuk statistik kartu
     
     if supabase:
         try:
-            # 1. Ambil Total Count Logs (Untuk hitung halaman)
+            # A. Pagination Logs
             count_res = supabase.table('blast_logs').select("id", count='exact', head=True).eq('user_id', uid).execute()
             total_logs = count_res.count if count_res.count else 0
-            
-            # Hitung total halaman
             import math
             total_pages = math.ceil(total_logs / per_page)
 
-            # 2. Ambil Data Logs Sesuai Halaman (Range)
             logs = supabase.table('blast_logs').select("*").eq('user_id', uid)\
-                .order('created_at', desc=True)\
-                .range(start, end)\
-                .execute().data
+                .order('created_at', desc=True).range(start, end).execute().data
             
-            # 3. Data Lainnya
+            # B. Ambil Data Jadwal & Target
             schedules = supabase.table('blast_schedules').select("*").eq('user_id', uid).execute().data
             targets = supabase.table('blast_targets').select("*").eq('user_id', uid).execute().data
-            crm_res = supabase.table('tele_users').select("id", count='exact', head=True).eq('owner_id', uid).execute()
-            crm_count = crm_res.count if crm_res.count else 0
+            
+            # C. Hitung Statistik Ringkas (Buat Kartu Atas)
+            acc_count = supabase.table('telegram_accounts').select("id", count='exact', head=True).eq('user_id', uid).eq('is_active', True).execute().count
+            success_blast = supabase.table('blast_logs').select("id", count='exact', head=True).eq('user_id', uid).eq('status', 'SUCCESS').execute().count
+            
+            stats = {
+                'connected_accounts': acc_count or 0,
+                'total_blast': total_logs,
+                'success_rate': int((success_blast/total_logs)*100) if total_logs > 0 else 0,
+                'active_schedules': len([s for s in schedules if s.get('is_active')])
+            }
             
         except Exception as e:
             logger.error(f"Dashboard Data Error: {e}")
+            stats = {'connected_accounts': 0, 'total_blast': 0, 'success_rate': 0, 'active_schedules': 0}
     
     return render_template('dashboard/index.html', 
                            user=user, 
+                           stats=stats, # Kirim stats biar gak error
                            logs=logs, 
                            schedules=schedules, 
-                           targets=targets, 
-                           user_count=crm_count,
-                           # Kirim variabel pagination ke HTML
+                           targets=targets,
+                           # Pagination Data
                            current_page=page,
                            total_pages=total_pages,
-                           per_page=per_page,
                            total_logs=total_logs,
-                           active_page='dashboard')
+                           active_page='home') # Ganti 'dashboard' jadi 'home' sesuai base.html
 
 # Variable Global buat kontrol Broadcast
 # Format: {'user_id': 'running' | 'stopped'}
@@ -2609,31 +2617,69 @@ def delete_keyword_route(id):
 # ==============================================================================
 
 @app.route('/super-admin')
+@app.route('/super-admin/dashboard')
 @admin_required
 def super_admin_dashboard():
+    """
+    Halaman Utama Admin (God Mode):
+    - Statistik User & Bot
+    - Statistik Keuangan (Revenue & Pending)
+    - 5 Transaksi Terakhir
+    """
     try:
-        # Stats Logic
+        # 1. Stats User & Bot
         users_res = supabase.table('users').select("id, is_banned, plan_tier", count='exact').execute()
         bots_res = supabase.table('telegram_accounts').select("id", count='exact').eq('is_active', True).execute()
         
-        # Hitung User per Paket
         users_data = users_res.data
-        plan_stats = {
-            'starter': sum(1 for u in users_data if u.get('plan_tier') == 'Starter'),
-            'pro': sum(1 for u in users_data if u.get('plan_tier') == 'UMKM PRO'),
-            'agency': sum(1 for u in users_data if u.get('plan_tier') == 'Agency')
-        }
+        
+        # 2. Stats Keuangan (INI YANG TADINYA KURANG)
+        # Hitung Transaksi Pending
+        pending_trx = supabase.table('transactions').select("id", count='exact').eq('status', 'pending').execute().count
+        
+        # Hitung Total Revenue (Paid Only)
+        revenue_data = supabase.table('transactions').select("amount").eq('status', 'paid').execute().data
+        total_revenue = sum(item['amount'] for item in revenue_data) if revenue_data else 0
 
+        # Hitung User Aktif (Non-Starter & Belum Expired)
+        now_iso = datetime.utcnow().isoformat()
+        active_subs = supabase.table('users').select("id", count='exact')\
+            .neq('plan_tier', 'Starter').gt('subscription_end', now_iso).execute().count
+
+        # Rangkum Data Stats
         stats = {
             'total_users': users_res.count or 0,
             'active_bots': bots_res.count or 0,
-            'banned_users': sum(1 for u in users_data if u.get('is_banned')),
-            'plans': plan_stats
+            'active_subs': active_subs or 0,
+            'pending_trx': pending_trx or 0,
+            'revenue': total_revenue,
+            'plans': {
+                'agency': sum(1 for u in users_data if u.get('plan_tier') == 'Agency'),
+                'pro': sum(1 for u in users_data if u.get('plan_tier') == 'UMKM Pro') # Sesuaikan string DB
+            }
         }
+
+        # 3. Ambil 5 Transaksi Terakhir (Buat Tabel Dashboard)
+        recent_trx = supabase.table('transactions').select("*, users(email), pricing_variants(pricing_plans(code_name))")\
+            .order('created_at', desc=True).limit(5).execute().data
+
+        # 4. Waktu Server
+        now_wib = (datetime.utcnow() + timedelta(hours=7)).strftime("%H:%M WIB")
         
-        return render_template('admin/index.html', stats=stats, active_page='dashboard')
+        return render_template('admin/index.html', 
+                               stats=stats, 
+                               recent_trx=recent_trx, 
+                               now_wib=now_wib,
+                               active_page='dashboard')
+                               
     except Exception as e:
-        return f"Admin Dashboard Error: {e}"
+        logger.error(f"Admin Dashboard Error: {e}")
+        # Return fallback biar gak crash
+        return render_template('admin/index.html', 
+                               stats={'total_users':0, 'revenue':0, 'pending_trx':0, 'active_subs':0, 'active_bots':0, 'plans':{'agency':0, 'pro':0}}, 
+                               recent_trx=[], 
+                               now_wib="Error",
+                               active_page='dashboard')
 
 @app.route('/super-admin/users')
 @admin_required
