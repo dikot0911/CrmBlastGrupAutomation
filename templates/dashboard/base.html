@@ -63,6 +63,13 @@
             <a href="/dashboard/broadcast" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 {% if active_page == 'broadcast' %}active{% endif %}">
                 <i class="fa-solid fa-paper-plane w-5 text-center"></i> Broadcast
             </a>
+            <a href="/dashboard/auto-reply" class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group {{ 'bg-indigo-50 text-indigo-600 font-bold shadow-sm' if active_page == 'autoreply' else 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium' }}">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors {{ 'bg-white text-indigo-600 shadow-sm' if active_page == 'autoreply' else 'bg-gray-100 text-gray-400 group-hover:bg-white group-hover:text-gray-600' }}">
+            <i class="fa-solid fa-robot"></i>
+            </div>
+            <span>Auto Reply</span>
+            <span class="ml-auto text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">Baru</span>
+            </a>
 
             <div class="px-6 pt-4 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Pengaturan</div>
             <a href="/dashboard/profile" class="nav-item flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-600 {% if active_page == 'profile' %}active{% endif %}">
@@ -279,4 +286,5 @@
 
 </body>
 </html>
+
 
