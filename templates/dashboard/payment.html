@@ -1,27 +1,27 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Upgrade Paket BlastPro{% endblock %}
+{% block title %}Upgrade Paket{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto animate-enter pb-24 px-4 sm:px-6 lg:px-8">
+<div class="max-w-7xl mx-auto animate-fade-in pb-24 px-4">
     
     <div class="text-center max-w-3xl mx-auto mb-12">
         <span class="text-indigo-600 font-bold text-xs uppercase tracking-widest bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-100">Pricing Plans</span>
-        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mt-6 tracking-tight">Pilih Level Bisnismu</h1>
-        <p class="text-gray-500 mt-4 text-lg">Sesuaikan dengan jumlah akun & target market yang mau kamu dominasi.</p>
+        <h1 class="text-4xl font-extrabold text-gray-900 mt-6 tracking-tight">Pilih Level Bisnismu</h1>
+        <p class="text-gray-500 mt-4 text-lg">Investasi leher ke atas untuk profit melimpah.</p>
         
         <div class="mt-10 inline-flex bg-white p-1.5 rounded-2xl border border-gray-200 shadow-lg relative z-0">
-            <button onclick="switchPackage('basic')" id="tab-basic" class="pkg-tab relative w-32 py-3 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
-                <span>Starter</span>
-                <span class="text-[10px] font-normal text-gray-400 group-hover:text-indigo-400">1 Akun</span>
+            <button onclick="switchPackage('basic')" id="tab-basic" class="pkg-tab w-32 py-3 rounded-xl transition-all duration-300 flex flex-col items-center group">
+                <span class="font-bold text-sm">Starter</span>
+                <span class="text-[10px]">1 Akun</span>
             </button>
-            <button onclick="switchPackage('optimal')" id="tab-optimal" class="pkg-tab relative w-32 py-3 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
-                <span>UMKM Pro</span>
-                <span class="text-[10px] font-normal text-gray-400 group-hover:text-indigo-400">3 Akun</span>
-                <span class="absolute -top-3 -right-2 bg-gradient-to-r from-orange-400 to-red-500 text-white text-[9px] px-2 py-0.5 rounded-full shadow-md animate-pulse">BEST</span>
+            <button onclick="switchPackage('optimal')" id="tab-optimal" class="pkg-tab w-32 py-3 rounded-xl transition-all duration-300 flex flex-col items-center group relative">
+                <span class="font-bold text-sm">UMKM Pro</span>
+                <span class="text-[10px]">3 Akun</span>
+                <span class="absolute -top-3 -right-2 bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full shadow-md animate-pulse">BEST</span>
             </button>
-            <button onclick="switchPackage('agency')" id="tab-agency" class="pkg-tab relative w-32 py-3 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
-                <span>Agency</span>
-                <span class="text-[10px] font-normal text-gray-400 group-hover:text-indigo-400">10 Akun</span>
+            <button onclick="switchPackage('agency')" id="tab-agency" class="pkg-tab w-32 py-3 rounded-xl transition-all duration-300 flex flex-col items-center group">
+                <span class="font-bold text-sm">Agency</span>
+                <span class="text-[10px]">10 Akun</span>
             </button>
         </div>
     </div>
@@ -29,321 +29,145 @@
     <div id="cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20 items-stretch">
         </div>
 
-    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mt-12">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <div class="flex items-center gap-3">
-                <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600"><i class="fa-solid fa-file-invoice"></i></div>
-                <h3 class="font-bold text-gray-800">Riwayat Tagihan</h3>
-            </div>
-            <button class="text-xs text-indigo-600 font-bold hover:text-indigo-800 transition">Lihat Semua</button>
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 bg-gray-50/50">
+            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-file-invoice text-indigo-500 mr-2"></i> Riwayat Tagihan</h3>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-                <thead class="bg-gray-50 text-gray-500 text-xs uppercase font-bold tracking-wider">
-                    <tr>
-                        <th class="px-6 py-4">ID Invoice</th>
-                        <th class="px-6 py-4">Tanggal</th>
-                        <th class="px-6 py-4">Paket</th>
-                        <th class="px-6 py-4">Nominal</th>
-                        <th class="px-6 py-4">Status</th>
-                        <th class="px-6 py-4 text-right">Invoice</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 font-mono text-xs text-gray-500">#INV-001</td>
-                        <td class="px-6 py-4 text-gray-600">--</td>
-                        <td class="px-6 py-4 font-bold text-gray-400">Belum ada tagihan</td>
-                        <td class="px-6 py-4 font-medium">Rp 0</td>
-                        <td class="px-6 py-4"><span class="bg-gray-100 text-gray-500 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide">EMPTY</span></td>
-                        <td class="px-6 py-4 text-right"><button class="text-gray-300 cursor-not-allowed"><i class="fa-solid fa-download"></i></button></td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
-    </div>
-
 </div>
 
-<div id="paymentModal" class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center transition-all duration-300 opacity-0 pointer-events-none">
-    <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden transform scale-90 transition-all duration-300" id="modalContent">
-        <div class="p-6 bg-gradient-to-r from-indigo-600 to-indigo-700 flex justify-between items-center relative overflow-hidden">
-            <div class="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
-            <div class="relative z-10">
-                <h3 class="font-bold text-xl text-white">Checkout</h3>
-                <p class="text-xs text-indigo-100 opacity-90" id="modalPlanName">Upgrade Paket</p>
-            </div>
-            <button onclick="closeModal()" class="relative z-10 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition backdrop-blur-md">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+<div id="paymentModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center transition-opacity opacity-0">
+    <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 transition-transform" id="modalContent">
+        
+        <div class="p-6 bg-gradient-to-r from-indigo-600 to-indigo-800 relative">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-white/70 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <h3 class="font-bold text-xl text-white">Checkout</h3>
+            <p class="text-xs text-indigo-200" id="modalPlanName">Upgrade Paket</p>
         </div>
         
         <div class="p-6">
-            <div class="text-center mb-8 bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Total Pembayaran</p>
-                <h2 class="text-4xl font-black text-gray-900 tracking-tight" id="modalPrice">Rp 0</h2>
-                <p class="text-xs text-green-600 font-bold mt-2 hidden" id="modalSaveInfo"><i class="fa-solid fa-tag"></i> Harga promo aktif</p>
-            </div>
-
-            <div class="space-y-3" id="paymentMethods">
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Pilih Metode Pembayaran</label>
+            <form action="/api/payment/checkout" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="variant_id" id="inputVariantId">
                 
-                <label class="flex items-center p-4 border-2 border-indigo-100 bg-indigo-50/50 rounded-xl cursor-pointer hover:border-indigo-500 transition group relative overflow-hidden">
-                    <div class="absolute right-0 top-0 bg-indigo-500 text-white text-[9px] px-2 py-0.5 rounded-bl-lg font-bold">INSTANT</div>
-                    <input type="radio" name="payment" value="qris" class="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-gray-300" checked>
-                    <div class="ml-4 flex-1">
-                        <span class="block font-bold text-gray-900 text-sm">QRIS (Otomatis)</span>
-                        <span class="text-[10px] text-gray-500">Gopay, OVO, Dana, ShopeePay</span>
-                    </div>
-                    <i class="fa-solid fa-qrcode text-2xl text-indigo-300 group-hover:text-indigo-600 transition"></i>
-                </label>
+                <div class="text-center mb-6 bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+                    <p class="text-xs text-indigo-400 uppercase font-bold">Total Tagihan</p>
+                    <h2 class="text-3xl font-black text-indigo-900 mt-1" id="modalPrice">Rp 0</h2>
+                </div>
 
-                <label class="flex items-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition group">
-                    <input type="radio" name="payment" value="transfer" class="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-gray-300">
-                    <div class="ml-4 flex-1">
-                        <span class="block font-bold text-gray-800 text-sm">Transfer Bank</span>
-                        <span class="text-[10px] text-gray-500">BCA, Mandiri (Cek Manual)</span>
-                    </div>
-                    <i class="fa-solid fa-building-columns text-xl text-gray-300 group-hover:text-gray-600 transition"></i>
-                </label>
-            </div>
-            
-            <button onclick="processPayment()" id="payBtn" class="w-full mt-8 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-sm">
-                <i class="fa-solid fa-lock"></i> Bayar Sekarang
-            </button>
+                <div class="space-y-4 mb-6">
+                    <p class="text-xs font-bold text-gray-400 uppercase">Metode Pembayaran</p>
+                    
+                    {% for bank in banks %}
+                    <label class="flex items-center p-3 border border-gray-200 rounded-xl cursor-pointer hover:border-indigo-500 hover:bg-gray-50 transition">
+                        <input type="radio" name="payment_method" value="{{ bank.bank_name }}" class="w-4 h-4 text-indigo-600" required>
+                        <div class="ml-3">
+                            <span class="block font-bold text-gray-800 text-sm">{{ bank.bank_name }}</span>
+                            <span class="text-xs text-gray-500 font-mono">{{ bank.account_number }} ({{ bank.account_holder }})</span>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Bukti Transfer</label>
+                    <input type="file" name="proof_file" accept="image/*" required class="w-full text-xs text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-gray-200 rounded-lg">
+                </div>
+                
+                <button type="submit" class="w-full py-3.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition shadow-lg">
+                    Konfirmasi Pembayaran
+                </button>
+            </form>
         </div>
     </div>
 </div>
 
 <script>
-    // --- KONFIGURASI DATA PAKET ---
-    // Format: [Judul Durasi, Harga Tampil, Harga Asli (utk coret), Hemat text, ID Unik, rawPrice]
-    const packages = {
-        'basic': [
-            {
-                title: "Starter Trial",
-                duration: "1 Hari",
-                price: "Gratis",
-                rawPrice: 0,
-                coret: "",
-                hemat: "",
-                features: ["1 Akun Telegram", "Coba Semua Fitur", "Limit 50 Pesan", "No Credit Card"],
-                btnText: "Coba Gratis",
-                bestValue: false
-            },
-            {
-                title: "Bulanan",
-                duration: "30 Hari",
-                price: "599rb",
-                rawPrice: "599.000",
-                coret: "",
-                hemat: "",
-                features: ["1 Akun Telegram", "Unlimited Broadcast", "Auto Reply Basic", "CRM Database"],
-                btnText: "Pilih Bulanan",
-                bestValue: false
-            },
-            {
-                title: "Quarterly",
-                duration: "90 Hari",
-                price: "1.399rb",
-                rawPrice: "1.399.000",
-                coret: "Rp 1.797.000",
-                hemat: "Hemat 400rb",
-                features: ["1 Akun Telegram", "Fitur Lengkap", "Prioritas Server", "Free Update"],
-                btnText: "Ambil Promo",
-                bestValue: true
-            }
-        ],
-        'optimal': [
-            {
-                title: "Bulanan",
-                duration: "30 Hari",
-                price: "999rb",
-                rawPrice: "999.000",
-                coret: "Rp 1.797.000",
-                hemat: "Hemat 45%",
-                features: ["3 Akun Telegram", "Multi-Account", "Auto Reply Pro", "Broadcast Cepat"],
-                btnText: "Pilih Bulanan",
-                bestValue: false
-            },
-            {
-                title: "Quarterly",
-                duration: "90 Hari",
-                price: "2.399rb",
-                rawPrice: "2.399.000",
-                coret: "Rp 2.997.000",
-                hemat: "Hemat 600rb",
-                features: ["3 Akun Telegram", "Server Prioritas", "Jalur VIP Support", "Anti Banned Pro"],
-                btnText: "Pilih Hemat",
-                bestValue: false
-            },
-            {
-                title: "Semester",
-                duration: "180 Hari",
-                price: "3.999rb",
-                rawPrice: "3.999.000",
-                coret: "Rp 5.994.000",
-                hemat: "HEMAT 2 JUTA",
-                features: ["3 Akun Telegram", "Super Prioritas", "Konsultasi Setup", "All Access"],
-                btnText: "Ambil Promo Gila",
-                bestValue: true
-            }
-        ],
-        'agency': [
-            {
-                title: "Bulanan",
-                duration: "30 Hari",
-                price: "2.999rb",
-                rawPrice: "2.999.000",
-                coret: "Rp 5.990.000",
-                hemat: "Hemat 50%",
-                features: ["10 Akun Telegram", "Agency Dashboard", "Whitelabel Option", "Team Management"],
-                btnText: "Start Agency",
-                bestValue: false
-            },
-            {
-                title: "Quarterly",
-                duration: "90 Hari",
-                price: "6.999rb",
-                rawPrice: "6.999.000",
-                coret: "Rp 8.997.000",
-                hemat: "Hemat 2 Juta",
-                features: ["10 Akun Telegram", "Dedicated Server", "Priority Support", "API Access"],
-                btnText: "Scale Up",
-                bestValue: false
-            },
-            {
-                title: "Semester",
-                duration: "180 Hari",
-                price: "11.999rb",
-                rawPrice: "11.999.000",
-                coret: "Rp 17.994.000",
-                hemat: "HEMAT 6 JUTA",
-                features: ["10 Akun Telegram", "VIP Partner", "Custom Feature", "Private Group"],
-                btnText: "Dominasi Pasar",
-                bestValue: true
-            }
-        ]
-    };
+    // --- INTEGRASI DATA DARI BACKEND (JINJA2 -> JS) ---
+    // Data ini sekarang otomatis terisi dari Database!
+    const packages = JSON.parse('{{ plans_json | safe }}');
 
-    // INIT
     document.addEventListener('DOMContentLoaded', () => {
-        switchPackage('optimal'); // Default tampilkan Optimal (Best Seller)
+        switchPackage('optimal'); // Default Tab
     });
 
     function switchPackage(pkgType) {
-        // 1. Style Tab Active
+        // 1. Reset Styles Tab
         document.querySelectorAll('.pkg-tab').forEach(tab => {
-            tab.classList.remove('bg-indigo-600', 'text-white', 'shadow-md', 'ring-2', 'ring-indigo-200');
-            tab.classList.add('text-gray-700');
-            // Reset subtext color inside tab
-            tab.querySelector('span:last-child').classList.remove('text-indigo-200');
-            tab.querySelector('span:last-child').classList.add('text-gray-400');
+            tab.classList.remove('bg-indigo-600', 'text-white', 'shadow-md');
+            tab.classList.add('text-gray-600', 'hover:bg-gray-50');
         });
-
+        
+        // 2. Active Tab Style
         const activeTab = document.getElementById(`tab-${pkgType}`);
-        activeTab.classList.remove('text-gray-700');
-        activeTab.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'ring-2', 'ring-indigo-200');
-        activeTab.querySelector('span:last-child').classList.remove('text-gray-400', 'group-hover:text-indigo-400');
-        activeTab.querySelector('span:last-child').classList.add('text-indigo-200');
+        activeTab.classList.remove('text-gray-600', 'hover:bg-gray-50');
+        activeTab.classList.add('bg-indigo-600', 'text-white', 'shadow-md');
 
-        // 2. Render Cards
+        // 3. Render Cards
         const container = document.getElementById('cards-container');
-        container.innerHTML = ''; // Clear old content
-        
-        // Animasi fade in
-        container.style.opacity = '0';
-        
+        container.innerHTML = '';
+        container.style.opacity = '0'; // Fade out effect
+
         setTimeout(() => {
-            const data = packages[pkgType];
+            const data = packages[pkgType] || [];
             
             data.forEach(item => {
                 const isBest = item.bestValue;
-                const cardHTML = `
-                    <div class="relative flex flex-col h-full bg-white rounded-[2rem] p-8 ${isBest ? 'border-2 border-indigo-500 shadow-xl scale-105 z-10' : 'border border-gray-200 shadow-lg hover:shadow-xl'} transition-all duration-300">
-                        ${isBest ? '<div class="absolute top-0 inset-x-0 flex justify-center -mt-3"><span class="bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Paling Untung</span></div>' : ''}
+                const card = `
+                    <div class="relative flex flex-col bg-white rounded-[2rem] p-8 ${isBest ? 'border-2 border-indigo-500 shadow-2xl scale-105 z-10' : 'border border-gray-200 shadow-lg'} transition-all duration-300">
+                        ${isBest ? '<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">Paling Untung</div>' : ''}
                         
                         <div class="mb-6">
-                            <h3 class="text-lg font-bold ${isBest ? 'text-indigo-600' : 'text-gray-800'}">${item.title}</h3>
+                            <h3 class="text-lg font-bold text-gray-800">${item.title}</h3>
                             <div class="flex items-baseline gap-1 mt-2">
                                 <span class="text-4xl font-extrabold text-gray-900">${item.price}</span>
-                                ${item.price !== 'Gratis' ? '<span class="text-gray-400 text-xs font-medium">/net</span>' : ''}
+                                <span class="text-gray-400 text-xs font-medium">/${item.duration}</span>
                             </div>
                             <div class="h-6 mt-1 flex items-center gap-2">
                                 ${item.coret ? `<span class="text-xs text-gray-400 line-through">${item.coret}</span>` : ''}
-                                ${item.hemat ? `<span class="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">${item.hemat}</span>` : ''}
+                                ${item.hemat ? `<span class="text-[9px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">${item.hemat}</span>` : ''}
                             </div>
                         </div>
 
-                        <div class="flex-1">
-                            <ul class="space-y-3 mb-8 text-sm text-gray-600">
-                                ${item.features.map(f => `<li class="flex items-start gap-3"><i class="fa-solid fa-check text-green-500 mt-1"></i> <span>${f}</span></li>`).join('')}
-                            </ul>
+                        <div class="flex-1 space-y-3 mb-8">
+                            ${item.features.map(f => `
+                                <div class="flex items-start gap-3 text-sm text-gray-600">
+                                    <i class="fa-solid fa-check text-green-500 mt-1"></i> <span>${f}</span>
+                                </div>
+                            `).join('')}
                         </div>
 
-                        <button onclick="openPaymentModal('${item.title} ${pkgType}', '${item.rawPrice}', ${item.rawPrice === 0})" 
-                            class="w-full py-3.5 rounded-xl font-bold transition transform hover:translate-y-[-2px] ${isBest ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200' : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100'}">
+                        <button onclick="openModal('${item.title}', '${item.price}', ${item.id})" 
+                            class="w-full py-3.5 rounded-xl font-bold transition transform hover:-translate-y-1 ${isBest ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-gray-50 text-gray-800 border border-gray-200 hover:bg-gray-100'}">
                             ${item.btnText}
                         </button>
                     </div>
                 `;
-                container.innerHTML += cardHTML;
+                container.innerHTML += card;
             });
-            
             container.style.opacity = '1';
         }, 150);
     }
 
-    // --- MODAL LOGIC ---
+    // Modal Logic
     const modal = document.getElementById('paymentModal');
     const content = document.getElementById('modalContent');
-    const payBtn = document.getElementById('payBtn');
-    const paymentMethods = document.getElementById('paymentMethods');
 
-    function openPaymentModal(name, price, isFree) {
-        document.getElementById('modalPlanName').innerText = name.toUpperCase().replace('BASIC', '1 AKUN').replace('OPTIMAL', '3 AKUN').replace('AGENCY', '10 AKUN');
+    function openModal(title, price, id) {
+        document.getElementById('modalPlanName').innerText = title;
+        document.getElementById('modalPrice').innerText = price;
+        document.getElementById('inputVariantId').value = id; // ID buat backend
         
-        if (isFree) {
-            document.getElementById('modalPrice').innerText = 'Gratis';
-            paymentMethods.classList.add('hidden'); // Sembunyikan metode bayar kalau gratis
-            payBtn.innerText = 'Aktifkan Trial Sekarang';
-            payBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
-            payBtn.classList.add('bg-green-600', 'hover:bg-green-700');
-        } else {
-            document.getElementById('modalPrice').innerText = 'Rp ' + price;
-            paymentMethods.classList.remove('hidden');
-            payBtn.innerText = 'Bayar Sekarang';
-            payBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-            payBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
-        }
-
         modal.classList.remove('hidden');
         setTimeout(() => {
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            content.classList.remove('scale-90');
-            content.classList.add('scale-100');
+            modal.classList.remove('opacity-0');
+            content.classList.remove('scale-95');
         }, 10);
     }
 
     function closeModal() {
-        content.classList.remove('scale-100');
-        content.classList.add('scale-90');
-        modal.classList.add('opacity-0', 'pointer-events-none');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-        }, 300);
-    }
-
-    function processPayment() {
-        const btn = document.getElementById('payBtn');
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses...';
-        btn.disabled = true;
-        
-        setTimeout(() => {
-            // Logika redirect nanti di sini
-            alert("Order Created! Redirecting...");
-            location.reload(); 
-        }, 1500);
+        modal.classList.add('opacity-0');
+        content.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
     }
 </script>
 {% endblock %}
