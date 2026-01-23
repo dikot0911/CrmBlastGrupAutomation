@@ -912,7 +912,16 @@ def admin_required(f):
 
 @app.route('/')
 def index():
-    return render_template('landing/index.html')
+    # Ambil data pricing struktur JSON tapi dikonversi balik ke Dict Python
+    # Supaya bisa di-looping pakai Jinja2 di HTML
+    pricing_data = {}
+    if supabase:
+        try:
+            raw_json = FinanceManager.get_plans_json() # Reuse fungsi yang udah ada
+            pricing_data = json.loads(raw_json)
+        except: pass
+        
+    return render_template('landing/index.html', pricing=pricing_data)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -1402,6 +1411,31 @@ def dashboard_payment():
                            plans_json=json.dumps(plans_data), # Kirim JSON ke JS
                            banks=banks)
 
+# --- [TAMBAHAN WAJIB] API CHECKOUT USER ---
+@app.route('/api/payment/checkout', methods=['POST'])
+@login_required
+def api_checkout():
+    user_id = session['user_id']
+    variant_id = request.form.get('variant_id')
+    method = request.form.get('payment_method')
+    proof = request.files.get('proof_file')
+    
+    # Validasi input
+    if not variant_id or not method:
+        flash('Data pembayaran tidak lengkap.', 'danger')
+        return redirect(url_for('dashboard_payment'))
+
+    # Panggil Manager untuk simpan transaksi
+    success, msg = FinanceManager.create_transaction(user_id, variant_id, method, proof)
+    
+    if success:
+        # Kirim notif ke Admin (Optional) atau ke User
+        flash('✅ Invoice berhasil dibuat! Mohon tunggu konfirmasi admin 1x24 jam.', 'success')
+    else:
+        flash(f'❌ Gagal: {msg}', 'danger')
+        
+    return redirect(url_for('dashboard_payment'))
+    
 # ==============================================================================
 # SECTION 9: TELEGRAM AUTHENTICATION (CORE LOGIC & STATELESS)
 # ==============================================================================
