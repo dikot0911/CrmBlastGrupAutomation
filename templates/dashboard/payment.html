@@ -1,27 +1,27 @@
 {% extends "dashboard/base.html" %}
-{% block title %}Upgrade Paket{% endblock %}
+{% block title %}Upgrade Paket & Billing{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto animate-fade-in pb-24 px-4">
+<div class="max-w-7xl mx-auto animate-fade-in pb-24 px-4 sm:px-6 lg:px-8">
     
     <div class="text-center max-w-3xl mx-auto mb-12">
-        <span class="text-indigo-600 font-bold text-xs uppercase tracking-widest bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-100">Pricing Plans</span>
-        <h1 class="text-4xl font-extrabold text-gray-900 mt-6 tracking-tight">Pilih Level Bisnismu</h1>
-        <p class="text-gray-500 mt-4 text-lg">Investasi leher ke atas untuk profit melimpah.</p>
+        <span class="text-indigo-600 font-extrabold text-xs uppercase tracking-widest bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-100">Pricing Plans</span>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mt-6 tracking-tight">Investasi Leher ke Atas</h1>
+        <p class="text-gray-500 mt-4 text-lg">Pilih paket yang sesuai dengan skala bisnismu saat ini.</p>
         
         <div class="mt-10 inline-flex bg-white p-1.5 rounded-2xl border border-gray-200 shadow-lg relative z-0">
-            <button onclick="switchPackage('basic')" id="tab-basic" class="pkg-tab w-32 py-3 rounded-xl transition-all duration-300 flex flex-col items-center group">
-                <span class="font-bold text-sm">Starter</span>
-                <span class="text-[10px]">1 Akun</span>
+            <button onclick="switchPackage('basic')" id="tab-basic" class="pkg-tab relative w-32 py-3 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
+                <span>Starter</span>
+                <span class="text-[10px] font-normal text-gray-400 group-hover:text-indigo-400">Pemula</span>
             </button>
-            <button onclick="switchPackage('optimal')" id="tab-optimal" class="pkg-tab w-32 py-3 rounded-xl transition-all duration-300 flex flex-col items-center group relative">
-                <span class="font-bold text-sm">UMKM Pro</span>
-                <span class="text-[10px]">3 Akun</span>
-                <span class="absolute -top-3 -right-2 bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full shadow-md animate-pulse">BEST</span>
+            <button onclick="switchPackage('optimal')" id="tab-optimal" class="pkg-tab relative w-32 py-3 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
+                <span>UMKM Pro</span>
+                <span class="text-[10px] font-normal text-gray-400 group-hover:text-indigo-400">Scale Up</span>
+                <span class="absolute -top-3 -right-2 bg-gradient-to-r from-orange-400 to-red-500 text-white text-[9px] px-2 py-0.5 rounded-full shadow-md animate-pulse">BEST</span>
             </button>
-            <button onclick="switchPackage('agency')" id="tab-agency" class="pkg-tab w-32 py-3 rounded-xl transition-all duration-300 flex flex-col items-center group">
-                <span class="font-bold text-sm">Agency</span>
-                <span class="text-[10px]">10 Akun</span>
+            <button onclick="switchPackage('agency')" id="tab-agency" class="pkg-tab relative w-32 py-3 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
+                <span>Agency</span>
+                <span class="text-[10px] font-normal text-gray-400 group-hover:text-indigo-400">Sultan</span>
             </button>
         </div>
     </div>
@@ -29,52 +29,71 @@
     <div id="cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20 items-stretch">
         </div>
 
-    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="p-6 border-b border-gray-100 bg-gray-50/50">
-            <h3 class="font-bold text-gray-800"><i class="fa-solid fa-file-invoice text-indigo-500 mr-2"></i> Riwayat Tagihan</h3>
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mt-12">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600"><i class="fa-solid fa-file-invoice"></i></div>
+                <h3 class="font-bold text-gray-800">Riwayat Pembayaran</h3>
+            </div>
         </div>
+        <div class="p-8 text-center text-gray-400 italic text-sm">
+            Belum ada riwayat transaksi.
         </div>
+    </div>
+
 </div>
 
-<div id="paymentModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center transition-opacity opacity-0">
-    <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 transition-transform" id="modalContent">
+<div id="paymentModal" class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center transition-all duration-300 opacity-0 pointer-events-none">
+    <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden transform scale-90 transition-all duration-300" id="modalContent">
         
-        <div class="p-6 bg-gradient-to-r from-indigo-600 to-indigo-800 relative">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-white/70 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-            <h3 class="font-bold text-xl text-white">Checkout</h3>
-            <p class="text-xs text-indigo-200" id="modalPlanName">Upgrade Paket</p>
+        <div class="p-6 bg-gradient-to-r from-indigo-600 to-purple-700 flex justify-between items-center relative overflow-hidden">
+            <div class="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+            <div class="relative z-10">
+                <h3 class="font-bold text-xl text-white flex items-center gap-2"><i class="fa-solid fa-cart-shopping"></i> Checkout</h3>
+                <p class="text-xs text-indigo-100 opacity-90" id="modalPlanName">Upgrade Paket</p>
+            </div>
+            <button onclick="closeModal()" class="relative z-10 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition backdrop-blur-md">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
         
         <div class="p-6">
-            <form action="/api/payment/checkout" method="POST" enctype="multipart/form-data">
+            <form action="/api/payment/checkout" method="POST" enctype="multipart/form-data" id="checkoutForm">
                 <input type="hidden" name="variant_id" id="inputVariantId">
                 
-                <div class="text-center mb-6 bg-indigo-50 rounded-xl p-4 border border-indigo-100">
-                    <p class="text-xs text-indigo-400 uppercase font-bold">Total Tagihan</p>
-                    <h2 class="text-3xl font-black text-indigo-900 mt-1" id="modalPrice">Rp 0</h2>
+                <div class="text-center mb-8 bg-gray-50 rounded-2xl p-4 border border-gray-100 relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                    <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Total Tagihan</p>
+                    <h2 class="text-3xl font-black text-gray-900 tracking-tight" id="modalPrice">Rp 0</h2>
                 </div>
 
-                <div class="space-y-4 mb-6">
-                    <p class="text-xs font-bold text-gray-400 uppercase">Metode Pembayaran</p>
+                <div class="space-y-3 mb-6 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                    <p class="text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Transfer Ke:</p>
                     
                     {% for bank in banks %}
-                    <label class="flex items-center p-3 border border-gray-200 rounded-xl cursor-pointer hover:border-indigo-500 hover:bg-gray-50 transition">
-                        <input type="radio" name="payment_method" value="{{ bank.bank_name }}" class="w-4 h-4 text-indigo-600" required>
-                        <div class="ml-3">
+                    <label class="flex items-center p-3 border-2 border-gray-100 rounded-xl cursor-pointer hover:border-indigo-500 hover:bg-indigo-50/30 transition group relative">
+                        <input type="radio" name="payment_method" value="{{ bank.bank_name }}" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300" required>
+                        <div class="ml-3 flex-1">
                             <span class="block font-bold text-gray-800 text-sm">{{ bank.bank_name }}</span>
-                            <span class="text-xs text-gray-500 font-mono">{{ bank.account_number }} ({{ bank.account_holder }})</span>
+                            <span class="text-xs text-gray-500 font-mono">{{ bank.account_number }}</span>
+                            <span class="text-[10px] text-gray-400 block">a.n {{ bank.account_holder }}</span>
                         </div>
+                        <i class="fa-solid fa-building-columns text-gray-300 group-hover:text-indigo-400 text-xl absolute right-4"></i>
                     </label>
                     {% endfor %}
                 </div>
 
                 <div class="mb-6">
-                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Bukti Transfer</label>
-                    <input type="file" name="proof_file" accept="image/*" required class="w-full text-xs text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-gray-200 rounded-lg">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Bukti Transfer</label>
+                    <div class="relative">
+                        <input type="file" name="proof_file" accept="image/*" required 
+                            class="block w-full text-xs text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-gray-200 rounded-lg cursor-pointer focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                    <p class="text-[10px] text-gray-400 mt-1 ml-1">*Format: JPG, PNG. Max 2MB.</p>
                 </div>
                 
-                <button type="submit" class="w-full py-3.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition shadow-lg">
-                    Konfirmasi Pembayaran
+                <button type="submit" id="payBtn" class="w-full bg-gray-900 hover:bg-black text-white py-3.5 rounded-xl font-bold shadow-lg shadow-gray-300/50 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-regular fa-paper-plane"></i> Kirim Konfirmasi
                 </button>
             </form>
         </div>
@@ -82,8 +101,8 @@
 </div>
 
 <script>
-    // --- INTEGRASI DATA DARI BACKEND (JINJA2 -> JS) ---
-    // Data ini sekarang otomatis terisi dari Database!
+    // --- CORE LOGIC: DATA DARI DATABASE ---
+    // Variable ini di-inject langsung oleh Python/Flask saat render
     const packages = JSON.parse('{{ plans_json | safe }}');
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -91,83 +110,118 @@
     });
 
     function switchPackage(pkgType) {
-        // 1. Reset Styles Tab
+        // 1. Reset Style Tab
         document.querySelectorAll('.pkg-tab').forEach(tab => {
-            tab.classList.remove('bg-indigo-600', 'text-white', 'shadow-md');
-            tab.classList.add('text-gray-600', 'hover:bg-gray-50');
+            tab.classList.remove('bg-indigo-600', 'text-white', 'shadow-md', 'ring-2', 'ring-indigo-200');
+            tab.classList.add('text-gray-700');
+            // Reset warna subtext
+            const sub = tab.querySelector('span:last-child');
+            if(sub) { sub.classList.remove('text-indigo-200'); sub.classList.add('text-gray-400'); }
         });
-        
-        // 2. Active Tab Style
+
+        // 2. Set Active Tab
         const activeTab = document.getElementById(`tab-${pkgType}`);
-        activeTab.classList.remove('text-gray-600', 'hover:bg-gray-50');
-        activeTab.classList.add('bg-indigo-600', 'text-white', 'shadow-md');
+        if(activeTab){
+            activeTab.classList.remove('text-gray-700');
+            activeTab.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'ring-2', 'ring-indigo-200');
+            const sub = activeTab.querySelector('span:last-child');
+            if(sub) { sub.classList.remove('text-gray-400', 'group-hover:text-indigo-400'); sub.classList.add('text-indigo-200'); }
+        }
 
-        // 3. Render Cards
+        // 3. Render Cards Dinamis
         const container = document.getElementById('cards-container');
-        container.innerHTML = '';
-        container.style.opacity = '0'; // Fade out effect
-
+        container.style.opacity = '0'; // Fade out
+        
         setTimeout(() => {
+            container.innerHTML = ''; // Clear
             const data = packages[pkgType] || [];
             
+            if(data.length === 0) {
+                container.innerHTML = '<div class="col-span-3 text-center py-10 text-gray-400">Belum ada paket tersedia untuk kategori ini.</div>';
+            }
+
             data.forEach(item => {
                 const isBest = item.bestValue;
-                const card = `
-                    <div class="relative flex flex-col bg-white rounded-[2rem] p-8 ${isBest ? 'border-2 border-indigo-500 shadow-2xl scale-105 z-10' : 'border border-gray-200 shadow-lg'} transition-all duration-300">
-                        ${isBest ? '<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">Paling Untung</div>' : ''}
+                // Render Feature List
+                const featuresHtml = item.features.map(f => `
+                    <li class="flex items-start gap-3">
+                        <i class="fa-solid fa-check text-green-500 mt-1 text-xs"></i> 
+                        <span class="text-sm text-gray-600 font-medium">${f}</span>
+                    </li>
+                `).join('');
+
+                const cardHtml = `
+                    <div class="relative flex flex-col bg-white rounded-[2rem] p-8 ${isBest ? 'border-2 border-indigo-500 shadow-xl scale-105 z-10' : 'border border-gray-200 shadow-lg hover:shadow-xl'} transition-all duration-300">
+                        ${isBest ? '<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-lg shadow-indigo-500/30">Paling Hemat</div>' : ''}
                         
-                        <div class="mb-6">
-                            <h3 class="text-lg font-bold text-gray-800">${item.title}</h3>
-                            <div class="flex items-baseline gap-1 mt-2">
+                        <div class="mb-6 text-center">
+                            <h3 class="text-lg font-bold ${isBest ? 'text-indigo-600' : 'text-gray-800'}">${item.title}</h3>
+                            <div class="flex items-center justify-center gap-1 mt-2">
                                 <span class="text-4xl font-extrabold text-gray-900">${item.price}</span>
-                                <span class="text-gray-400 text-xs font-medium">/${item.duration}</span>
                             </div>
-                            <div class="h-6 mt-1 flex items-center gap-2">
-                                ${item.coret ? `<span class="text-xs text-gray-400 line-through">${item.coret}</span>` : ''}
-                                ${item.hemat ? `<span class="text-[9px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">${item.hemat}</span>` : ''}
+                            <div class="h-6 mt-2 flex items-center justify-center gap-2">
+                                ${item.coret ? `<span class="text-xs text-gray-400 line-through decoration-red-400">${item.coret}</span>` : ''}
+                                ${item.hemat ? `<span class="text-[9px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-md border border-green-200">${item.hemat}</span>` : ''}
                             </div>
                         </div>
 
-                        <div class="flex-1 space-y-3 mb-8">
-                            ${item.features.map(f => `
-                                <div class="flex items-start gap-3 text-sm text-gray-600">
-                                    <i class="fa-solid fa-check text-green-500 mt-1"></i> <span>${f}</span>
-                                </div>
-                            `).join('')}
+                        <div class="flex-1 bg-gray-50/50 rounded-2xl p-4 mb-6 border border-gray-100">
+                            <ul class="space-y-3">
+                                ${featuresHtml}
+                            </ul>
                         </div>
 
-                        <button onclick="openModal('${item.title}', '${item.price}', ${item.id})" 
-                            class="w-full py-3.5 rounded-xl font-bold transition transform hover:-translate-y-1 ${isBest ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-gray-50 text-gray-800 border border-gray-200 hover:bg-gray-100'}">
+                        <button onclick="openPaymentModal('${item.title} (${pkgType.toUpperCase()})', '${item.price}', ${item.id})" 
+                            class="w-full py-3.5 rounded-xl font-bold transition transform hover:translate-y-[-2px] active:scale-95 ${isBest ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200' : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-900 hover:text-gray-900'}">
                             ${item.btnText}
                         </button>
                     </div>
                 `;
-                container.innerHTML += card;
+                container.innerHTML += cardHtml;
             });
-            container.style.opacity = '1';
-        }, 150);
+            
+            container.style.opacity = '1'; // Fade in
+        }, 200);
     }
 
-    // Modal Logic
+    // --- MODAL FUNCTIONS ---
     const modal = document.getElementById('paymentModal');
     const content = document.getElementById('modalContent');
 
-    function openModal(title, price, id) {
-        document.getElementById('modalPlanName').innerText = title;
-        document.getElementById('modalPrice').innerText = price;
-        document.getElementById('inputVariantId').value = id; // ID buat backend
+    function openPaymentModal(planName, priceDisplay, variantId) {
+        document.getElementById('modalPlanName').innerText = planName;
+        document.getElementById('modalPrice').innerText = priceDisplay;
+        document.getElementById('inputVariantId').value = variantId; // Set ID buat Backend
         
         modal.classList.remove('hidden');
+        // Hack sedikit biar transisi CSS jalan
         setTimeout(() => {
-            modal.classList.remove('opacity-0');
-            content.classList.remove('scale-95');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-90');
+            content.classList.add('scale-100');
         }, 10);
     }
 
     function closeModal() {
-        modal.classList.add('opacity-0');
-        content.classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 300);
+        content.classList.remove('scale-100');
+        content.classList.add('scale-90');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
     }
+    
+    // Auto close jika klik di luar modal
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+    });
 </script>
+
+<style>
+    .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+</style>
 {% endblock %}
