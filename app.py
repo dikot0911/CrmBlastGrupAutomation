@@ -1387,14 +1387,20 @@ def dashboard_profile():
                            active_page='profile',
                            bot_link=bot_link,
                            is_notif_connected=is_notif_connected)
+    
 @app.route('/dashboard/payment')
 @login_required
 def dashboard_payment():
-    """Halaman Pilihan Paket & Pembayaran"""
-    user = get_user_data(session['user_id'])
-    if not user: return redirect(url_for('login'))
+    user = get_dashboard_context()
+    # Ambil data dinamis dari DB
+    plans_data = FinanceManager.get_plans_structure()
+    banks = supabase.table('admin_banks').select("*").eq('is_active', True).execute().data
     
-    return render_template('dashboard/payment.html', user=user, active_page='payment')
+    return render_template('dashboard/payment.html', 
+                           user=user, 
+                           active_page='payment',
+                           plans_json=json.dumps(plans_data), # Kirim JSON ke JS
+                           banks=banks)
 
 # ==============================================================================
 # SECTION 9: TELEGRAM AUTHENTICATION (CORE LOGIC & STATELESS)
@@ -2728,6 +2734,159 @@ def ban_user(user_id):
         
     # Redirect balik ke halaman detail user biar enak
     return redirect(url_for('super_admin_user_detail', user_id=user_id))
+
+@app.route('/super-admin/pricing', methods=['GET', 'POST'])
+@admin_required
+def super_admin_pricing():
+    # Logic Update Harga disini (Update tabel pricing_variants)
+    if request.method == 'POST':
+        var_id = request.form.get('id')
+        price_raw = request.form.get('price_raw')
+        price_disp = request.form.get('price_display')
+        # ... logic update DB ...
+        supabase.table('pricing_variants').update({
+            'price_raw': price_raw,
+            'price_display': price_disp
+        }).eq('id', var_id).execute()
+        flash('Harga berhasil diupdate', 'success')
+        return redirect(url_for('super_admin_pricing'))
+
+    # Ambil data raw untuk ditampilkan di tabel edit
+    plans = supabase.table('pricing_plans').select("*, pricing_variants(*)").order('id').execute().data
+    return render_template('admin/pricing.html', plans=plans, active_page='pricing')
+
+@app.route('/super-admin/finance')
+@admin_required
+def super_admin_finance():
+    # Ambil transaksi
+    trx = supabase.table('transactions').select("*, users(email), pricing_variants(price_display, duration_days, pricing_plans(display_name))")\
+        .order('created_at', desc=True).execute().data
+        
+    return render_template('admin/finance.html', transactions=trx, active_page='finance')
+
+@app.route('/super-admin/finance/approve/<uuid:trx_id>')
+@admin_required
+def approve_trx(trx_id):
+    success, msg = FinanceManager.approve_transaction(str(trx_id), session['user_id'])
+    if success: flash(msg, 'success')
+    else: flash(msg, 'danger')
+    return redirect(url_for('super_admin_finance'))
+
+# ==============================================================================
+# SECTION 13.5: FINANCE & PRICING MANAGER
+# ==============================================================================
+class FinanceManager:
+    @staticmethod
+    def get_plans_structure():
+        """Mengambil struktur lengkap Plan + Varian untuk Frontend"""
+        if not supabase: return {}
+        
+        # Ambil Plans
+        plans = supabase.table('pricing_plans').select("*").order('id').execute().data
+        
+        structured_data = {}
+        for p in plans:
+            # Ambil Varian untuk plan ini
+            variants = supabase.table('pricing_variants').select("*").eq('plan_id', p['id']).order('duration_days').execute().data
+            
+            structured_data[p['code_name']] = []
+            for v in variants:
+                structured_data[p['code_name']].append({
+                    'id': v['id'],
+                    'title': _get_duration_title(v['duration_days']), # Helper function
+                    'duration': f"{v['duration_days']} Hari",
+                    'price': v['price_display'],
+                    'rawPrice': v['price_raw'],
+                    'coret': v['price_strike'] or "",
+                    'hemat': v['save_badge'] or "",
+                    'features': p['features'],
+                    'btnText': "Pilih Paket",
+                    'bestValue': v['is_best_value']
+                })
+        return structured_data
+
+    @staticmethod
+    def create_transaction(user_id, variant_id, method, proof_file=None):
+        """Buat invoice baru"""
+        # Ambil harga asli dari DB biar gak dimanipulasi frontend
+        var_res = supabase.table('pricing_variants').select("price_raw").eq('id', variant_id).execute()
+        if not var_res.data: return False, "Paket tidak valid"
+        
+        amount = var_res.data[0]['price_raw']
+        
+        # Upload Bukti (Jika ada)
+        proof_path = None
+        if proof_file:
+            # Logic upload gambar bukti ke Storage / Static folder
+            filename = secure_filename(f"proof_{user_id}_{int(time.time())}_{proof_file.filename}")
+            proof_path = f"/static/uploads/proofs/{filename}"
+            proof_file.save(os.path.join('static/uploads/proofs', filename))
+
+        data = {
+            'user_id': user_id,
+            'plan_variant_id': variant_id,
+            'amount': amount,
+            'payment_method': method,
+            'proof_url': proof_path,
+            'status': 'pending'
+        }
+        res = supabase.table('transactions').insert(data).execute()
+        return True, "Invoice berhasil dibuat"
+
+    @staticmethod
+    def approve_transaction(trx_id, admin_id):
+        """Admin Acc Pembayaran -> Otomatis perpanjang masa aktif user"""
+        try:
+            # 1. Ambil Data Transaksi & Varian Paket
+            trx = supabase.table('transactions').select("*, pricing_variants(*, pricing_plans(display_name))")\
+                .eq('id', trx_id).single().execute().data
+            
+            if not trx: return False, "Transaksi tidak ditemukan"
+            
+            user_id = trx['user_id']
+            duration = trx['pricing_variants']['duration_days']
+            plan_name = trx['pricing_variants']['pricing_plans']['display_name']
+            
+            # 2. Hitung Expired Baru
+            # Cek dulu user sekarang expired kapan
+            u_res = supabase.table('users').select("subscription_end").eq('id', user_id).single().execute()
+            current_end = u_res.data.get('subscription_end')
+            
+            now = datetime.utcnow()
+            if current_end:
+                current_date = datetime.fromisoformat(current_end.replace('Z', ''))
+                # Kalau masih aktif, tambah hari dari tanggal expired lama
+                start_date = current_date if current_date > now else now
+            else:
+                start_date = now
+                
+            new_expiry = (start_date + timedelta(days=duration)).isoformat()
+            
+            # 3. Update User
+            supabase.table('users').update({
+                'plan_tier': plan_name,
+                'subscription_end': new_expiry
+            }).eq('id', user_id).execute()
+            
+            # 4. Update Transaksi jadi PAID
+            supabase.table('transactions').update({
+                'status': 'paid',
+                'admin_note': f"Approved by Admin #{admin_id} at {now}"
+            }).eq('id', trx_id).execute()
+            
+            # 5. Kirim Notif ke User
+            send_telegram_alert(user_id, f"✅ **Pembayaran Diterima!**\nPaket {plan_name} aktif sampai {new_expiry[:10]}.")
+            
+            return True, "Sukses Approve"
+        except Exception as e:
+            logger.error(f"Approval Error: {e}")
+            return False, str(e)
+
+def _get_duration_title(days):
+    if days <= 3: return "Trial"
+    if days <= 35: return "Bulanan"
+    if days <= 100: return "Quarterly"
+    return "Semester"
 
 # ==========================================
 # SECTION 14 : IMPORT & EXPORT CSV
