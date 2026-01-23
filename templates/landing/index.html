@@ -6,7 +6,204 @@
 
     {% include 'landing/_features.html' %}
 
-    {% include 'landing/_pricing.html' %}
+    <section id="pricing" class="py-24 bg-gray-50 overflow-hidden relative font-sans">
+        
+        <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+            <div class="absolute -top-[10%] -right-[5%] w-[600px] h-[600px] bg-indigo-100/40 rounded-full blur-[120px]"></div>
+            <div class="absolute bottom-[10%] -left-[10%] w-[500px] h-[500px] bg-purple-100/40 rounded-full blur-[100px]"></div>
+        </div>
+
+        <div class="container mx-auto px-4 relative z-10">
+            
+            <div class="text-center max-w-3xl mx-auto mb-20" data-aos="fade-down">
+                <span class="text-indigo-600 font-extrabold text-xs uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-indigo-100 shadow-sm">
+                    Pricing Plans
+                </span>
+                <h2 class="text-4xl md:text-5xl font-black text-gray-900 mt-6 leading-tight tracking-tight">
+                    Investasi Kecil, <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Profit Melimpah</span>
+                </h2>
+                <p class="text-gray-500 mt-5 text-lg">
+                    Pilih paket sesuai level bisnismu. Semua paket sudah termasuk fitur anti-banned dan server prioritas.
+                </p>
+            </div>
+
+            <div class="flex flex-col gap-10 max-w-5xl mx-auto">
+
+                {% if pricing %}
+                    
+                    {% set basic_plan = pricing.get('basic') %}
+                    {% if basic_plan %}
+                    <div class="group relative bg-white rounded-[2.5rem] p-8 md:p-10 border border-gray-200 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1" data-aos="fade-up">
+                        <div class="flex flex-col md:flex-row gap-10 items-center">
+                            
+                            <div class="flex-1 w-full text-center md:text-left">
+                                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gray-100 text-gray-600 mb-6 text-2xl">
+                                    <i class="fa-regular fa-paper-plane"></i>
+                                </div>
+                                <h3 class="text-3xl font-black text-gray-900 mb-2">Starter Pack</h3>
+                                <p class="text-gray-500 mb-6">Satu akun untuk pemula yang mau test pasar.</p>
+
+                                <div class="space-y-3 mb-8 text-left max-w-xs mx-auto md:mx-0">
+                                    {% for f in basic_plan[0].features[:3] %}
+                                    <div class="flex items-center gap-3 text-gray-700 font-medium">
+                                        <i class="fa-solid fa-check-circle text-indigo-500"></i> {{ f }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <a href="/register?ref=STARTER" class="w-full md:w-auto inline-block px-8 py-3.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition shadow-lg shadow-gray-200 text-center">
+                                    Mulai Sekarang
+                                </a>
+                            </div>
+
+                            <div class="w-full md:w-[55%] flex flex-col gap-3">
+                                {% for variant in basic_plan %}
+                                <label class="cursor-pointer relative flex items-center justify-between p-5 border {{ 'border-2 border-green-400 bg-green-50/30' if variant.rawPrice == 0 else 'border-gray-200 bg-white hover:border-indigo-400' }} rounded-2xl transition group/item" onclick="window.location.href='/register?ref=STARTER&plan={{ variant.id }}'">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-5 h-5 rounded-full border-2 {{ 'border-green-500 bg-green-500' if variant.rawPrice == 0 else 'border-gray-300 group-hover/item:border-indigo-500' }}"></div>
+                                        <div>
+                                            <span class="block font-bold text-gray-900 text-lg">{{ variant.title }}</span>
+                                            {% if variant.coret %}
+                                                <span class="text-[10px] text-gray-400 line-through decoration-red-400">{{ variant.coret }}</span>
+                                            {% else %}
+                                                <span class="text-[10px] text-gray-400">Durasi {{ variant.duration }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="block font-black {{ 'text-green-600' if variant.rawPrice == 0 else 'text-indigo-600' }} text-xl">{{ variant.price }}</span>
+                                        {% if variant.hemat %}
+                                            <span class="text-[10px] font-bold text-white bg-green-500 px-2 py-0.5 rounded">{{ variant.hemat }}</span>
+                                        {% endif %}
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% set optimal_plan = pricing.get('optimal') %}
+                    {% if optimal_plan %}
+                    <div class="group relative bg-gray-900 rounded-[2.5rem] p-1 border-2 border-indigo-500 shadow-2xl scale-[1.02] z-20" data-aos="zoom-in">
+                        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold px-8 py-1.5 rounded-full shadow-lg text-sm tracking-wide uppercase shadow-orange-500/30 animate-pulse">
+                            🔥 Paling Laris
+                        </div>
+
+                        <div class="bg-gray-900 rounded-[2.3rem] p-8 md:p-12">
+                            <div class="flex flex-col md:flex-row gap-10 items-center">
+                                
+                                <div class="flex-1 w-full text-center md:text-left">
+                                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 text-white mb-6 text-2xl shadow-lg shadow-indigo-500/50">
+                                        <i class="fa-solid fa-rocket"></i>
+                                    </div>
+                                    <h3 class="text-3xl font-black text-white mb-2">UMKM Pro</h3>
+                                    <p class="text-gray-400 mb-6">Power 3x lipat. Wajib buat yang mau serius cuan.</p>
+
+                                    <div class="space-y-3 mb-8 text-left max-w-xs mx-auto md:mx-0">
+                                        {% for f in optimal_plan[0].features[:3] %}
+                                        <div class="flex items-center gap-3 text-gray-300 font-medium">
+                                            <i class="fa-solid fa-check-circle text-green-400"></i> {{ f }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+
+                                    <a href="/register?ref=PRO" class="w-full md:w-auto inline-block px-8 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/40 hover:-translate-y-1 text-center">
+                                        Ambil Promo Ini 🚀
+                                    </a>
+                                </div>
+
+                                <div class="w-full md:w-[55%] flex flex-col gap-3">
+                                    {% for variant in optimal_plan %}
+                                    <label class="cursor-pointer relative flex items-center justify-between p-5 {{ 'border-2 border-yellow-500/50 bg-gradient-to-r from-gray-800 to-gray-800 hover:to-gray-700' if variant.bestValue else 'border border-gray-700 bg-gray-800/50 hover:bg-gray-800' }} rounded-2xl transition group-hover:shadow-lg" onclick="window.location.href='/register?ref=PRO&plan={{ variant.id }}'">
+                                        {% if variant.bestValue %}
+                                            <div class="absolute top-0 right-0 bg-yellow-500 text-yellow-900 text-[10px] font-bold px-3 py-1 rounded-bl-xl">SUPER VALUE</div>
+                                        {% endif %}
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-5 h-5 rounded-full border-2 {{ 'border-yellow-500 bg-white' if variant.bestValue else 'border-gray-500' }}"></div>
+                                            <div>
+                                                <span class="block font-bold {{ 'text-white' if variant.bestValue else 'text-gray-200' }}">{{ variant.title }}</span>
+                                                <span class="text-[10px] text-gray-500 line-through">{{ variant.coret }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="text-right mt-2 md:mt-0">
+                                            <span class="block font-black {{ 'text-yellow-400' if variant.bestValue else 'text-white' }} text-xl">{{ variant.price }}</span>
+                                            {% if variant.hemat %}
+                                                <span class="text-[10px] font-bold text-white {{ 'bg-red-600 animate-pulse' if variant.bestValue else 'bg-green-600' }} px-2 py-0.5 rounded-full">{{ variant.hemat }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% set agency_plan = pricing.get('agency') %}
+                    {% if agency_plan %}
+                    <div class="group relative bg-white rounded-[2.5rem] p-8 md:p-10 border border-gray-200 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1" data-aos="fade-up">
+                        <div class="flex flex-col md:flex-row gap-10 items-center">
+                            <div class="flex-1 w-full text-center md:text-left">
+                                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-yellow-100 text-yellow-700 mb-6 text-2xl">
+                                    <i class="fa-solid fa-crown"></i>
+                                </div>
+                                <h3 class="text-3xl font-black text-gray-900 mb-2">Agency / Sultan</h3>
+                                <p class="text-gray-500 mb-6">Dominasi pasar dengan 10 akun sekaligus.</p>
+
+                                <div class="space-y-3 mb-8 text-left max-w-xs mx-auto md:mx-0">
+                                    {% for f in agency_plan[0].features[:3] %}
+                                    <div class="flex items-center gap-3 text-gray-700 font-medium">
+                                        <i class="fa-solid fa-check-circle text-yellow-500"></i> {{ f }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <a href="/register?ref=AGENCY" class="w-full md:w-auto inline-block px-8 py-3.5 bg-white border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:text-indigo-600 hover:border-indigo-200 transition text-center">
+                                    Mulai Jadi Agency
+                                </a>
+                            </div>
+                            <div class="w-full md:w-[55%] flex flex-col gap-3">
+                                {% for variant in agency_plan %}
+                                <label class="cursor-pointer relative flex items-center justify-between p-5 border border-gray-200 bg-white rounded-2xl hover:border-yellow-400 hover:shadow-md transition" onclick="window.location.href='/register?ref=AGENCY&plan={{ variant.id }}'">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-5 h-5 rounded-full border-2 border-gray-300"></div>
+                                        <div>
+                                            <span class="block font-bold text-gray-700">{{ variant.title }}</span>
+                                            <span class="text-[10px] text-gray-400 line-through">{{ variant.coret }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="block font-black text-gray-900 text-xl">{{ variant.price }}</span>
+                                        {% if variant.hemat %}
+                                            <span class="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded">{{ variant.hemat }}</span>
+                                        {% endif %}
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                {% else %}
+                    <div class="text-center py-20">
+                        <i class="fa-solid fa-server text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500">Sedang memuat harga terbaru...</p>
+                    </div>
+                {% endif %}
+                
+            </div>
+
+            <div class="text-center mt-16" data-aos="fade-up" data-aos-delay="200">
+                 <div class="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm text-sm text-gray-500">
+                    <i class="fa-solid fa-lock text-green-500"></i>
+                    <span>Garansi uang kembali 7 hari jika tools tidak bekerja.</span>
+                </div>
+            </div>
+
+        </div>
+    </section>
 
     {% include 'landing/_faq.html' %}
 
@@ -18,7 +215,6 @@
             // Cek elemen ada atau enggak (Penting biar ga error JS)
             if (!container || !wrapper) return;
 
-            // [FIX] Pake 1280px biar di HP tulisan lebih kebaca
             const desktopWidth = 1280; 
             const containerWidth = container.offsetWidth;
             
@@ -38,10 +234,9 @@
             }
         }
 
-        // Jalankan saat load & resize
+        // Jalankan saat load & resize dengan debounce ringan
         window.addEventListener('load', scaleIframe);
-        window.addEventListener('resize', scaleIframe);
+        window.addEventListener('resize', () => requestAnimationFrame(scaleIframe));
     </script>
 
 {% endblock %}
-
