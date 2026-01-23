@@ -22,7 +22,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_from_directory, Response, stream_with_context
 
 # --- TELETHON & SUPABASE ---
-from telethon import TelegramClient, errors, functions, types, utils
+from telethon import TelegramClient, errors, functions, types, utils, events
 from telethon.sessions import StringSession
 from supabase import create_client, Client
 
@@ -335,6 +335,130 @@ class MessageTemplateManager:
             
             # Tangkap Error Lainnya
             return False, f"⚠️ System Error: {str(e)}"
+
+# ==============================================================================
+# SECTION 4.5.5: AUTO REPLY & KEYWORD ENGINE (NEW FEATURE)
+# ==============================================================================
+
+class AutoReplyManager:
+    @staticmethod
+    def get_settings(user_id):
+        if not supabase: return None
+        res = supabase.table('auto_reply_settings').select("*").eq('user_id', user_id).execute()
+        return res.data[0] if res.data else None
+
+    @staticmethod
+    def update_settings(user_id, data):
+        # Upsert (Insert or Update)
+        existing = AutoReplyManager.get_settings(user_id)
+        if existing:
+            supabase.table('auto_reply_settings').update(data).eq('user_id', user_id).execute()
+        else:
+            data['user_id'] = user_id
+            supabase.table('auto_reply_settings').insert(data).execute()
+
+    @staticmethod
+    def get_keywords(user_id):
+        res = supabase.table('keyword_rules').select("*").eq('user_id', user_id).execute()
+        return res.data if res.data else []
+
+    @staticmethod
+    def add_keyword(user_id, keyword, response):
+        data = {'user_id': user_id, 'keyword': keyword.lower(), 'response': response}
+        supabase.table('keyword_rules').insert(data).execute()
+
+    @staticmethod
+    def delete_keyword(id):
+        supabase.table('keyword_rules').delete().eq('id', id).execute()
+
+class ReplyEngine:
+    """
+    Worker yang mendengarkan pesan masuk (Incoming Listener).
+    Menangani Auto-Reply Chat Pertama & Keyword Trigger.
+    """
+    active_listeners = {} # Memory Store buat nyimpen client yang lagi 'mendengar'
+
+    @staticmethod
+    def start_listener(user_id, client):
+        """Pasang kuping (Event Handler) ke Client Telethon"""
+        if user_id in ReplyEngine.active_listeners:
+            return # Udah jalan, skip
+
+        # Ambil Settingan User
+        settings = AutoReplyManager.get_settings(user_id)
+        if not settings or not settings.get('is_active'):
+            return # Fitur dimatiin user
+
+        keywords = AutoReplyManager.get_keywords(user_id)
+        welcome_msg = settings.get('welcome_message')
+        cooldown = settings.get('cooldown_minutes', 60)
+
+        @client.on(events.NewMessage(incoming=True))
+        async def handler(event):
+            try:
+                # 1. Jangan bales diri sendiri atau bot lain
+                if event.sender_id == (await client.get_me()).id or event.message.via_bot_id:
+                    return
+                
+                # 2. Jangan bales grup (Fokus Personal Chat dulu biar aman)
+                if event.is_group or event.is_channel:
+                    return
+
+                sender_id = event.sender_id
+                chat_text = event.raw_text.lower()
+                response_text = None
+                is_keyword_hit = False
+
+                # --- LOGIC 1: CEK KEYWORD ---
+                for rule in keywords:
+                    if rule['keyword'] in chat_text:
+                        response_text = rule['response']
+                        is_keyword_hit = True
+                        break # Prioritas keyword pertama yg ketemu
+                
+                # --- LOGIC 2: CEK WELCOME MESSAGE (AUTO REPLY) ---
+                if not response_text and welcome_msg:
+                    # Cek Cooldown di DB
+                    log_res = supabase.table('reply_logs').select("last_reply_at")\
+                        .eq('user_id', user_id).eq('sender_id', sender_id).execute()
+                    
+                    should_reply = True
+                    if log_res.data:
+                        last_time = datetime.fromisoformat(log_res.data[0]['last_reply_at'].replace('Z', '+00:00'))
+                        now = datetime.now(pytz.utc)
+                        # Hitung selisih menit
+                        diff_min = (now - last_time).total_seconds() / 60
+                        if diff_min < cooldown:
+                            should_reply = False # Masih cooldown
+                    
+                    if should_reply:
+                        response_text = welcome_msg
+
+                # --- EKSEKUSI BALAS ---
+                if response_text:
+                    # Simulasi Ngetik (Humanis)
+                    async with client.action(event.chat_id, 'typing'):
+                        await asyncio.sleep(random.uniform(1.5, 4.0))
+                    
+                    await event.reply(response_text)
+                    
+                    # Update Log Cooldown
+                    log_data = {
+                        'user_id': user_id, 
+                        'sender_id': sender_id, 
+                        'last_reply_at': datetime.utcnow().isoformat()
+                    }
+                    # Upsert Log (Hapus lama, insert baru biar simple)
+                    supabase.table('reply_logs').delete().eq('user_id', user_id).eq('sender_id', sender_id).execute()
+                    supabase.table('reply_logs').insert(log_data).execute()
+                    
+                    print(f"🤖 [AUTO-REPLY] Replied to {sender_id} (User: {user_id})")
+
+            except Exception as e:
+                print(f"Reply Error: {e}")
+
+        ReplyEngine.active_listeners[user_id] = True
+        print(f"👂 Reply Listener Started for User {user_id}")
             
 # ==============================================================================
 # SECTION 4.6: SCHEDULER & AUTO-BLAST WORKER (HUMAN + SMART RETRY) - FIXED
@@ -704,6 +828,14 @@ async def get_active_client(user_id):
     except Exception as e:
         logger.error(f"Client Init Error for UserID {user_id}: {e}")
         return None
+
+    try:
+            ReplyEngine.start_listener(user_id, client)
+        except Exception as e:
+            logger.warning(f"Listener Start Warning: {e}")
+    
+        return client
+    async def get_active_client(user_id):  
 
 # ==============================================================================
 # SECTION 6: MIDDLEWARE & DECORATORS
@@ -2347,6 +2479,52 @@ def update_template():
     
     return redirect(url_for('dashboard_templates'))
 
+# AUTO REPLY-
+@app.route('/dashboard/auto-reply', methods=['GET', 'POST'])
+@login_required
+def dashboard_auto_reply():
+    user = get_dashboard_context()
+    if not user: return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        # Save Settings
+        is_active = True if request.form.get('is_active') == 'on' else False
+        welcome = request.form.get('welcome_message')
+        cooldown = int(request.form.get('cooldown', 60))
+        
+        AutoReplyManager.update_settings(user.id, {
+            'is_active': is_active,
+            'welcome_message': welcome,
+            'cooldown_minutes': cooldown
+        })
+        flash('Pengaturan Auto-Reply tersimpan!', 'success')
+        return redirect(url_for('dashboard_auto_reply'))
+
+    settings = AutoReplyManager.get_settings(user.id)
+    keywords = AutoReplyManager.get_keywords(user.id)
+    
+    return render_template('dashboard/auto_reply.html', 
+                           user=user, 
+                           settings=settings, 
+                           keywords=keywords, 
+                           active_page='autoreply')
+
+@app.route('/add_keyword', methods=['POST'])
+@login_required
+def add_keyword_route():
+    key = request.form.get('keyword')
+    resp = request.form.get('response')
+    if key and resp:
+        AutoReplyManager.add_keyword(session['user_id'], key, resp)
+        flash('Keyword ditambahkan.', 'success')
+    return redirect(url_for('dashboard_auto_reply'))
+
+@app.route('/delete_keyword/<int:id>')
+@login_required
+def delete_keyword_route(id):
+    AutoReplyManager.delete_keyword(id)
+    flash('Keyword dihapus.', 'success')
+    return redirect(url_for('dashboard_auto_reply'))
 # ==============================================================================
 # SECTION 13: SUPER ADMIN PANEL
 # ==============================================================================
