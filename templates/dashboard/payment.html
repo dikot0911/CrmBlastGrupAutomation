@@ -4,133 +4,32 @@
 {% block content %}
 <div class="max-w-7xl mx-auto animate-enter pb-24 px-4 sm:px-6 lg:px-8">
     
-    <div class="text-center max-w-3xl mx-auto mb-16">
-        <span class="text-indigo-600 font-bold text-xs uppercase tracking-widest bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-100">Pricing & Plans</span>
-        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mt-6 tracking-tight">Investasi Kecil, <span class="text-indigo-600">Profit Melimpah</span></h1>
-        <p class="text-gray-500 mt-4 text-lg">Pilih durasi langgananmu. Makin lama durasinya, makin gila diskonnya.</p>
+    <div class="text-center max-w-3xl mx-auto mb-12">
+        <span class="text-indigo-600 font-bold text-xs uppercase tracking-widest bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-100">Pricing Plans</span>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mt-6 tracking-tight">Pilih Level Bisnismu</h1>
+        <p class="text-gray-500 mt-4 text-lg">Sesuaikan dengan jumlah akun & target market yang mau kamu dominasi.</p>
         
-        <div class="mt-10 inline-flex bg-gray-100 p-1.5 rounded-2xl border border-gray-200 shadow-inner relative z-0">
-            <button onclick="switchDuration(30)" id="btn-30" class="duration-btn relative w-28 py-2.5 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none">
-                Bulanan
+        <div class="mt-10 inline-flex bg-white p-1.5 rounded-2xl border border-gray-200 shadow-lg relative z-0">
+            <button onclick="switchPackage('basic')" id="tab-basic" class="pkg-tab relative w-32 py-3 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
+                <span>Starter</span>
+                <span class="text-[10px] font-normal text-gray-400 group-hover:text-indigo-400">1 Akun</span>
             </button>
-            <button onclick="switchDuration(90)" id="btn-90" class="duration-btn relative w-28 py-2.5 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none">
-                3 Bulan
-                <span class="absolute -top-3 -right-2 bg-green-500 text-white text-[9px] px-2 py-0.5 rounded-full shadow-sm animate-pulse">HEMAT</span>
+            <button onclick="switchPackage('optimal')" id="tab-optimal" class="pkg-tab relative w-32 py-3 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
+                <span>UMKM Pro</span>
+                <span class="text-[10px] font-normal text-gray-400 group-hover:text-indigo-400">3 Akun</span>
+                <span class="absolute -top-3 -right-2 bg-gradient-to-r from-orange-400 to-red-500 text-white text-[9px] px-2 py-0.5 rounded-full shadow-md animate-pulse">BEST</span>
             </button>
-            <button onclick="switchDuration(180)" id="btn-180" class="duration-btn relative w-28 py-2.5 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none">
-                6 Bulan
-                <span class="absolute -top-3 -right-2 bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full shadow-sm">SUPER</span>
+            <button onclick="switchPackage('agency')" id="tab-agency" class="pkg-tab relative w-32 py-3 text-sm font-bold text-gray-700 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
+                <span>Agency</span>
+                <span class="text-[10px] font-normal text-gray-400 group-hover:text-indigo-400">10 Akun</span>
             </button>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20 items-start">
-        
-        <div class="bg-white rounded-[2rem] p-8 border border-gray-200 shadow-lg hover:shadow-xl transition duration-300 relative flex flex-col h-full">
-            <div class="mb-6">
-                <h3 class="text-xl font-bold text-gray-800">Basic / Solo</h3>
-                <p class="text-xs text-gray-400 mt-1">Start small, grow fast.</p>
-            </div>
-            
-            <div class="mb-6">
-                <div class="flex items-baseline gap-2">
-                    <span class="text-4xl font-extrabold text-gray-900" id="price-basic">599rb</span>
-                    <span class="text-gray-400 font-medium">/periode</span>
-                </div>
-                <div class="h-6 mt-1">
-                    <span id="coret-basic" class="text-sm text-gray-400 line-through decoration-red-400 hidden">Rp 0</span>
-                    <span id="hemat-basic" class="ml-2 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded hidden">Hemat 0</span>
-                </div>
-            </div>
-
-            <ul class="space-y-4 mb-8 text-sm text-gray-600 flex-1">
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check text-indigo-500 mt-1"></i> <span><strong>1 Akun</strong> Telegram</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check text-indigo-500 mt-1"></i> <span>Mode Schedule Share</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check text-indigo-500 mt-1"></i> <span>Auto Reply (First Chat)</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check text-indigo-500 mt-1"></i> <span>System CRM Humanis</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-shield-halved text-indigo-500 mt-1"></i> <span>Anti Banned System</span></li>
-            </ul>
-
-            <div class="space-y-3 mt-auto">
-                <button onclick="openPaymentModal('Basic', getCurrentPrice('basic'))" class="w-full py-3.5 bg-gray-50 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-100 hover:border-gray-300 transition">
-                    Pilih Basic
-                </button>
-                <div class="text-center">
-                    <a href="#" class="text-xs text-indigo-600 hover:underline font-semibold">Mau coba Gratis 1 Hari? Klik disini</a>
-                </div>
-            </div>
+    <div id="cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20 items-stretch">
         </div>
 
-        <div class="bg-gray-900 rounded-[2rem] p-8 border-2 border-indigo-500 shadow-2xl relative transform md:-translate-y-4 flex flex-col h-full z-10">
-            <div class="absolute top-0 inset-x-0 flex justify-center -mt-4">
-                <span class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg uppercase tracking-wide">Paling Laris 🔥</span>
-            </div>
-            
-            <div class="mb-6 mt-2">
-                <h3 class="text-2xl font-bold text-white">Optimal</h3>
-                <p class="text-xs text-gray-400 mt-1">Best value for scaling up.</p>
-            </div>
-            
-            <div class="mb-6">
-                 <div class="flex items-baseline gap-2">
-                    <span class="text-5xl font-extrabold text-white" id="price-optimal">999rb</span>
-                    <span class="text-gray-400 font-medium">/periode</span>
-                </div>
-                <div class="h-6 mt-1">
-                    <span id="coret-optimal" class="text-sm text-gray-500 line-through decoration-red-500">Rp 1.797.000</span>
-                    <span id="hemat-optimal" class="ml-2 text-xs font-bold text-yellow-900 bg-yellow-400 px-2 py-0.5 rounded">Hemat 45%</span>
-                </div>
-            </div>
-
-            <p class="text-sm text-gray-300 mb-6 pb-6 border-b border-gray-700 leading-relaxed">
-                Paket favorit para UMKM. Power 3x lipat dengan harga yang gak bikin kantong bolong.
-            </p>
-
-            <ul class="space-y-4 mb-8 text-sm text-white flex-1">
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check-circle text-green-400 mt-1"></i> <span class="font-bold text-lg">3 Akun Telegram</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check-circle text-green-400 mt-1"></i> <span>Akses Server <strong>Super Prioritas</strong> (Anti Lag)</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check-circle text-green-400 mt-1"></i> <span>Priority Support (Jalur Khusus)</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check-circle text-green-400 mt-1"></i> <span>Unlimited Group Scan</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check-circle text-green-400 mt-1"></i> <span>Fitur CRM & Auto Reply Lengkap</span></li>
-            </ul>
-
-            <button onclick="openPaymentModal('Optimal', getCurrentPrice('optimal'))" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-900/50 transition transform hover:scale-[1.02] mt-auto">
-                Ambil Promo Ini 🚀
-            </button>
-        </div>
-
-        <div class="bg-white rounded-[2rem] p-8 border border-gray-200 shadow-lg hover:shadow-xl transition duration-300 relative flex flex-col h-full">
-            <div class="mb-6">
-                <h3 class="text-xl font-bold text-gray-800">Agency / Sultan</h3>
-                <p class="text-xs text-gray-400 mt-1">Massive scale domination.</p>
-            </div>
-            
-            <div class="mb-6">
-                 <div class="flex items-baseline gap-2">
-                    <span class="text-4xl font-extrabold text-gray-900" id="price-agency">2.999rb</span>
-                    <span class="text-gray-400 font-medium">/periode</span>
-                </div>
-                <div class="h-6 mt-1">
-                    <span id="coret-agency" class="text-sm text-gray-400 line-through decoration-red-400">Rp 5.990.000</span>
-                    <span id="hemat-agency" class="ml-2 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">Hemat 50%</span>
-                </div>
-            </div>
-
-            <ul class="space-y-4 mb-8 text-sm text-gray-600 flex-1">
-                <li class="flex items-start gap-3"><i class="fa-solid fa-crown text-yellow-500 mt-1"></i> <span class="font-bold text-gray-900">10 Akun Telegram</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check text-indigo-500 mt-1"></i> <span>Server Dedicated (Paling Stabil)</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check text-indigo-500 mt-1"></i> <span>Dashboard Management 10 Akun</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check text-indigo-500 mt-1"></i> <span>Prioritas Tertinggi (VIP Support)</span></li>
-                <li class="flex items-start gap-3"><i class="fa-solid fa-check text-indigo-500 mt-1"></i> <span>All Unlock Features</span></li>
-            </ul>
-
-            <button onclick="openPaymentModal('Agency', getCurrentPrice('agency'))" class="w-full py-3.5 bg-white border-2 border-indigo-600 text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition mt-auto">
-                Pilih Agency
-            </button>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mt-12">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
             <div class="flex items-center gap-3">
                 <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600"><i class="fa-solid fa-file-invoice"></i></div>
@@ -152,12 +51,12 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     <tr class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 font-mono text-xs text-gray-500">#INV-2026-001</td>
-                        <td class="px-6 py-4 text-gray-600">14 Jan 2026</td>
-                        <td class="px-6 py-4 font-bold text-indigo-600">Optimal (30 Hari)</td>
-                        <td class="px-6 py-4 font-medium">Rp 999.000</td>
-                        <td class="px-6 py-4"><span class="bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border border-green-200">LUNAS</span></td>
-                        <td class="px-6 py-4 text-right"><button class="text-gray-400 hover:text-indigo-600 transition"><i class="fa-solid fa-download"></i></button></td>
+                        <td class="px-6 py-4 font-mono text-xs text-gray-500">#INV-001</td>
+                        <td class="px-6 py-4 text-gray-600">--</td>
+                        <td class="px-6 py-4 font-bold text-gray-400">Belum ada tagihan</td>
+                        <td class="px-6 py-4 font-medium">Rp 0</td>
+                        <td class="px-6 py-4"><span class="bg-gray-100 text-gray-500 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide">EMPTY</span></td>
+                        <td class="px-6 py-4 text-right"><button class="text-gray-300 cursor-not-allowed"><i class="fa-solid fa-download"></i></button></td>
                     </tr>
                 </tbody>
             </table>
@@ -181,12 +80,12 @@
         
         <div class="p-6">
             <div class="text-center mb-8 bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Total Yang Harus Dibayar</p>
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Total Pembayaran</p>
                 <h2 class="text-4xl font-black text-gray-900 tracking-tight" id="modalPrice">Rp 0</h2>
-                <p class="text-xs text-green-600 font-bold mt-2" id="modalSaveInfo"><i class="fa-solid fa-tag"></i> Harga promo aktif</p>
+                <p class="text-xs text-green-600 font-bold mt-2 hidden" id="modalSaveInfo"><i class="fa-solid fa-tag"></i> Harga promo aktif</p>
             </div>
 
-            <div class="space-y-3">
+            <div class="space-y-3" id="paymentMethods">
                 <label class="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Pilih Metode Pembayaran</label>
                 
                 <label class="flex items-center p-4 border-2 border-indigo-100 bg-indigo-50/50 rounded-xl cursor-pointer hover:border-indigo-500 transition group relative overflow-hidden">
@@ -194,7 +93,7 @@
                     <input type="radio" name="payment" value="qris" class="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-gray-300" checked>
                     <div class="ml-4 flex-1">
                         <span class="block font-bold text-gray-900 text-sm">QRIS (Otomatis)</span>
-                        <span class="text-[10px] text-gray-500">Gopay, OVO, Dana, ShopeePay, BCA QR</span>
+                        <span class="text-[10px] text-gray-500">Gopay, OVO, Dana, ShopeePay</span>
                     </div>
                     <i class="fa-solid fa-qrcode text-2xl text-indigo-300 group-hover:text-indigo-600 transition"></i>
                 </label>
@@ -209,101 +108,216 @@
                 </label>
             </div>
             
-            <button onclick="processPayment()" class="w-full mt-8 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-sm">
-                <i class="fa-solid fa-lock"></i> Bayar Sekarang & Aktifkan
+            <button onclick="processPayment()" id="payBtn" class="w-full mt-8 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-sm">
+                <i class="fa-solid fa-lock"></i> Bayar Sekarang
             </button>
-            <p class="text-center text-[10px] text-gray-400 mt-4">Enkripsi SSL Secure. Garansi Uang Kembali 7 Hari.</p>
         </div>
     </div>
 </div>
 
 <script>
-    // DATA HARGA (Sesuai Spreadsheet)
-    const pricingData = {
-        basic: {
-            30: { price: "Rp 599.000", raw: "599.000", coret: "", hemat: "", showCoret: false },
-            90: { price: "Rp 1.399.000", raw: "1.399.000", coret: "Rp 1.797.000", hemat: "Hemat 398rb", showCoret: true },
-            180: { price: "Rp 2.499.000", raw: "2.499.000", coret: "Rp 3.594.000", hemat: "Hemat 1,1 Juta", showCoret: true }
-        },
-        optimal: {
-            30: { price: "Rp 999.000", raw: "999.000", coret: "Rp 1.797.000", hemat: "Hemat 45%", showCoret: true },
-            90: { price: "Rp 2.399.000", raw: "2.399.000", coret: "Rp 2.997.000", hemat: "Hemat 600rb", showCoret: true },
-            180: { price: "Rp 3.999.000", raw: "3.999.000", coret: "Rp 5.994.000", hemat: "Hemat 2 Juta", showCoret: true }
-        },
-        agency: {
-            30: { price: "Rp 2.999.000", raw: "2.999.000", coret: "Rp 5.990.000", hemat: "Hemat 50%", showCoret: true },
-            90: { price: "Rp 6.999.000", raw: "6.999.000", coret: "Rp 8.997.000", hemat: "Hemat 2 Juta", showCoret: true },
-            180: { price: "Rp 11.999.000", raw: "11.999.000", coret: "Rp 17.994.000", hemat: "Hemat 6 Juta", showCoret: true }
-        }
+    // --- KONFIGURASI DATA PAKET ---
+    // Format: [Judul Durasi, Harga Tampil, Harga Asli (utk coret), Hemat text, ID Unik, rawPrice]
+    const packages = {
+        'basic': [
+            {
+                title: "Starter Trial",
+                duration: "1 Hari",
+                price: "Gratis",
+                rawPrice: 0,
+                coret: "",
+                hemat: "",
+                features: ["1 Akun Telegram", "Coba Semua Fitur", "Limit 50 Pesan", "No Credit Card"],
+                btnText: "Coba Gratis",
+                bestValue: false
+            },
+            {
+                title: "Bulanan",
+                duration: "30 Hari",
+                price: "599rb",
+                rawPrice: "599.000",
+                coret: "",
+                hemat: "",
+                features: ["1 Akun Telegram", "Unlimited Broadcast", "Auto Reply Basic", "CRM Database"],
+                btnText: "Pilih Bulanan",
+                bestValue: false
+            },
+            {
+                title: "Quarterly",
+                duration: "90 Hari",
+                price: "1.399rb",
+                rawPrice: "1.399.000",
+                coret: "Rp 1.797.000",
+                hemat: "Hemat 400rb",
+                features: ["1 Akun Telegram", "Fitur Lengkap", "Prioritas Server", "Free Update"],
+                btnText: "Ambil Promo",
+                bestValue: true
+            }
+        ],
+        'optimal': [
+            {
+                title: "Bulanan",
+                duration: "30 Hari",
+                price: "999rb",
+                rawPrice: "999.000",
+                coret: "Rp 1.797.000",
+                hemat: "Hemat 45%",
+                features: ["3 Akun Telegram", "Multi-Account", "Auto Reply Pro", "Broadcast Cepat"],
+                btnText: "Pilih Bulanan",
+                bestValue: false
+            },
+            {
+                title: "Quarterly",
+                duration: "90 Hari",
+                price: "2.399rb",
+                rawPrice: "2.399.000",
+                coret: "Rp 2.997.000",
+                hemat: "Hemat 600rb",
+                features: ["3 Akun Telegram", "Server Prioritas", "Jalur VIP Support", "Anti Banned Pro"],
+                btnText: "Pilih Hemat",
+                bestValue: false
+            },
+            {
+                title: "Semester",
+                duration: "180 Hari",
+                price: "3.999rb",
+                rawPrice: "3.999.000",
+                coret: "Rp 5.994.000",
+                hemat: "HEMAT 2 JUTA",
+                features: ["3 Akun Telegram", "Super Prioritas", "Konsultasi Setup", "All Access"],
+                btnText: "Ambil Promo Gila",
+                bestValue: true
+            }
+        ],
+        'agency': [
+            {
+                title: "Bulanan",
+                duration: "30 Hari",
+                price: "2.999rb",
+                rawPrice: "2.999.000",
+                coret: "Rp 5.990.000",
+                hemat: "Hemat 50%",
+                features: ["10 Akun Telegram", "Agency Dashboard", "Whitelabel Option", "Team Management"],
+                btnText: "Start Agency",
+                bestValue: false
+            },
+            {
+                title: "Quarterly",
+                duration: "90 Hari",
+                price: "6.999rb",
+                rawPrice: "6.999.000",
+                coret: "Rp 8.997.000",
+                hemat: "Hemat 2 Juta",
+                features: ["10 Akun Telegram", "Dedicated Server", "Priority Support", "API Access"],
+                btnText: "Scale Up",
+                bestValue: false
+            },
+            {
+                title: "Semester",
+                duration: "180 Hari",
+                price: "11.999rb",
+                rawPrice: "11.999.000",
+                coret: "Rp 17.994.000",
+                hemat: "HEMAT 6 JUTA",
+                features: ["10 Akun Telegram", "VIP Partner", "Custom Feature", "Private Group"],
+                btnText: "Dominasi Pasar",
+                bestValue: true
+            }
+        ]
     };
-
-    let currentDuration = 30; // Default 30 hari
 
     // INIT
     document.addEventListener('DOMContentLoaded', () => {
-        switchDuration(30); // Load default
+        switchPackage('optimal'); // Default tampilkan Optimal (Best Seller)
     });
 
-    function switchDuration(days) {
-        currentDuration = days;
-        
-        // 1. Update Style Tombol Tab
-        document.querySelectorAll('.duration-btn').forEach(btn => {
-            btn.classList.remove('bg-white', 'shadow-sm', 'text-indigo-600', 'ring-1', 'ring-gray-200');
-            btn.classList.add('text-gray-700');
+    function switchPackage(pkgType) {
+        // 1. Style Tab Active
+        document.querySelectorAll('.pkg-tab').forEach(tab => {
+            tab.classList.remove('bg-indigo-600', 'text-white', 'shadow-md', 'ring-2', 'ring-indigo-200');
+            tab.classList.add('text-gray-700');
+            // Reset subtext color inside tab
+            tab.querySelector('span:last-child').classList.remove('text-indigo-200');
+            tab.querySelector('span:last-child').classList.add('text-gray-400');
         });
-        const activeBtn = document.getElementById('btn-' + days);
-        activeBtn.classList.add('bg-white', 'shadow-sm', 'text-indigo-600', 'ring-1', 'ring-gray-200');
-        activeBtn.classList.remove('text-gray-700');
 
-        // 2. Update Content Kartu
-        updateCard('basic', days);
-        updateCard('optimal', days);
-        updateCard('agency', days);
-    }
+        const activeTab = document.getElementById(`tab-${pkgType}`);
+        activeTab.classList.remove('text-gray-700');
+        activeTab.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'ring-2', 'ring-indigo-200');
+        activeTab.querySelector('span:last-child').classList.remove('text-gray-400', 'group-hover:text-indigo-400');
+        activeTab.querySelector('span:last-child').classList.add('text-indigo-200');
 
-    function updateCard(plan, days) {
-        const data = pricingData[plan][days];
+        // 2. Render Cards
+        const container = document.getElementById('cards-container');
+        container.innerHTML = ''; // Clear old content
         
-        // Harga Utama
-        document.getElementById(`price-${plan}`).innerText = data.price.replace("Rp ", ""); // Biar clean tanpa Rp di header besar
+        // Animasi fade in
+        container.style.opacity = '0';
         
-        // Coret & Hemat Badge
-        const coretEl = document.getElementById(`coret-${plan}`);
-        const hematEl = document.getElementById(`hemat-${plan}`);
-        
-        if (data.showCoret) {
-            coretEl.innerText = data.coret;
-            coretEl.classList.remove('hidden');
+        setTimeout(() => {
+            const data = packages[pkgType];
             
-            hematEl.innerText = data.hemat;
-            hematEl.classList.remove('hidden');
-        } else {
-            coretEl.classList.add('hidden');
-            hematEl.classList.add('hidden');
-        }
+            data.forEach(item => {
+                const isBest = item.bestValue;
+                const cardHTML = `
+                    <div class="relative flex flex-col h-full bg-white rounded-[2rem] p-8 ${isBest ? 'border-2 border-indigo-500 shadow-xl scale-105 z-10' : 'border border-gray-200 shadow-lg hover:shadow-xl'} transition-all duration-300">
+                        ${isBest ? '<div class="absolute top-0 inset-x-0 flex justify-center -mt-3"><span class="bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Paling Untung</span></div>' : ''}
+                        
+                        <div class="mb-6">
+                            <h3 class="text-lg font-bold ${isBest ? 'text-indigo-600' : 'text-gray-800'}">${item.title}</h3>
+                            <div class="flex items-baseline gap-1 mt-2">
+                                <span class="text-4xl font-extrabold text-gray-900">${item.price}</span>
+                                ${item.price !== 'Gratis' ? '<span class="text-gray-400 text-xs font-medium">/net</span>' : ''}
+                            </div>
+                            <div class="h-6 mt-1 flex items-center gap-2">
+                                ${item.coret ? `<span class="text-xs text-gray-400 line-through">${item.coret}</span>` : ''}
+                                ${item.hemat ? `<span class="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">${item.hemat}</span>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="flex-1">
+                            <ul class="space-y-3 mb-8 text-sm text-gray-600">
+                                ${item.features.map(f => `<li class="flex items-start gap-3"><i class="fa-solid fa-check text-green-500 mt-1"></i> <span>${f}</span></li>`).join('')}
+                            </ul>
+                        </div>
+
+                        <button onclick="openPaymentModal('${item.title} ${pkgType}', '${item.rawPrice}', ${item.rawPrice === 0})" 
+                            class="w-full py-3.5 rounded-xl font-bold transition transform hover:translate-y-[-2px] ${isBest ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200' : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100'}">
+                            ${item.btnText}
+                        </button>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+            
+            container.style.opacity = '1';
+        }, 150);
     }
 
-    function getCurrentPrice(plan) {
-        return pricingData[plan][currentDuration].raw;
-    }
-
-    // --- MODAL LOGIC (Sama kaya sebelumnya cuma dipercantik dikit) ---
+    // --- MODAL LOGIC ---
     const modal = document.getElementById('paymentModal');
     const content = document.getElementById('modalContent');
+    const payBtn = document.getElementById('payBtn');
+    const paymentMethods = document.getElementById('paymentMethods');
 
-    function openPaymentModal(name, price) {
-        // Set info
-        let durasiText = "Bulan";
-        if(currentDuration === 90) durasiText = "3 Bulan";
-        if(currentDuration === 180) durasiText = "6 Bulan";
-
-        document.getElementById('modalPlanName').innerText = `Upgrade ke Paket ${name} (${durasiText})`;
-        document.getElementById('modalPrice').innerText = 'Rp ' + price;
+    function openPaymentModal(name, price, isFree) {
+        document.getElementById('modalPlanName').innerText = name.toUpperCase().replace('BASIC', '1 AKUN').replace('OPTIMAL', '3 AKUN').replace('AGENCY', '10 AKUN');
         
-        // Animasi Masuk
+        if (isFree) {
+            document.getElementById('modalPrice').innerText = 'Gratis';
+            paymentMethods.classList.add('hidden'); // Sembunyikan metode bayar kalau gratis
+            payBtn.innerText = 'Aktifkan Trial Sekarang';
+            payBtn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+            payBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+        } else {
+            document.getElementById('modalPrice').innerText = 'Rp ' + price;
+            paymentMethods.classList.remove('hidden');
+            payBtn.innerText = 'Bayar Sekarang';
+            payBtn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+            payBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+        }
+
         modal.classList.remove('hidden');
-        // Hack sedikit biar transisi opacity jalan
         setTimeout(() => {
             modal.classList.remove('opacity-0', 'pointer-events-none');
             content.classList.remove('scale-90');
@@ -312,23 +326,22 @@
     }
 
     function closeModal() {
-        // Animasi Keluar
         content.classList.remove('scale-100');
         content.classList.add('scale-90');
         modal.classList.add('opacity-0', 'pointer-events-none');
-        
         setTimeout(() => {
             modal.classList.add('hidden');
         }, 300);
     }
 
     function processPayment() {
-        const btn = event.target;
-        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sedang Memproses...';
+        const btn = document.getElementById('payBtn');
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses...';
         btn.disabled = true;
         
         setTimeout(() => {
-            alert("Sistem akan mengarahkan ke halaman pembayaran...");
+            // Logika redirect nanti di sini
+            alert("Order Created! Redirecting...");
             location.reload(); 
         }, 1500);
     }
