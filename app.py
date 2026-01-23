@@ -380,85 +380,94 @@ class ReplyEngine:
 
     @staticmethod
     def start_listener(user_id, client):
-        """Pasang kuping (Event Handler) ke Client Telethon"""
-        if user_id in ReplyEngine.active_listeners:
-            return # Udah jalan, skip
+        """
+        Pasang listener HANYA jika akun ini diizinkan di settingan.
+        """
+        # Cek apakah listener untuk sesi client ini udah jalan?
+        # Kita pake session_id client sebagai key biar unik per akun
+        client_key = f"{user_id}_{id(client)}"
+        if client_key in ReplyEngine.active_listeners: return 
 
-        # Ambil Settingan User
+        # Ambil Settingan
         settings = AutoReplyManager.get_settings(user_id)
-        if not settings or not settings.get('is_active'):
-            return # Fitur dimatiin user
+        if not settings or not settings.get('is_active'): return
 
-        keywords = AutoReplyManager.get_keywords(user_id)
-        welcome_msg = settings.get('welcome_message')
-        cooldown = settings.get('cooldown_minutes', 60)
-
-        @client.on(events.NewMessage(incoming=True))
-        async def handler(event):
+        # --- [LOGIC BARU: CEK TARGET AKUN] ---
+        target_phone = settings.get('target_phone', 'all')
+        
+        # Kita butuh tau nomor HP client ini siapa
+        # Karena get_me() itu async network call, kita ambil dari memory session string/database kalau bisa
+        # Tapi cara paling akurat adalah get_me (tapi berat).
+        # Trik: Kita anggap client yang dipassing ke sini sudah authorized.
+        
+        async def _attach():
             try:
-                # 1. Jangan bales diri sendiri atau bot lain
-                if event.sender_id == (await client.get_me()).id or event.message.via_bot_id:
-                    return
+                me = await client.get_me()
+                my_phone = f"+{me.phone}" if not str(me.phone).startswith('+') else str(me.phone)
                 
-                # 2. Jangan bales grup (Fokus Personal Chat dulu biar aman)
-                if event.is_group or event.is_channel:
+                # JIKA setting bukan 'all' DAN nomor saya bukan target -> JANGAN DENGAR
+                if target_phone != 'all' and target_phone != my_phone:
+                    # logger.info(f"🔇 Listener Skipped for {my_phone} (Target: {target_phone})")
                     return
 
-                sender_id = event.sender_id
-                chat_text = event.raw_text.lower()
-                response_text = None
-                is_keyword_hit = False
+                # --- LOAD RESOURCES ---
+                keywords = AutoReplyManager.get_keywords(user_id)
+                welcome_msg = settings.get('welcome_message')
+                cooldown = settings.get('cooldown_minutes', 60)
 
-                # --- LOGIC 1: CEK KEYWORD ---
-                for rule in keywords:
-                    if rule['keyword'] in chat_text:
-                        response_text = rule['response']
-                        is_keyword_hit = True
-                        break # Prioritas keyword pertama yg ketemu
-                
-                # --- LOGIC 2: CEK WELCOME MESSAGE (AUTO REPLY) ---
-                if not response_text and welcome_msg:
-                    # Cek Cooldown di DB
-                    log_res = supabase.table('reply_logs').select("last_reply_at")\
-                        .eq('user_id', user_id).eq('sender_id', sender_id).execute()
-                    
-                    should_reply = True
-                    if log_res.data:
-                        last_time = datetime.fromisoformat(log_res.data[0]['last_reply_at'].replace('Z', '+00:00'))
-                        now = datetime.now(pytz.utc)
-                        # Hitung selisih menit
-                        diff_min = (now - last_time).total_seconds() / 60
-                        if diff_min < cooldown:
-                            should_reply = False # Masih cooldown
-                    
-                    if should_reply:
-                        response_text = welcome_msg
+                # --- DEFINE HANDLER ---
+                @client.on(events.NewMessage(incoming=True))
+                async def handler(event):
+                    try:
+                        if event.sender_id == me.id or event.message.via_bot_id: return
+                        if event.is_group or event.is_channel: return
 
-                # --- EKSEKUSI BALAS ---
-                if response_text:
-                    # Simulasi Ngetik (Humanis)
-                    async with client.action(event.chat_id, 'typing'):
-                        await asyncio.sleep(random.uniform(1.5, 4.0))
-                    
-                    await event.reply(response_text)
-                    
-                    # Update Log Cooldown
-                    log_data = {
-                        'user_id': user_id, 
-                        'sender_id': sender_id, 
-                        'last_reply_at': datetime.utcnow().isoformat()
-                    }
-                    # Upsert Log (Hapus lama, insert baru biar simple)
-                    supabase.table('reply_logs').delete().eq('user_id', user_id).eq('sender_id', sender_id).execute()
-                    supabase.table('reply_logs').insert(log_data).execute()
-                    
-                    print(f"🤖 [AUTO-REPLY] Replied to {sender_id} (User: {user_id})")
+                        sender_id = event.sender_id
+                        chat_text = event.raw_text.lower()
+                        response_text = None
+
+                        # 1. Cek Keyword
+                        for rule in keywords:
+                            if rule['keyword'] in chat_text:
+                                response_text = rule['response']
+                                break 
+                        
+                        # 2. Cek Welcome (Cooldown Logic)
+                        if not response_text and welcome_msg:
+                            log_res = supabase.table('reply_logs').select("last_reply_at")\
+                                .eq('user_id', user_id).eq('sender_id', sender_id).execute()
+                            
+                            should_reply = True
+                            if log_res.data:
+                                last_time = datetime.fromisoformat(log_res.data[0]['last_reply_at'].replace('Z', '+00:00'))
+                                diff_min = (datetime.now(pytz.utc) - last_time).total_seconds() / 60
+                                if diff_min < cooldown: should_reply = False
+                            
+                            if should_reply: response_text = welcome_msg
+
+                        # 3. Action
+                        if response_text:
+                            async with client.action(event.chat_id, 'typing'):
+                                await asyncio.sleep(random.uniform(2.0, 5.0))
+                            await event.reply(response_text)
+                            
+                            # Log Activity
+                            log_data = {'user_id': user_id, 'sender_id': sender_id, 'last_reply_at': datetime.utcnow().isoformat()}
+                            supabase.table('reply_logs').delete().eq('user_id', user_id).eq('sender_id', sender_id).execute()
+                            supabase.table('reply_logs').insert(log_data).execute()
+
+                    except Exception as e:
+                        print(f"ReplyHandler Error: {e}")
+
+                # Tandai aktif
+                ReplyEngine.active_listeners[client_key] = True
+                # print(f"👂 Auto-Reply ACTIVE on {my_phone}")
 
             except Exception as e:
-                print(f"Reply Error: {e}")
+                print(f"Listener Attach Error: {e}")
 
-        ReplyEngine.active_listeners[user_id] = True
-        print(f"👂 Reply Listener Started for User {user_id}")
+        # Jalankan async attach di background
+        run_async(_attach())
             
 # ==============================================================================
 # SECTION 4.6: SCHEDULER & AUTO-BLAST WORKER (HUMAN + SMART RETRY) - FIXED
@@ -2488,15 +2497,16 @@ def dashboard_auto_reply():
     if not user: return redirect(url_for('login'))
     
     if request.method == 'POST':
-        # Save Settings
         is_active = True if request.form.get('is_active') == 'on' else False
         welcome = request.form.get('welcome_message')
         cooldown = int(request.form.get('cooldown', 60))
+        target_phone = request.form.get('target_phone', 'all') # <--- TANGKAP INPUT BARU
         
         AutoReplyManager.update_settings(user.id, {
             'is_active': is_active,
             'welcome_message': welcome,
-            'cooldown_minutes': cooldown
+            'cooldown_minutes': cooldown,
+            'target_phone': target_phone # <--- SIMPAN KE DB
         })
         flash('Pengaturan Auto-Reply tersimpan!', 'success')
         return redirect(url_for('dashboard_auto_reply'))
@@ -2504,10 +2514,19 @@ def dashboard_auto_reply():
     settings = AutoReplyManager.get_settings(user.id)
     keywords = AutoReplyManager.get_keywords(user.id)
     
+    # [TAMBAHAN] Ambil List Akun Aktif buat Dropdown
+    accounts = []
+    try:
+        acc_res = supabase.table('telegram_accounts').select("*")\
+            .eq('user_id', user.id).eq('is_active', True).execute()
+        accounts = acc_res.data if acc_res.data else []
+    except: pass
+    
     return render_template('dashboard/auto_reply.html', 
                            user=user, 
                            settings=settings, 
-                           keywords=keywords, 
+                           keywords=keywords,
+                           accounts=accounts, # <--- KIRIM DATA INI
                            active_page='autoreply')
 
 @app.route('/add_keyword', methods=['POST'])
