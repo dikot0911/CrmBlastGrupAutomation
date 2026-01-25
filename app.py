@@ -3234,6 +3234,32 @@ if os.getenv("NOTIF_BOT_TOKEN"): # Cek kalo token ada
     except Exception as e:
         print(f"❌ [BOOT] Gagal Start Bot: {e}", flush=True)
 
+# --- DEBUG ROUTE (HAPUS NANTI KALO UDAH FIX) ---
+@app.route('/debug-pricing')
+def debug_pricing():
+    try:
+        # 1. Cek Koneksi DB
+        if not supabase: return "Supabase Offline"
+        
+        # 2. Cek Data Raw dari DB
+        plans = supabase.table('pricing_plans').select("*").execute().data
+        variants = supabase.table('pricing_variants').select("*").execute().data
+        
+        # 3. Cek Output FinanceManager
+        manager_output = FinanceManager.get_plans_structure()
+        
+        return jsonify({
+            "status": "Check",
+            "db_plans_count": len(plans),
+            "db_variants_count": len(variants),
+            "manager_output": manager_output,
+            "raw_plans": plans
+        })
+    except Exception as e:
+        # INI YANG KITA CARI: ERROR ASLINYA
+        import traceback
+        return f"<h1>🔥 ERROR KETEMU:</h1><pre>{traceback.format_exc()}</pre>"
+
 # ... (Baru masuk ke app.run) ...
 if __name__ == '__main__':
     app.run(debug=True, port=5000, use_reloader=False) 
