@@ -2818,31 +2818,59 @@ def ban_user(user_id):
 @app.route('/super-admin/pricing', methods=['GET', 'POST'])
 @admin_required
 def super_admin_pricing():
-    # Logic Update Harga disini (Update tabel pricing_variants)
-    if request.method == 'POST':
-        var_id = request.form.get('id')
-        price_raw = request.form.get('price_raw')
-        price_disp = request.form.get('price_display')
-        # ... logic update DB ...
-        supabase.table('pricing_variants').update({
-            'price_raw': price_raw,
-            'price_display': price_disp
-        }).eq('id', var_id).execute()
-        flash('Harga berhasil diupdate', 'success')
-        return redirect(url_for('super_admin_pricing'))
+    try:
+        # Logic Update Harga
+        if request.method == 'POST':
+            var_id = request.form.get('id')
+            price_raw = request.form.get('price_raw')
+            price_disp = request.form.get('price_display')
+            
+            # Update ke DB
+            supabase.table('pricing_variants').update({
+                'price_raw': price_raw,
+                'price_display': price_disp
+            }).eq('id', var_id).execute()
+            
+            flash('Harga berhasil diupdate!', 'success')
+            return redirect(url_for('super_admin_pricing'))
 
-    # Ambil data raw untuk ditampilkan di tabel edit
-    plans = supabase.table('pricing_plans').select("*, pricing_variants(*)").order('id').execute().data
-    return render_template('admin/pricing.html', plans=plans, active_page='pricing')
+        # Fetch Data (Dengan Error Handling)
+        try:
+            plans = supabase.table('pricing_plans').select("*, pricing_variants(*)").order('id').execute().data
+        except Exception as db_e:
+            logger.error(f"DB Error Pricing: {db_e}")
+            flash("Gagal ambil data harga. Cek tabel database.", "danger")
+            plans = []
+
+        return render_template('admin/pricing.html', plans=plans, active_page='pricing')
+    except Exception as e:
+        logger.error(f"Page Error Pricing: {e}")
+        return f"System Error: {e}"
 
 @app.route('/super-admin/finance')
 @admin_required
 def super_admin_finance():
-    # Ambil transaksi
-    trx = supabase.table('transactions').select("*, users(email), pricing_variants(price_display, duration_days, pricing_plans(display_name))")\
-        .order('created_at', desc=True).execute().data
+    status = request.args.get('status', 'all')
+    trx = []
+    
+    try:
+        # Query Kompleks: Transaksi + User + Paket
+        query = supabase.table('transactions').select(
+            "*, users(email), pricing_variants(price_display, duration_days, pricing_plans(display_name))"
+        )
         
-    return render_template('admin/finance.html', transactions=trx, active_page='finance')
+        if status != 'all':
+            query = query.eq('status', status)
+            
+        res = query.order('created_at', desc=True).execute()
+        trx = res.data if res.data else []
+        
+    except Exception as e:
+        logger.error(f"Finance Query Error: {e}")
+        # Jangan return error 500, tapi kasih flash message & list kosong
+        flash(f"Gagal memuat transaksi: {str(e)}", "warning")
+        
+    return render_template('admin/finance.html', transactions=trx, current_filter=status, active_page='finance')
 
 @app.route('/super-admin/finance/approve/<uuid:trx_id>')
 @admin_required
