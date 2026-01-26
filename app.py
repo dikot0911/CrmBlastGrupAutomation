@@ -186,38 +186,41 @@ def allowed_file(filename):
 
 # --- "Trigger BOT TELEGRAM
 
-def send_telegram_alert(user_id, message):
+def send_telegram_alert(user_id, message, show_report_btn=False):
     """
-    Fungsi Kurir: Ngirim pesan dari Web ke Bot Telegram User.
-    Pake HTTP Request biasa biar enteng dan gak nungguin botnya.
+    Kirim notif ke Telegram User.
+    Param show_report_btn: Jika True, akan menampilkan tombol '🔍 Lihat Detail'.
     """
     try:
-        # 1. Cari tau ID Chat Telegram user ini siapa
         res = supabase.table('users').select("notification_chat_id").eq('id', user_id).execute()
+        if not res.data or not res.data[0]['notification_chat_id']: return 
         
-        # Kalau user belum connect bot (kolomnya kosong), yaudah skip
-        if not res.data or not res.data[0]['notification_chat_id']:
-            return 
-            
         chat_id = res.data[0]['notification_chat_id']
-        
-        # 2. Ambil Token Bot Notifikasi dari .env
         notif_token = os.getenv("NOTIF_BOT_TOKEN")
         if not notif_token: return
-
-        # 3. Tembak API Telegram (Fire and Forget)
+        
         url = f"https://api.telegram.org/bot{notif_token}/sendMessage"
+        
         payload = {
             "chat_id": chat_id,
             "text": message,
             "parse_mode": "Markdown"
         }
-        # Timeout 5 detik, kalau macet tinggalin aja
+
+        # [NEW] Jika ini laporan blast, tambahkan tombol
+        if show_report_btn:
+            payload["reply_markup"] = {
+                "inline_keyboard": [[
+                    {
+                        "text": "🔍 Lihat Detail & Error", 
+                        "callback_data": f"menu_reports_{user_id}"
+                    }
+                ]]
+            }
+
         httpx.post(url, json=payload, timeout=5)
-        
     except Exception as e:
-        # Jangan sampe error notif bikin aplikasi crash
-        print(f"⚠️ Gagal kirim notif ke user {user_id}: {e}")
+        print(f"⚠️ Gagal kirim notif: {e}")
 
 def generate_ref_code():
     """Bikin kode unik 6 karakter, contoh: X7Y9Z1"""
@@ -2394,6 +2397,24 @@ def start_broadcast():
                 if manual_image_path and os.path.exists(manual_image_path):
                     os.remove(manual_image_path)
                 
+                # --- [TAMBAHAN BARU: LAPORAN KE BOT] ---
+                # Kirim notif "Selesai" lengkap dengan statistik & tombol cek error
+                if success_count > 0 or fail_count > 0:
+                    report_msg = (
+                        f"🚀 **BROADCAST SELESAI!**\n"
+                        f"─────────────────\n"
+                        f"✅ **Berhasil:** {success_count}\n"
+                        f"❌ **Gagal:** {fail_count}\n"
+                        f"📊 **Total:** {success_count + fail_count}\n"
+                        f"─────────────────\n"
+                        f"_Klik tombol di bawah untuk melihat detail._"
+                    )
+                    # Jalankan di background thread biar gak bikin loading web lama
+                    threading.Thread(
+                        target=send_telegram_alert, 
+                        args=(user_id, report_msg, True) # True = Munculin Tombol
+                    ).start()
+
                 yield json.dumps({"type": "done", "success": success_count, "failed": fail_count}) + "\n"
 
         loop = asyncio.new_event_loop()
