@@ -42,45 +42,66 @@
                 </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-gray-700 uppercase mb-2 ml-1 flex justify-between items-center">
-                    <span>Kode Referral</span>
-                    {% if ref_code %}
-                        <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200 flex items-center gap-1">
-                            <i class="fa-solid fa-link"></i> Terhubung
-                        </span>
-                    {% else %}
-                        <span class="text-[10px] text-gray-400 font-normal italic">(Opsional)</span>
-                    {% endif %}
-                </label>
-                
-                <div class="relative group">
-                    <span class="absolute left-4 top-3.5 {{ 'text-green-600' if ref_code else 'text-gray-400' }}">
-                        <i class="fa-solid fa-ticket"></i>
-                    </span>
-                    
-                    <input type="text" name="referral_code" 
-                        value="{{ ref_code if ref_code else '' }}" 
-                        placeholder="Masukan Kode (Contoh: BABA-123)"
-                        class="form-input w-full pl-11 pr-10 py-3 border rounded-xl text-sm font-bold tracking-widest uppercase outline-none transition shadow-sm
-                        {{ 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed select-none' if ref_code else 'bg-white border-gray-200 text-gray-900 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 hover:border-gray-300' }}"
-                        {{ 'readonly' if ref_code else '' }}>
+            <div class="mb-5">
+    <label class="block text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">
+        Kode Referral / Affiliate
+    </label>
+    
+    <div class="relative group">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+            {% if ref %}
+                <i class="fa-solid fa-lock text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]"></i>
+            {% else %}
+                <i class="fa-solid fa-ticket text-slate-500 group-focus-within:text-indigo-400 transition-colors"></i>
+            {% endif %}
+        </div>
 
-                    {% if ref_code %}
-                        <span class="absolute right-4 top-3.5 text-green-500 animate-pulse">
-                            <i class="fa-solid fa-circle-check"></i>
-                        </span>
-                    {% endif %}
-                </div>
+        <input 
+            type="text" 
+            name="referral_code" 
+            id="referral_code"
+            value="{{ ref if ref else '' }}"
+            placeholder="Punya kode teman? Masukan disini"
+            class="w-full pl-10 pr-4 py-3 rounded-xl border outline-none transition-all duration-300 font-mono text-sm shadow-sm
+            {% if ref %}
+                /* STYLE TERKUNCI (LINK) */
+                bg-emerald-900/20 border-emerald-500/30 text-emerald-300 
+                cursor-not-allowed font-bold tracking-wide
+                focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50
+            {% else %}
+                /* STYLE MANUAL (EDITABLE) */
+                bg-slate-800/50 border-slate-700 text-white 
+                focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 
+                focus:bg-slate-800
+                placeholder:text-slate-600
+            {% endif %}"
+            
+            {# Logic Kunci: Tambahkan readonly jika ref ada #}
+            {% if ref %} readonly title="Kode otomatis terpasang dari link referral" {% endif %}
+        >
 
-                <p class="text-[10px] mt-2 ml-1 flex items-start gap-1.5 {{ 'text-green-600' if ref_code else 'text-gray-400' }}">
-                    {% if ref_code %}
-                        <i class="fa-solid fa-circle-info mt-0.5"></i> Kode referral otomatis diterapkan dari link undangan.
-                    {% else %}
-                        Masukkan kode teman untuk mendapatkan bonus affiliate.
-                    {% endif %}
-                </p>
-            </div>
+        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            {% if ref %}
+                <span class="flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded border border-emerald-500/20 font-bold animate-pulse">
+                    <i class="fa-solid fa-check"></i> APPLIED
+                </span>
+            {% else %}
+                <span class="text-[10px] text-slate-600 italic">Optional</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if ref %}
+        <p class="mt-2 text-[10px] text-emerald-400 flex items-center gap-1.5 animate-fade-in-up">
+            <i class="fa-solid fa-shield-halved"></i>
+            Kode referral Sesuai!
+        </p>
+    {% else %}
+        <p class="mt-2 text-[10px] text-slate-500">
+            Biarkan kosong jika mendaftar tanpa undangan.
+        </p>
+    {% endif %}
+</div>
 
             <button type="submit" class="w-full py-4 bg-gray-900 hover:bg-black text-white font-bold rounded-xl shadow-xl shadow-gray-200 transition transform hover:-translate-y-1 active:scale-95 relative z-50 cursor-pointer flex items-center justify-center gap-2 group">
                 Buat Akun Sekarang
@@ -103,3 +124,4 @@
     </div>
 </div>
 {% endblock %}
+
