@@ -26,57 +26,50 @@ from telethon import TelegramClient, errors, functions, types, utils, events
 from telethon.sessions import StringSession
 from supabase import create_client, Client
 
-# --- CUSTOM BLUEPRINTS (EXISTING) ---
-# Kami mempertahankan blueprint lama agar tidak merusak struktur folder yang sudah ada
-try:
-    from demo_routes import demo_bp
-except ImportError:
-    # Fallback aman jika file demo_routes.py belum ada di environment baru
-    demo_bp = None
-
-try:
-    from bot import run_bot_process
-except ImportError:
-    logger.warning("⚠️ Modul bot.py tidak ditemukan atau error.")
-    run_bot_process = None
-
 # ==============================================================================
 # SECTION 1: SYSTEM CONFIGURATION & ENVIRONMENT SETUP
 # ==============================================================================
 
-# Initialize Flask Application
-app = Flask(__name__)
-
-# Security Configuration
-# Gunakan Secret Key yang sangat kuat untuk production environment SaaS
-app.secret_key = os.getenv('SECRET_KEY', 'rahasia_negara_baba_parfume_saas_ultimate_key_v99_production_ready')
-
-# Registrasi Blueprint Lama (Jika Ada)
-if demo_bp:
-    app.register_blueprint(demo_bp)  
-
-# Session Configuration (Agar login user awet dan aman)
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-app.config['SESSION_COOKIE_SECURE'] = True  # Hanya kirim cookie via HTTPS (Wajib di Production)
-app.config['SESSION_COOKIE_HTTPONLY'] = True # Mencegah akses JavaScript ke cookie (Anti-XSS)
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' # Mencegah CSRF
-
-# Upload Configuration (Untuk fitur Broadcast Gambar)
-UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# Pastikan folder upload tersedia saat startup
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Advanced Logging System (Enterprise Grade)
-# Mencatat setiap detil aktivitas sistem dengan timestamp presisi
+# [FIX 1: LOGGER WAJIB PALING ATAS]
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-logger = logging.getLogger("BabaSaaSCore")
+logger = logging.getLogger("BlastProSAAS")
+
+# Initialize Flask Application
+app = Flask(__name__)
+
+# Security Configuration
+app.secret_key = os.getenv('SECRET_KEY', 'rahasia_Blast_Pro_Saas_ultimate_key_v99_production_ready')
+
+# [FIX 2: IMPORT MODUL LAIN SETELAH LOGGER JADI]
+try:
+    from demo_routes import demo_bp
+    if demo_bp:
+        app.register_blueprint(demo_bp)  
+except ImportError:
+    demo_bp = None
+
+try:
+    from bot import run_bot_process
+except ImportError as e:
+    # Sekarang aman panggil logger disini
+    logger.warning(f"⚠️ Modul bot.py tidak ditemukan atau error: {e}")
+    run_bot_process = None
+
+# Session Configuration
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SESSION_COOKIE_SECURE'] = True  
+app.config['SESSION_COOKIE_HTTPONLY'] = True 
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' 
+
+# Upload Configuration
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # ==============================================================================
 # SECTION 2: DATABASE CONNECTION (SUPABASE)
