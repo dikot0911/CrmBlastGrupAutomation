@@ -191,6 +191,11 @@ def send_telegram_alert(user_id, message, show_report_btn=False):
     Kirim notif ke Telegram User.
     Param show_report_btn: Jika True, akan menampilkan tombol '🔍 Lihat Detail'.
     """
+    # [FIX SAFETY] Cek koneksi DB dulu biar gak crash
+    if not supabase:
+        logger.warning(f"⚠️ Skip notif user {user_id}: Database Disconnected")
+        return
+
     try:
         res = supabase.table('users').select("notification_chat_id").eq('id', user_id).execute()
         if not res.data or not res.data[0]['notification_chat_id']: return 
@@ -220,7 +225,8 @@ def send_telegram_alert(user_id, message, show_report_btn=False):
 
         httpx.post(url, json=payload, timeout=5)
     except Exception as e:
-        print(f"⚠️ Gagal kirim notif: {e}")
+        # [FIX LOGGING] Pake logger biar seragam sama yang lain
+        logger.error(f"⚠️ Gagal kirim notif: {e}")
 
 def generate_ref_code():
     """Bikin kode unik 6 karakter, contoh: X7Y9Z1"""
