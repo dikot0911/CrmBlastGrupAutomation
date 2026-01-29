@@ -125,7 +125,7 @@
                                         <button onclick="viewDetails('{{ tmpl_name }}', {{ groups|tojson }})" class="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition flex items-center gap-2.5">
                                             <i class="fa-solid fa-eye w-4 text-center"></i> Lihat & Edit Isi
                                         </button>
-                                        <button onclick="alert('Fitur Rename segera hadir!')" class="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 transition flex items-center gap-2.5">
+                                        <button onclick="promptRename('{{ tmpl_name }}', '{{ source_phone }}')" class="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-600 transition flex items-center gap-2.5">
                                             <i class="fa-solid fa-pen-to-square w-4 text-center"></i> Ganti Nama
                                         </button>
                                         <div class="h-px bg-slate-50 my-1"></div>
@@ -207,6 +207,29 @@
         <div class="px-8 py-5 border-t border-slate-100 bg-white flex justify-end gap-3 shrink-0">
             <button onclick="closeDetailModal()" class="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition">
                 Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="editItemModal" class="fixed inset-0 z-[110] hidden flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeEditItemModal()"></div>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative z-10 transform scale-100 transition-all">
+        <h3 class="text-lg font-bold text-slate-800 mb-4">Edit Info Grup</h3>
+        <input type="hidden" id="editItemId">
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Grup</label>
+                <input type="text" id="editItemName" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Topik ID (Pisahkan Koma)</label>
+                <input type="text" id="editItemTopics" placeholder="Contoh: 1, 404, 202" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none">
+                <p class="text-[10px] text-slate-400 mt-1">*Kosongkan jika General Chat</p>
+            </div>
+            <button onclick="saveItemChanges()" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition">
+                Simpan Perubahan
             </button>
         </div>
     </div>
@@ -375,19 +398,32 @@
 
     // --- VARIABLES ---
     let scannedGroups = [];
+    let currentDetailTemplate = null;
 
-    // --- 1. DETAIL MODAL LOGIC ---
+    // --- 1. DETAIL MODAL LOGIC & EDIT ITEM ---
     function viewDetails(tmplName, groups) {
+        currentDetailTemplate = { name: tmplName, groups: groups };
+        
         const modal = document.getElementById('detailModal');
         const backdrop = document.getElementById('detailBackdrop');
         const panel = document.getElementById('detailPanel');
-        const list = document.getElementById('detailList');
         
         document.getElementById('detailTitle').innerText = tmplName;
         document.getElementById('detailSubtitle').innerText = `${groups.length} Grup Tersimpan`;
         
-        // Render List Item
+        renderDetailList(groups);
+
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            backdrop.classList.remove('opacity-0');
+            panel.classList.remove('translate-x-full');
+        }, 10);
+    }
+
+    function renderDetailList(groups) {
+        const list = document.getElementById('detailList');
         list.innerHTML = '';
+        
         groups.forEach((g) => {
             let topicBadges = '';
             if(g.topic_ids) {
@@ -399,7 +435,7 @@
             }
 
             const item = `
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3 group hover:border-indigo-300 transition-colors animate-fade-in">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3 group hover:border-indigo-300 transition-colors" id="row-${g.id}">
                 <div class="flex justify-between items-start gap-3">
                     <div class="min-w-0">
                         <h4 class="font-bold text-slate-800 text-sm truncate" title="${g.group_name}">${g.group_name}</h4>
@@ -407,9 +443,16 @@
                             <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-mono border border-slate-200">${g.group_id}</span>
                         </div>
                     </div>
-                    <button onclick="removeGroupFromList(this, '${g.id}')" class="w-8 h-8 rounded-lg bg-white border border-slate-100 text-slate-300 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition flex items-center justify-center shadow-sm">
-                        <i class="fa-solid fa-trash-can text-xs"></i>
-                    </button>
+                    <div class="flex gap-1">
+                        <button onclick="openEditItemModal('${g.id}', '${g.group_name.replace(/'/g, "\\'")}', '${g.topic_ids || ''}')" 
+                                class="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center">
+                            <i class="fa-solid fa-pen-to-square text-xs"></i>
+                        </button>
+                        <button onclick="removeGroupFromList(this, '${g.id}')" 
+                                class="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 transition flex items-center justify-center">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="flex flex-wrap gap-1.5 pt-2 border-t border-slate-50">
                     ${topicBadges}
@@ -417,13 +460,42 @@
             </div>`;
             list.innerHTML += item;
         });
+    }
 
-        // Show Modal
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            backdrop.classList.remove('opacity-0');
-            panel.classList.remove('translate-x-full');
-        }, 10);
+    // --- MODAL EDIT ITEM KECIL ---
+    function openEditItemModal(id, name, topics) {
+        document.getElementById('editItemId').value = id;
+        document.getElementById('editItemName').value = name;
+        document.getElementById('editItemTopics').value = topics;
+        document.getElementById('editItemModal').classList.remove('hidden');
+    }
+
+    function closeEditItemModal() {
+        document.getElementById('editItemModal').classList.add('hidden');
+    }
+
+    async function saveItemChanges() {
+        const id = document.getElementById('editItemId').value;
+        const name = document.getElementById('editItemName').value;
+        const topics = document.getElementById('editItemTopics').value;
+        
+        try {
+            const res = await fetch('/api/target/update_group', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: id, group_name: name, topic_ids: topics })
+            });
+            const d = await res.json();
+            
+            if(d.status === 'success') {
+                closeEditItemModal();
+                location.reload();
+            } else {
+                alert("Gagal: " + d.message);
+            }
+        } catch(e) {
+            alert("Error: " + e);
+        }
     }
 
     function closeDetailModal() {
@@ -439,13 +511,16 @@
     function removeGroupFromList(btn, id) {
         if(!confirm('Hapus grup ini dari template?')) return;
         fetch(`/delete_target/${id}`).then(() => {
-            btn.closest('.bg-white').remove(); 
+            const el = document.getElementById(`row-${id}`);
+            if(el) el.remove();
+            let count = parseInt(document.getElementById('detailSubtitle').innerText);
+            if(count > 0) document.getElementById('detailSubtitle').innerText = `${count - 1} Grup Tersimpan`;
         });
     }
 
-    // --- 2. DELETE TEMPLATE LOGIC ---
+    // --- 2. DELETE & RENAME TEMPLATE LOGIC ---
     async function deleteTemplate(name, phone) {
-        if(!confirm(`⚠️ PERINGATAN PENTING!\n\nAnda akan menghapus seluruh template "${name}".\nSemua grup di dalamnya akan hilang permanen dari database.\n\nLanjutkan?`)) return;
+        if(!confirm(`⚠️ PERINGATAN!\n\nAnda akan menghapus SELURUH template "${name}".\nSemua grup di dalamnya akan hilang permanen.\n\nLanjutkan?`)) return;
         
         try {
             const res = await fetch('/delete_target_template', {
@@ -461,6 +536,28 @@
         }
     }
 
+    async function promptRename(oldName, phone) {
+        const newName = prompt("Masukkan nama template baru:", oldName);
+        if (newName && newName !== oldName) {
+            try {
+                const res = await fetch('/api/target/rename_template', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        old_name: oldName,
+                        new_name: newName,
+                        source_phone: phone
+                    })
+                });
+                const d = await res.json();
+                if (d.status === 'success') location.reload();
+                else alert("Gagal: " + d.message);
+            } catch (e) {
+                alert("Error: " + e);
+            }
+        }
+    }
+
     // --- 3. SCAN MODAL LOGIC (FIXED: TOPIC & MEMBER) ---
     function openScanModal() {
         const m = document.getElementById('scanModal');
@@ -471,7 +568,6 @@
             document.getElementById('scanPanel').classList.add('opacity-100', 'scale-100');
         }, 10);
         
-        // Reset
         document.getElementById('initialState').classList.remove('hidden');
         document.getElementById('loadingScan').classList.add('hidden');
         document.getElementById('resultList').classList.add('hidden');
@@ -540,7 +636,6 @@
             const isForum = g.is_forum;
             let topicsHtml = '';
 
-            // LOGIC FORUM TOPIC
             if(isForum) {
                 let topicChecks = '';
                 g.topics.forEach(t => {
@@ -575,7 +670,6 @@
                 </div>`;
             }
 
-            // MEMBER COUNT BADGE
             let memberBadge = '';
             if (g.members) {
                 memberBadge = `<span class="bg-emerald-50 text-emerald-600 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-100 flex items-center gap-1"><i class="fa-solid fa-users"></i> ${g.members}</span>`;
@@ -614,7 +708,6 @@
             card.classList.add('border-indigo-500', 'bg-indigo-50/10', 'ring-1', 'ring-indigo-500');
             if(box) {
                 box.classList.remove('hidden');
-                // Auto check 'General' (ID 1)
                 const generalCheck = document.querySelector(`.topic-check-${index}[value="1"]`);
                 if(generalCheck && !generalCheck.checked) generalCheck.checked = true;
             }
@@ -697,7 +790,7 @@
         }
     }
 
-    // --- 4. IMPORT CSV LOGIC ---
+    // --- 4. IMPORT CSV ---
     function openImportModal() {
         const m = document.getElementById('importModal');
         const p = document.getElementById('importPanel');
