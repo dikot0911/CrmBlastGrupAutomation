@@ -2513,6 +2513,28 @@ def start_broadcast():
 # SECTION 12: CRUD ROUTES (SCHEDULE, TARGETS, & TEMPLATES)
 # ==============================================================================
 
+@app.route('/update_schedule', methods=['POST'])
+@login_required
+def update_schedule():
+    s_id = request.form.get('schedule_id')
+    user_id = session['user_id']
+    
+    try:
+        data = {
+            'run_hour': int(request.form.get('hour')),
+            'run_minute': int(request.form.get('minute')),
+            'sender_phone': request.form.get('sender_phone'),
+            'target_group_id': request.form.get('target_group_id') or None,
+            'template_id': int(request.form.get('template_id')) if request.form.get('template_id') else None
+        }
+        
+        supabase.table('blast_schedules').update(data).eq('id', s_id).eq('user_id', user_id).execute()
+        flash('Jadwal berhasil diperbarui!', 'success')
+    except Exception as e:
+        flash(f'Gagal update jadwal: {str(e)}', 'danger')
+        
+    return redirect(url_for('dashboard_schedule'))
+
 @app.route('/add_schedule', methods=['POST'])
 @login_required
 def add_schedule():
