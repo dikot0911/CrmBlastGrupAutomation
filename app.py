@@ -1212,6 +1212,58 @@ def dashboard_targets():
                            accounts=accounts, 
                            active_page='targets')
 
+# TAMBAHAN UTK TARGET MANAGER (RENAME & EDIT)
+@app.route('/api/target/rename_template', methods=['POST'])
+@login_required
+def rename_target_template():
+    user_id = session['user_id']
+    data = request.json
+    
+    old_name = data.get('old_name')
+    new_name = data.get('new_name')
+    source_phone = data.get('source_phone')
+    
+    if not old_name or not new_name or not source_phone:
+        return jsonify({'status': 'error', 'message': 'Data tidak lengkap'})
+        
+    try:
+        # Update semua baris yang punya nama template lama & akun yg sama
+        supabase.table('blast_targets').update({'template_name': new_name})\
+            .eq('user_id', user_id)\
+            .eq('source_phone', source_phone)\
+            .eq('template_name', old_name)\
+            .execute()
+            
+        return jsonify({'status': 'success', 'message': 'Template berhasil diubah!'})
+    except Exception as e:
+        logger.error(f"Rename Template Error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/api/target/update_group', methods=['POST'])
+@login_required
+def update_target_group():
+    user_id = session['user_id']
+    data = request.json
+    
+    target_id = data.get('id')
+    new_name = data.get('group_name')
+    new_topics = data.get('topic_ids') # String "123, 456" atau None
+    
+    try:
+        update_payload = {
+            'group_name': new_name,
+            'topic_ids': new_topics
+        }
+        
+        supabase.table('blast_targets').update(update_payload)\
+            .eq('id', target_id)\
+            .eq('user_id', user_id)\
+            .execute()
+            
+        return jsonify({'status': 'success', 'message': 'Data grup berhasil diperbarui.'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
 @app.route('/dashboard/schedule')
 @login_required
 def dashboard_schedule():
@@ -3380,6 +3432,7 @@ def debug_pricing():
         # INI YANG KITA CARI: ERROR ASLINYA
         import traceback
         return f"<h1>🔥 ERROR KETEMU:</h1><pre>{traceback.format_exc()}</pre>"
+        
 
 # ... (Baru masuk ke app.run) ...
 if __name__ == '__main__':
