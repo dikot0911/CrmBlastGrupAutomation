@@ -1170,28 +1170,46 @@ def stop_broadcast_api():
 @app.route('/dashboard/targets')
 @login_required
 def dashboard_targets():
-    """Halaman Manajemen Target Grup (Multi-Account Support)"""
+    """Halaman Manajemen Target Grup (Mode Template / Collection)"""
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
-    targets = []
-    accounts = [] # [BARU]
+    # Struktur Data: { 'No_HP_Akun': { 'Nama_Template': [List Grup] } }
+    grouped_targets = {}
+    
+    # List Akun Aktif (Untuk Dropdown Scan & Import)
+    accounts = []
     
     try:
-        # Ambil Target
-        targets = supabase.table('blast_targets').select("*").eq('user_id', user.id).order('created_at', desc=True).execute().data
-        
-        # [BARU] Ambil Akun Aktif untuk Dropdown Scan
+        # 1. Ambil Akun Aktif
         acc_res = supabase.table('telegram_accounts').select("*").eq('user_id', user.id).eq('is_active', True).execute()
         accounts = acc_res.data if acc_res.data else []
+
+        # 2. Ambil Semua Target
+        all_targets = supabase.table('blast_targets').select("*").eq('user_id', user.id).order('created_at', desc=True).execute().data
         
+        # 3. Logic Grouping (Python Side biar fleksibel)
+        for t in all_targets:
+            # Key 1: Source Phone (Akun)
+            src = t.get('source_phone') or 'Unknown Account'
+            # Key 2: Template Name (Koleksi)
+            tmpl = t.get('template_name') or 'Tanpa Nama'
+            
+            if src not in grouped_targets:
+                grouped_targets[src] = {}
+            
+            if tmpl not in grouped_targets[src]:
+                grouped_targets[src][tmpl] = []
+                
+            grouped_targets[src][tmpl].append(t)
+            
     except Exception as e:
         logger.error(f"Targets Page Error: {e}")
     
     return render_template('dashboard/targets.html', 
                            user=user, 
-                           targets=targets, 
-                           accounts=accounts, # Kirim ke HTML
+                           grouped_targets=grouped_targets, # Data struktur baru
+                           accounts=accounts, 
                            active_page='targets')
 
 @app.route('/dashboard/schedule')
@@ -2014,16 +2032,17 @@ def scan_groups_api():
 @app.route('/save_bulk_targets', methods=['POST'])
 @login_required
 def save_bulk_targets():
-    user = get_dashboard_context()
+    user = session['user_id'] # Pake session langsung lebih aman buat API
     data = request.json
     targets = data.get('targets', [])
-    source_phone = data.get('source_phone') # <--- INI KUNCINYA
+    source_phone = data.get('source_phone')
+    template_name = data.get('template_name', 'Scan Result ' + datetime.now().strftime('%d/%m')) # <--- BARU
 
     if not targets:
-        return jsonify({'status': 'error', 'message': 'No targets provided'})
+        return jsonify({'status': 'error', 'message': 'Tidak ada grup yang dipilih'})
 
     try:
-        # Kita cari nama akunnya sekalian biar di UI bagus (Optional)
+        # Cari nama akun (Display Name)
         source_name = None
         if source_phone:
             acc_data = supabase.table('telegram_accounts').select("first_name").eq('phone_number', source_phone).execute()
@@ -2033,19 +2052,18 @@ def save_bulk_targets():
         final_data = []
         for t in targets:
             final_data.append({
-                'user_id': user.id,
+                'user_id': user,
                 'group_name': t['group_name'],
                 'group_id': str(t['group_id']),
                 'topic_ids': ",".join(map(str, t['topic_ids'])) if t.get('topic_ids') else None,
                 'created_at': datetime.now().isoformat(),
-                'source_phone': source_phone, # <--- PASTIKAN INI DISIMPAN
-                'source_name': source_name    # <--- DAN INI
+                'source_phone': source_phone,
+                'source_name': source_name,
+                'template_name': template_name # <--- SIMPAN KE DB
             })
 
-        # Insert ke Supabase
         supabase.table('blast_targets').insert(final_data).execute()
-        
-        return jsonify({'status': 'success', 'message': f'{len(final_data)} targets saved linked to {source_phone}'})
+        return jsonify({'status': 'success', 'message': 'Database berhasil disimpan!'})
 
     except Exception as e:
         logger.error(f"Error saving targets: {e}")
@@ -2161,6 +2179,67 @@ def parse_telegram_link(link):
     except Exception as e:
         logger.error(f"Link Parse Error: {e}")
         return None, None
+
+@app.route('/delete_target_template', methods=['POST'])
+@login_required
+def delete_target_template():
+    user_id = session['user_id']
+    template_name = request.json.get('template_name')
+    source_phone = request.json.get('source_phone')
+    
+    try:
+        supabase.table('blast_targets').delete()\
+            .eq('user_id', user_id)\
+            .eq('template_name', template_name)\
+            .eq('source_phone', source_phone)\
+            .execute()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/import_targets_csv', methods=['POST'])
+@login_required
+def import_targets_csv():
+    user_id = session['user_id']
+    
+    file = request.files.get('file')
+    source_phone = request.form.get('source_phone')
+    template_name = request.form.get('template_name')
+
+    if not file or not source_phone or not template_name:
+        return jsonify({"status": "error", "message": "Data tidak lengkap (File, Akun, Nama Template wajib)."})
+
+    try:
+        # Baca CSV
+        stream = io.StringIO(file.stream.read().decode("utf-8-sig"), newline=None)
+        csv_input = csv.DictReader(stream)
+        
+        valid_rows = []
+        for row in csv_input:
+            # Mapping kolom fleksibel (Group ID, Name)
+            gid = row.get('group_id') or row.get('id')
+            gname = row.get('group_name') or row.get('name') or 'Imported Group'
+            topics = row.get('topics') or row.get('topic_ids') # Optional
+            
+            if gid:
+                valid_rows.append({
+                    "user_id": user_id,
+                    "group_id": str(gid).strip(),
+                    "group_name": gname.strip(),
+                    "topic_ids": topics.strip() if topics else None,
+                    "source_phone": source_phone,
+                    "template_name": template_name, # Masuk ke folder template ini
+                    "created_at": datetime.utcnow().isoformat()
+                })
+        
+        if valid_rows:
+            supabase.table('blast_targets').insert(valid_rows).execute()
+            return jsonify({"status": "success", "message": f"Berhasil import {len(valid_rows)} grup ke template '{template_name}'."})
+        else:
+            return jsonify({"status": "error", "message": "File CSV kosong atau format salah."})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Error: {str(e)}"})
 
 # --- UPDATE API FETCH ---
 @app.route('/api/fetch_message', methods=['POST'])
