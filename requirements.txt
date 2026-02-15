@@ -1,6 +1,6 @@
 flask
 flask_sqlalchemy
-Telethon>=1.36.0
+Telethon==1.42.0
 werkzeug
 gunicorn
 psycopg2-binary
