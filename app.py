@@ -1905,6 +1905,8 @@ def scan_groups_api():
     async def _scan():
         # --- 1. SETUP LIBRARIES & CHECK VERSIONS ---
         import telethon
+        logger.info(f"🧐 Cek Versi Telethon: {telethon.__version__}")
+        
         from telethon import utils, types
         from telethon.tl.types import InputPeerChannel
         
