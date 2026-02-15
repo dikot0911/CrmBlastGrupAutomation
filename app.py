@@ -765,6 +765,161 @@ class SchedulerWorker:
 # Jalankan Scheduler saat app start
 if supabase:
     SchedulerWorker.start()
+
+
+# ==============================================================================
+# SECTION 4.7: AUTO REPLY BACKGROUND SERVICE (SATPAM 24 JAM)
+# ==============================================================================
+
+class AutoReplyService:
+    """
+    Service yang berjalan di background untuk menjaga koneksi Telegram tetap hidup
+    agar bisa menerima pesan masuk (Auto Reply) secara real-time.
+    """
+    _loop = None
+    _clients = {} # Database koneksi aktif: { 'user_id_phone': client_object }
+
+    @classmethod
+    def start(cls):
+        # Jalankan di thread terpisah biar gak ganggu web server
+        threading.Thread(target=cls._background_process, daemon=True, name="AutoReplyService").start()
+        logger.info("🎧 AutoReply Service (Satpam) Berhasil Dinyalakan!")
+
+    @classmethod
+    def _background_process(cls):
+        # Bikin Event Loop khusus buat thread ini
+        cls._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(cls._loop)
+        cls._loop.run_until_complete(cls._main_supervisor())
+
+    @classmethod
+    async def _main_supervisor(cls):
+        logger.info("🎧 AutoReply Supervisor is Watching...")
+        while True:
+            try:
+                # 1. Ambil semua akun yang AKTIF dari database
+                if supabase:
+                    res = supabase.table('telegram_accounts').select("*").eq('is_active', True).execute()
+                    accounts = res.data or []
+                    
+                    active_keys = []
+                    
+                    for acc in accounts:
+                        # Kunci unik: UserID_NoHP
+                        key = f"{acc['user_id']}_{acc['phone_number']}"
+                        active_keys.append(key)
+                        
+                        # Jika akun ini belum ada di memori satpam, kita konekin!
+                        if key not in cls._clients:
+                            await cls._start_client(acc, key)
+                    
+                    # 2. Bersih-bersih (Kalo ada akun yang dilogout/dihapus, matikan koneksinya)
+                    for existing_key in list(cls._clients.keys()):
+                        if existing_key not in active_keys:
+                            await cls._stop_client(existing_key)
+                            
+            except Exception as e:
+                logger.error(f"AutoReply Supervisor Error: {e}")
+            
+            # Cek database setiap 30 detik (biar gak berat)
+            await asyncio.sleep(30)
+
+    @classmethod
+    async def _start_client(cls, acc_data, key):
+        try:
+            # Init Client
+            client = TelegramClient(StringSession(acc_data['session_string']), API_ID, API_HASH)
+            await client.connect()
+            
+            # Validasi Sesi
+            if not await client.is_user_authorized():
+                logger.warning(f"❌ Sesi Expired untuk {key}, melewatkan...")
+                await client.disconnect()
+                return
+
+            # --- PASANG KUPING (EVENT HANDLER) ---
+            # Kita pasang logic Auto Reply langsung disini
+            user_id = acc_data['user_id']
+            my_phone = acc_data['phone_number']
+
+            @client.on(events.NewMessage(incoming=True))
+            async def incoming_handler(event):
+                try:
+                    # Filter Dasar
+                    me_obj = await client.get_me()
+                    if event.sender_id == me_obj.id or event.message.via_bot_id: return
+                    if event.is_group or event.is_channel: return # Hanya personal chat
+
+                    sender_id = event.sender_id
+                    chat_text = event.raw_text.lower().strip()
+                    
+                    # Ambil Settings & Rules Terbaru dari DB (Realtime)
+                    # Biar kalo user update keyword, langsung ngefek tanpa restart
+                    settings = AutoReplyManager.get_settings(user_id)
+                    if not settings or not settings.get('is_active'): return
+                    
+                    # Cek Target Akun (Apakah akun ini boleh jawab?)
+                    target_setting = settings.get('target_phone', 'all')
+                    if target_setting != 'all' and target_setting != my_phone: return
+
+                    keywords = AutoReplyManager.get_keywords(user_id)
+                    response_text = None
+
+                    # LOGIC MATCHING
+                    # Prioritas: Spesifik > Global
+                    specific = [r for r in keywords if r.get('target_phone') == my_phone]
+                    global_r = [r for r in keywords if r.get('target_phone') == 'all']
+                    all_rules = specific + global_r
+
+                    for rule in all_rules:
+                        if rule['keyword'] in chat_text:
+                            response_text = rule['response']
+                            logger.info(f"🤖 [AutoReply] {my_phone} menjawab '{rule['keyword']}' ke {sender_id}")
+                            break
+                    
+                    # LOGIC WELCOME (No Keyword)
+                    if not response_text and settings.get('welcome_message'):
+                        # Cek Cooldown
+                        cooldown = settings.get('cooldown_minutes', 60)
+                        log_res = supabase.table('reply_logs').select("last_reply_at")\
+                            .eq('user_id', user_id).eq('sender_id', sender_id).execute()
+                        
+                        should_reply = True
+                        if log_res.data:
+                            last_time = datetime.fromisoformat(log_res.data[0]['last_reply_at'].replace('Z', '+00:00'))
+                            diff_min = (datetime.now(pytz.utc) - last_time).total_seconds() / 60
+                            if diff_min < cooldown: should_reply = False
+                        
+                        if should_reply:
+                            response_text = settings.get('welcome_message')
+                            logger.info(f"🤖 [AutoReply] {my_phone} kirim Welcome Message ke {sender_id}")
+
+                    # KIRIM BALASAN
+                    if response_text:
+                        async with client.action(event.chat_id, 'typing'):
+                            await asyncio.sleep(random.uniform(1.5, 4.0)) # Humanis delay
+                        await event.reply(response_text)
+                        
+                        # Catat Log
+                        log_payload = {'user_id': user_id, 'sender_id': sender_id, 'last_reply_at': datetime.utcnow().isoformat()}
+                        supabase.table('reply_logs').upsert(log_payload, on_conflict="user_id, sender_id").execute()
+
+                except Exception as handler_e:
+                    logger.error(f"Handler Error {my_phone}: {handler_e}")
+
+            # Simpan client ke memori biar tetep hidup
+            cls._clients[key] = client
+            logger.info(f"👂 Satpam Aktif: {acc_data['phone_number']}")
+            
+        except Exception as e:
+            logger.error(f"Gagal start client {key}: {e}")
+
+    @classmethod
+    async def _stop_client(cls, key):
+        client = cls._clients.pop(key, None)
+        if client:
+            await client.disconnect()
+            logger.info(f"🛑 Satpam Istirahat: {key}")
     
 # ==============================================================================
 # SECTION 5: DATA ACCESS LAYER (DAL)
@@ -3381,6 +3536,9 @@ def init_system_check():
 if supabase:
     print("⚙️ Executing System Check...", flush=True) # Debug log
     init_system_check()
+    
+    #NYALAKAN SATPAM
+    AutoReplyService.start()
     
 # Start Background Pinger
 start_self_ping()
