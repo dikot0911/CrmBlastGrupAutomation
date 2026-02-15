@@ -1902,6 +1902,7 @@ def scan_groups_api():
         import telethon
         from telethon import utils, types
         from telethon.tl.types import InputPeerChannel
+        from telethon import functions
         
         # [DEBUG WAJIB] Cek versi Telethon yang terinstall di Server
         logger.info(f"🧐 [DEBUG] Telethon Version Installed: {telethon.__version__}")
