@@ -70,7 +70,7 @@
         .nav-item:hover {
             background-color: #F1F5F9;
             color: #4F46E5;
-            padding-left: 1.2rem; /* Efek geser dikit pas hover */
+            padding-left: 1.8rem; /* Efek geser dikit pas hover */
         }
         .nav-item.active {
             background: linear-gradient(to right, #EEF2FF, #FFFFFF);
@@ -165,20 +165,21 @@
                     <div class="h-px bg-slate-100 flex-1"></div>
                 </div>
                 <div class="space-y-0.5">
-                    <a href="{{ url_for('dashboard_targets') }}" 
-                       class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg {{ 'active' if active_page == 'targets' else '' }}">
-                        <i class="fa-solid fa-bullseye w-5 text-center text-slate-400 transition-colors"></i>
-                        <span>Target Grup</span>
+                    <a href="{{ url_for('dashboard_auto_reply') }}" 
+                       class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg group {{ 'active' if active_page == 'autoreply' else '' }}">
+                        <i class="fa-solid fa-robot w-5 text-center text-slate-400 transition-colors"></i>
+                        <span class="flex-1">Auto Reply</span>
+                        <span class="bg-indigo-100 text-indigo-600 text-[9px] font-bold px-1.5 py-0.5 rounded border border-indigo-200 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-colors">PRO</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_broadcast') }}" 
+                       class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg {{ 'active' if active_page == 'broadcast' else '' }}">
+                        <i class="fa-solid fa-paper-plane w-5 text-center text-slate-400 transition-colors"></i>
+                        <span>Broadcast User</span>
                     </a>
                     <a href="{{ url_for('dashboard_schedule') }}" 
                        class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg {{ 'active' if active_page == 'schedule' else '' }}">
                         <i class="fa-solid fa-calendar-check w-5 text-center text-slate-400 transition-colors"></i>
                         <span>Jadwal Share</span>
-                    </a>
-                    <a href="{{ url_for('dashboard_templates') }}" 
-                       class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg {{ 'active' if active_page == 'templates' else '' }}">
-                        <i class="fa-regular fa-file-lines w-5 text-center text-slate-400 transition-colors"></i>
-                        <span>Template Pesan</span>
                     </a>
                 </div>
             </div>
@@ -189,21 +190,20 @@
                     <div class="h-px bg-slate-100 flex-1"></div>
                 </div>
                 <div class="space-y-0.5">
+                    <a href="{{ url_for('dashboard_targets') }}" 
+                       class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg {{ 'active' if active_page == 'targets' else '' }}">
+                        <i class="fa-solid fa-bullseye w-5 text-center text-slate-400 transition-colors"></i>
+                        <span>Target Grup</span>
+                    </a>
+                    <a href="{{ url_for('dashboard_templates') }}" 
+                       class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg {{ 'active' if active_page == 'templates' else '' }}">
+                        <i class="fa-regular fa-file-lines w-5 text-center text-slate-400 transition-colors"></i>
+                        <span>Template Pesan</span>
+                    </a>
                     <a href="{{ url_for('dashboard_crm') }}" 
                        class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg {{ 'active' if active_page == 'crm' else '' }}">
                         <i class="fa-solid fa-address-book w-5 text-center text-slate-400 transition-colors"></i>
                         <span>CRM User</span>
-                    </a>
-                    <a href="{{ url_for('dashboard_broadcast') }}" 
-                       class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg {{ 'active' if active_page == 'broadcast' else '' }}">
-                        <i class="fa-solid fa-paper-plane w-5 text-center text-slate-400 transition-colors"></i>
-                        <span>Broadcast User</span>
-                    </a>
-                    <a href="{{ url_for('dashboard_auto_reply') }}" 
-                       class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg group {{ 'active' if active_page == 'autoreply' else '' }}">
-                        <i class="fa-solid fa-robot w-5 text-center text-slate-400 transition-colors"></i>
-                        <span class="flex-1">Auto Reply</span>
-                        <span class="bg-indigo-100 text-indigo-600 text-[9px] font-bold px-1.5 py-0.5 rounded border border-indigo-200 shadow-sm group-hover:bg-indigo-600 group-hover:text-white transition-colors">PRO</span>
                     </a>
                 </div>
             </div>
@@ -222,9 +222,12 @@
                     <a href="{{ url_for('dashboard_connection') }}" 
                        class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg {{ 'active' if active_page == 'connection' else '' }}">
                         <i class="fa-brands fa-telegram w-5 text-center text-slate-400 transition-colors"></i>
-                        <span>Koneksi Telegram</span>
+                        <span class="flex-1">Koneksi Telegram</span>
                         {% if user.telegram_account and user.telegram_account.is_active %}
-                            <span class="w-2 h-2 bg-emerald-500 rounded-full ml-auto shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"></span>
+                            <span class="relative flex h-2 w-2">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
                         {% else %}
                             <span class="w-2 h-2 bg-red-400 rounded-full ml-auto"></span>
                         {% endif %}
@@ -240,21 +243,20 @@
         </nav>
 
         <div class="p-4 border-t border-slate-100 bg-slate-50">
-            <div class="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm">
+            <a href="{{ url_for('dashboard_profile') }}" class="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group cursor-pointer block w-full">
                 <div class="w-9 h-9 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white flex items-center justify-center font-bold text-sm shadow-md">
                     {{ user.email[0]|upper }}
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-bold text-slate-700 truncate">{{ user.email.split('@')[0] }}</p>
+                    <p class="text-xs font-bold text-slate-700 truncate group-hover:text-indigo-600 transition-colors">{{ user.email.split('@')[0] }}</p>
                     <p class="text-[10px] text-slate-400 truncate">{{ user.plan_tier }} Plan</p>
                 </div>
-                <a href="{{ url_for('logout') }}" class="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Logout">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </a>
-            </div>
+                <button onclick="event.preventDefault(); event.stopPropagation(); if(confirm('Yakin ingin keluar?')) window.location.href='{{ url_for('logout') }}';" class="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Logout">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </button>
+            </a>
         </div>
     </aside>
-
     <main class="flex-1 flex flex-col h-screen overflow-hidden bg-[#F8FAFC] relative">
         
         <header class="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-8 z-30 sticky top-0">
@@ -313,7 +315,7 @@
                             <i class="fa-solid fa-credit-card w-5"></i> Billing
                         </a>
                         <div class="border-t border-slate-50 my-1"></div>
-                        <a href="{{ url_for('logout') }}" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium">
+                        <a href="{{ url_for('logout') }}" onclick="return confirm('Yakin ingin keluar?')" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium">
                             <i class="fa-solid fa-arrow-right-from-bracket w-5"></i> Keluar
                         </a>
                     </div>
@@ -367,7 +369,7 @@
             if(loader) {
                 setTimeout(() => {
                     loader.classList.add('hidden');
-                }, 500); // Delay dikit biar smooth
+                }, 500); 
             }
         });
 
@@ -383,7 +385,7 @@
             }
         }, 1000);
 
-        // 3. Helper API Fetcher (Global)
+        // 3. Helper API Fetcher
         async function apiRequest(url, method = 'POST', body = null) {
             try {
                 const opts = { 
@@ -405,12 +407,9 @@
 
     {% if is_demo_mode %}
     <style>
-        /* Matikan tombol fungsional biar ga error di demo */
         a[href="/logout"], .badge-admin, button#btn-scan, button#btn-import, button[type="submit"] { 
             pointer-events: none; opacity: 0.6; filter: grayscale(1); cursor: not-allowed;
         }
-        
-        /* Overlay Cantik */
         body::after {
             content: "LIVE DEMO PREVIEW";
             position: fixed;
@@ -428,8 +427,6 @@
             animation: bounce-slow 3s infinite;
         }
         @keyframes bounce-slow { 0%, 100% {transform: translateY(0);} 50% {transform: translateY(-5px);} }
-
-        /* Animasi Transisi Halaman Demo */
         #page-content {
             transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
             opacity: 1; transform: translateY(0);
@@ -442,16 +439,12 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             console.log("🚀 DEMO MODE: INTERACTIVE STARTED");
-
             const tourPages = ['dashboard', 'targets', 'schedule', 'crm', 'broadcast', 'connection'];
             let autoTourTimer = null; 
 
-            // 1. Fungsi Pindah Halaman Tanpa Reload
             async function softTransition(targetPageName) {
                 const url = `/live-demo/${targetPageName}`;
                 const contentContainer = document.getElementById('page-content');
-
-                // Efek Keluar
                 contentContainer.classList.add('fading-out');
                 await new Promise(r => setTimeout(r, 300));
 
@@ -465,7 +458,6 @@
                     contentContainer.innerHTML = newContent;
                     window.history.pushState({}, '', url);
                     
-                    // Update Warna Sidebar (Manual Class Manipulation for Demo)
                     document.querySelectorAll('.nav-item').forEach(el => {
                         el.classList.remove('active');
                         const href = el.getAttribute('href');
@@ -473,54 +465,41 @@
                             el.classList.add('active');
                         }
                     });
-
                 } catch (err) {
                     console.error("Gagal load demo page", err);
                 }
-
-                // Efek Masuk
                 contentContainer.classList.remove('fading-out');
             }
 
-            // 2. Logic Auto Tour (Pindah otomatis kalau didiemin)
             function startAutoTour() {
                 if (autoTourTimer) clearTimeout(autoTourTimer);
-
                 autoTourTimer = setTimeout(() => {
                     const currentPath = window.location.pathname.split('/').pop();
                     let currentIndex = tourPages.indexOf(currentPath);
                     if (currentIndex === -1) currentIndex = 0;
-                    
                     const nextIndex = (currentIndex + 1) % tourPages.length;
                     const nextPage = tourPages[nextIndex];
-                    
-                    console.log(`Auto Touring to: ${nextPage}`);
                     softTransition(nextPage);
-                    startAutoTour(); // Loop lagi
-                }, 10000); // 10 Detik
+                    startAutoTour(); 
+                }, 10000); 
             }
 
-            // 3. Logic Klik Manual (User Klik Sidebar)
             document.body.addEventListener('click', (e) => {
                 const link = e.target.closest('a');
                 if (!link) return;
-
                 const href = link.getAttribute('href');
                 if (!href) return;
 
-                // Cegah link berbahaya
                 if (href === '/logout' || href.includes('profile')) {
                     e.preventDefault();
                     return;
                 }
 
-                // Kalau user klik link dashboard
                 if (href.startsWith('/dashboard/')) {
-                    e.preventDefault(); // Jangan reload
+                    e.preventDefault(); 
                     const pageName = href.split('/').pop();
-                    
-                    softTransition(pageName); // Pindah halus
-                    startAutoTour(); // Reset timer auto tour
+                    softTransition(pageName); 
+                    startAutoTour(); 
                 }
                 else if (href === '/dashboard') {
                     e.preventDefault();
@@ -528,8 +507,6 @@
                     startAutoTour();
                 }
             });
-
-            // Mulai Auto Tour Pertama Kali
             startAutoTour();
         });
     </script>
