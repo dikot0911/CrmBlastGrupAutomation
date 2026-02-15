@@ -1912,9 +1912,15 @@ def scan_groups_api():
         try:
             from telethon.tl.functions.channels import GetForumTopicsRequest
             HAS_RAW_API = True
-            logger.info(f"✅ [SCANNER] Forum API (GetForumTopicsRequest) SIAP DIGUNAKAN.")
-        except ImportError as e:
-            logger.critical(f"❌ [SCANNER] Forum API TIDAK DITEMUKAN. Telethon butuh update! Error: {e}")
+            logger.info("✅ [SCANNER] Forum API (GetForumTopicsRequest) SIAP DIGUNAKAN.")
+        except ImportError:
+            # Fallback kompatibilitas: beberapa versi expose lewat namespace functions.
+            GetForumTopicsRequest = getattr(getattr(functions, "channels", object()), "GetForumTopicsRequest", None)
+            HAS_RAW_API = GetForumTopicsRequest is not None
+            if HAS_RAW_API:
+                logger.info("✅ [SCANNER] Forum API tersedia via fallback namespace.")
+            else:
+                logger.warning("⚠️ [SCANNER] Forum API tidak tersedia di versi Telethon ini. Scan forum akan dilewati.")
 
         # --- 2. CONNECT TO TELEGRAM ---
         client = None
@@ -3314,7 +3320,8 @@ if supabase:
 start_self_ping()
     
 # --- [BATAS SUCI] --
-if os.getenv("NOTIF_BOT_TOKEN"): # Cek kalo token ada
+BOT_POLLING_ENABLED = os.getenv("ENABLE_BOT_POLLING", "false").lower() in {"1", "true", "yes", "on"}
+if BOT_POLLING_ENABLED and os.getenv("NOTIF_BOT_TOKEN"):
     try:
         # Jalankan bot di thread terpisah biar ga ganggu website
         bot_thread = threading.Thread(target=run_bot_process, name="TelegramBot", daemon=True)
@@ -3322,6 +3329,8 @@ if os.getenv("NOTIF_BOT_TOKEN"): # Cek kalo token ada
         print("✅ [BOOT] Sinyal Start Bot Terkirim.", flush=True)
     except Exception as e:
         print(f"❌ [BOOT] Gagal Start Bot: {e}", flush=True)
+else:
+    logger.info("ℹ️ Telegram polling bot nonaktif. Set ENABLE_BOT_POLLING=true jika ingin menyalakan polling di proses web ini.")
 
 # --- DEBUG ROUTE (HAPUS NANTI KALO UDAH FIX) ---
 @app.route('/debug-pricing')
