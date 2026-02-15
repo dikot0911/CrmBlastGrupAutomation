@@ -344,33 +344,58 @@ class MessageTemplateManager:
 
 class AutoReplyManager:
     @staticmethod
-    def get_settings(user_id):
+    def get_settings(user_id, target_phone='all'):
+        """
+        Ambil settingan. 
+        Prioritas: Cari yang SPESIFIK dulu. Kalau gak ada, cari yang 'all' (Global).
+        Kalau dua-duanya gak ada, return Default object.
+        """
         if not supabase: return None
-        res = supabase.table('auto_reply_settings').select("*").eq('user_id', user_id).execute()
-        return res.data[0] if res.data else None
+        
+        # Coba cari spesifik dulu
+        res = supabase.table('auto_reply_settings').select("*")\
+            .eq('user_id', user_id).eq('target_phone', target_phone).execute()
+        
+        if res.data:
+            return res.data[0]
+            
+        # Kalau spesifik gak ketemu, dan yang diminta bukan 'all', coba cari fallback 'all'
+        if target_phone != 'all':
+            res_global = supabase.table('auto_reply_settings').select("*")\
+                .eq('user_id', user_id).eq('target_phone', 'all').execute()
+            if res_global.data:
+                return res_global.data[0]
+
+        # Default object kalau belum pernah disetting sama sekali
+        return {
+            'is_active': False, 
+            'cooldown_minutes': 60, 
+            'welcome_message': '', 
+            'target_phone': target_phone
+        }
 
     @staticmethod
     def update_settings(user_id, data):
-        # Upsert (Insert or Update)
-        existing = AutoReplyManager.get_settings(user_id)
-        if existing:
-            supabase.table('auto_reply_settings').update(data).eq('user_id', user_id).execute()
+        # Pastikan ada target_phone
+        target = data.get('target_phone', 'all')
+        
+        # Cek apakah setting buat target ini udah ada?
+        existing = supabase.table('auto_reply_settings').select("id")\
+            .eq('user_id', user_id).eq('target_phone', target).execute()
+            
+        if existing.data:
+            # Update
+            supabase.table('auto_reply_settings').update(data)\
+                .eq('user_id', user_id).eq('target_phone', target).execute()
         else:
+            # Insert Baru
             data['user_id'] = user_id
             supabase.table('auto_reply_settings').insert(data).execute()
 
     @staticmethod
-    def get_keywords(user_id, filter_phone=None):
-        # Base query
-        query = supabase.table('keyword_rules').select("*").eq('user_id', user_id)
-        
-        # Kalau ada filter dari dropdown UI
-        if filter_phone and filter_phone != 'all':
-            query = query.eq('target_phone', filter_phone)
-            
-        # Urutkan biar yang 'Specific Account' dicek duluan daripada 'All' (Priority)
-        # Tapi di UI kita urutkan by created_at aja biar rapi
-        res = query.order('created_at', desc=True).execute()
+    def get_keywords(user_id):
+        # Ambil semua keyword (logic filtering ada di engine/frontend)
+        res = supabase.table('keyword_rules').select("*").eq('user_id', user_id).order('created_at', desc=True).execute()
         return res.data if res.data else []
 
     @staticmethod
@@ -379,7 +404,7 @@ class AutoReplyManager:
             'user_id': user_id, 
             'keyword': keyword.lower(), 
             'response': response,
-            'target_phone': target_phone # <--- SIMPAN TARGET AKUN
+            'target_phone': target_phone
         }
         supabase.table('keyword_rules').insert(data).execute()
 
@@ -853,20 +878,17 @@ class AutoReplyService:
                     sender_id = event.sender_id
                     chat_text = event.raw_text.lower().strip()
                     
-                    # Ambil Settings & Rules Terbaru dari DB (Realtime)
-                    # Biar kalo user update keyword, langsung ngefek tanpa restart
-                    settings = AutoReplyManager.get_settings(user_id)
+                    # [FIX] Ambil Settings SPESIFIK buat nomor HP ini (my_phone)
+                    # Jadi settings 'target_phone' akan otomatis sesuai dengan bot yang lagi jalan
+                    settings = AutoReplyManager.get_settings(user_id, my_phone)
+                    
                     if not settings or not settings.get('is_active'): return
                     
-                    # Cek Target Akun (Apakah akun ini boleh jawab?)
-                    target_setting = settings.get('target_phone', 'all')
-                    if target_setting != 'all' and target_setting != my_phone: return
-
+                    # Keyword Logic (Sama kayak sebelumnya, cuma hapus cek target_setting manual karena udah dihandle get_settings)
                     keywords = AutoReplyManager.get_keywords(user_id)
                     response_text = None
 
-                    # LOGIC MATCHING
-                    # Prioritas: Spesifik > Global
+                    # LOGIC MATCHING (Sama)
                     specific = [r for r in keywords if r.get('target_phone') == my_phone]
                     global_r = [r for r in keywords if r.get('target_phone') == 'all']
                     all_rules = specific + global_r
@@ -877,7 +899,7 @@ class AutoReplyService:
                             logger.info(f"🤖 [AutoReply] {my_phone} menjawab '{rule['keyword']}' ke {sender_id}")
                             break
                     
-                    # LOGIC WELCOME (No Keyword)
+                    # LOGIC WELCOME (Pakai settingan spesifik yg udah diambil di atas)
                     if not response_text and settings.get('welcome_message'):
                         # Cek Cooldown
                         cooldown = settings.get('cooldown_minutes', 60)
@@ -2855,57 +2877,71 @@ def dashboard_auto_reply():
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
-    # 1. Handle Save Settings (Config Umum)
-    if request.method == 'POST':
-        is_active = request.form.get('is_active') == 'on'
-        target_phone = request.form.get('target_phone') # Config Global Bot
-        cooldown = request.form.get('cooldown')
-        welcome_msg = request.form.get('welcome_message')
-        
-        data = {
-            'is_active': is_active,
-            'target_phone': target_phone,
-            'cooldown_minutes': int(cooldown) if cooldown else 60,
-            'welcome_message': welcome_msg,
-            'updated_at': datetime.utcnow().isoformat()
-        }
-        AutoReplyManager.update_settings(user.id, data)
-        flash('Konfigurasi Auto Reply berhasil disimpan!', 'success')
-        return redirect(url_for('dashboard_auto_reply'))
+    # Ambil Tab Aktif (Default 'all')
+    active_tab = request.args.get('tab', 'all') 
 
-    # 2. GET DATA
-    settings = AutoReplyManager.get_settings(user.id)
-    
-    # Ambil Akun Aktif (Buat Tab Folder)
+    # --- HANDLE SAVE SETTINGS ---
+    if request.method == 'POST':
+        try:
+            # Tangkap Data Form
+            is_active = request.form.get('is_active') == 'on'
+            target_phone_input = request.form.get('target_phone') # Ini dikirim dari hidden input di modal
+            
+            # Logic Jam & Menit
+            hours = int(request.form.get('cooldown_hours', 0))
+            minutes = int(request.form.get('cooldown_minutes', 0))
+            total_minutes = (hours * 60) + minutes
+            if total_minutes < 1: total_minutes = 1 # Minimal 1 menit
+            
+            welcome_msg = request.form.get('welcome_message')
+            
+            data = {
+                'is_active': is_active,
+                'target_phone': target_phone_input,
+                'cooldown_minutes': total_minutes,
+                'welcome_message': welcome_msg,
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            
+            AutoReplyManager.update_settings(user.id, data)
+            flash(f'Pengaturan untuk {target_phone_input} berhasil disimpan!', 'success')
+            return redirect(url_for('dashboard_auto_reply', tab=target_phone_input))
+            
+        except Exception as e:
+            logger.error(f"Save Settings Error: {e}")
+            flash(f"Gagal menyimpan: {str(e)}", 'danger')
+
+    # --- GET DATA ---
+    # Ambil Akun Aktif
     accounts = []
     try:
         acc_res = supabase.table('telegram_accounts').select("*").eq('user_id', user.id).eq('is_active', True).execute()
         accounts = acc_res.data if acc_res.data else []
     except: pass
 
-    # Ambil Semua Keyword
+    # Ambil Semua Keyword User Ini
     all_keywords = AutoReplyManager.get_keywords(user.id)
     
-    # Logic Grouping (Penting Buat Folder System)
-    # Struktur: { 'all': [], '+628xxx': [], '+628yyy': [] }
+    # Grouping Keyword by Phone
     grouped_keywords = {'all': []}
     for acc in accounts:
         grouped_keywords[acc['phone_number']] = []
         
     for k in all_keywords:
         phone = k.get('target_phone', 'all')
-        if phone not in grouped_keywords: 
-            grouped_keywords[phone] = [] # Jaga-jaga kalau ada akun lama
+        if phone not in grouped_keywords:
+            grouped_keywords[phone] = []
         grouped_keywords[phone].append(k)
         
-    # UX: Biar pas abis nambah keyword gak balik ke tab awal, kita tangkap tab active dari URL
-    active_tab = request.args.get('tab', 'all') 
+    # [NEW] Ambil Settingan KHUSUS TAB YANG AKTIF buat ditampilin di Modal
+    # Kalau user buka tab "Akun A", modal akan nunjukin settingan "Akun A"
+    current_settings = AutoReplyManager.get_settings(user.id, active_tab)
     
     return render_template('dashboard/auto_reply.html', 
                            user=user, 
-                           settings=settings, 
+                           settings=current_settings, # Pass settingan spesifik
                            accounts=accounts,
-                           grouped_keywords=grouped_keywords, # Data Keyword yg udah rapi
+                           grouped_keywords=grouped_keywords,
                            active_tab=active_tab,
                            active_page='autoreply')
 
