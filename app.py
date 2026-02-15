@@ -1966,7 +1966,7 @@ def scan_groups_api():
                     member_count = getattr(entity, 'participants_count', 0)
                     username = getattr(entity, 'username', None) # Public Username
                     is_forum = getattr(dialog.entity, 'forum', False)
-                topics_list = []
+                    topics_list = []
 
                 if is_forum:
                     try:
