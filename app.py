@@ -1888,8 +1888,8 @@ def check_qr_status():
 @login_required
 def scan_groups_api():
     """
-    Advanced Group Scanner API (Ultimate Fix & Debug).
-    Fitur: Multi-Account, Forum Pagination, Metadata, Error Isolation.
+    Advanced Group Scanner API (DYNAMIC IMPORT FIX).
+    Fitur: Mencari fungsi Forum API secara dinamis tanpa peduli versi Telethon.
     """
     user_id = session.get('user_id')
     target_phone = request.args.get('phone') 
@@ -1898,44 +1898,39 @@ def scan_groups_api():
         return jsonify({"status": "error", "message": "User not authenticated."}), 401
 
     async def _scan():
-        # --- 1. SETUP LIBRARIES & CEK VERSI ---
+        # --- 1. SETUP LIBRARIES (DYNAMIC MODE) ---
         import telethon
-        from telethon import utils, types
+        from telethon import utils, types, functions
         from telethon.tl.types import InputPeerChannel
-        from telethon import functions
         
-        # [DEBUG WAJIB] Cek versi Telethon yang terinstall di Server
-        logger.info(f"🧐 [DEBUG] Telethon Version Installed: {telethon.__version__}")
+        logger.info(f"🧐 [DEBUG] Telethon Version: {telethon.__version__}")
 
-        # Cek ketersediaan fitur Forum Topic lintas versi Telethon.
-        HAS_RAW_API = False
+        # [MAGIC FIX] Cari fungsi Forum Topic secara dinamis
+        # Kita cek di 'channels' atau 'messages' namespace
         GetForumTopicsRequest = None
-        forum_api_source = None
-        try:
-            from telethon.tl.functions.channels import GetForumTopicsRequest as _GetForumTopicsRequest
-            GetForumTopicsRequest = _GetForumTopicsRequest
-            HAS_RAW_API = True
-            forum_api_source = "telethon.tl.functions.channels.GetForumTopicsRequest"
-        except Exception:
-            # Fallback: beberapa versi expose class di namespace functions.channels
-            for candidate in ("GetForumTopicsRequest", "GetForumTopics"):
-                maybe_cls = getattr(getattr(functions, "channels", object()), candidate, None)
-                if maybe_cls:
-                    GetForumTopicsRequest = maybe_cls
-                    HAS_RAW_API = True
-                    forum_api_source = f"functions.channels.{candidate}"
-                    break
-
-        if HAS_RAW_API:
-            logger.info(f"✅ [SCANNER] Forum API loaded via {forum_api_source}")
-        else:
-            logger.warning("⚠️ [SCANNER] Forum API tidak tersedia di versi Telethon ini. Fallback hanya General topic.")
+        
+        # Coba cari di functions.channels
+        if hasattr(functions.channels, 'GetForumTopicsRequest'):
+            GetForumTopicsRequest = functions.channels.GetForumTopicsRequest
+            logger.info("✅ API Found: functions.channels.GetForumTopicsRequest")
+        # Coba cari di functions.messages (kadadang disini)
+        elif hasattr(functions.messages, 'GetForumTopicsRequest'):
+            GetForumTopicsRequest = functions.messages.GetForumTopicsRequest
+            logger.info("✅ API Found: functions.messages.GetForumTopicsRequest")
+        # Coba nama lain (kadang namanya cuma GetForumTopics)
+        elif hasattr(functions.channels, 'GetForumTopics'):
+            GetForumTopicsRequest = functions.channels.GetForumTopics
+            logger.info("✅ API Found: functions.channels.GetForumTopics")
+            
+        HAS_RAW_API = GetForumTopicsRequest is not None
+        
+        if not HAS_RAW_API:
+            logger.warning("⚠️ [FATAL] Forum API beneran gak ketemu di library ini. Cek dokumentasi Telethon terbaru.")
 
         # --- 2. CONNECT TO TELEGRAM ---
         client = None
         conn_info = "Default Account"
-
-        # Opsi A: Login pakai akun spesifik
+        
         if target_phone:
             try:
                 res = supabase.table('telegram_accounts').select("session_string")\
@@ -1945,26 +1940,24 @@ def scan_groups_api():
                     await client.connect()
                     conn_info = f"Specific: {target_phone}"
             except Exception as e:
-                logger.error(f"⚠️ Gagal connect akun {target_phone}: {e}")
+                logger.error(f"Connect Error: {e}")
 
-        # Opsi B: Fallback ke akun default
         if not client:
             client = await get_active_client(user_id)
             conn_info = "Auto-Default"
 
         if not client: 
-            return jsonify({"status": "error", "message": "Tidak ada akun Telegram yang terhubung / Sesi Kadaluarsa."})
+            return jsonify({"status": "error", "message": "Tidak ada akun Telegram yang terhubung."})
 
         logger.info(f"🚀 Starting Scan Process via {conn_info}...")
         
         groups = []
-        stats = {'groups': 0, 'forums': 0, 'errors': 0, 'skipped': 0, 'topics_total': 0}
+        stats = {'groups': 0, 'forums': 0, 'errors': 0, 'skipped': 0, 'topics_found': 0}
 
         try:
             # --- 3. SCANNING LOOP ---
             async for dialog in client.iter_dialogs(limit=500):
                 try:
-                    # Filter: Hanya ambil Grup dan Supergroup
                     if not dialog.is_group:
                         stats['skipped'] += 1
                         continue 
@@ -1972,33 +1965,29 @@ def scan_groups_api():
                     entity = dialog.entity
                     real_id = utils.get_peer_id(entity)
                     
-                    # Metadata Extraction
                     member_count = getattr(entity, 'participants_count', 0)
                     username = getattr(entity, 'username', None)
                     is_forum = getattr(entity, 'forum', False)
                     
                     all_topics = []
 
-                    # --- 4. DEEP SCAN FOR FORUMS (PAGINATION) ---
+                    # --- 4. DEEP SCAN FOR FORUMS ---
                     if is_forum:
+                        stats['forums'] += 1
+                        
                         if HAS_RAW_API:
-                            stats['forums'] += 1
-                            logger.info(f"    🔍 Scanning Forum: {dialog.name}")
-                            
                             try:
-                                # Siapkan InputChannel
+                                # Input Channel Preparation
                                 access_hash = getattr(entity, 'access_hash', None)
                                 if access_hash:
                                     input_channel = InputPeerChannel(channel_id=entity.id, access_hash=access_hash)
                                 else:
                                     input_channel = await client.get_input_entity(real_id)
 
-                                offset_id = 0
-                                offset_date = 0
-                                offset_topic = 0
-                                seen_topic_ids = set()
-                                # Deep pagination: lanjut sampai habis (dengan hard limit anti-loop)
-                                for page in range(100):
+                                offset_id, offset_date, offset_topic = 0, 0, 0
+                                
+                                # Scan 5 Pages
+                                for page in range(5): 
                                     req = GetForumTopicsRequest(
                                         channel=input_channel,
                                         offset_date=offset_date,
@@ -2008,51 +1997,39 @@ def scan_groups_api():
                                         q=''
                                     )
                                     res = await client(req)
-                                    if not res.topics:
-                                        break
+                                    if not res.topics: break
                                     
-                                    before_count = len(all_topics)
                                     for t in res.topics:
                                         t_id = getattr(t, 'id', None)
-                                        if t_id and t_id not in seen_topic_ids:
-                                            seen_topic_ids.add(t_id)
+                                        if t_id:
                                             t_title = getattr(t, 'title', '')
-                                            if isinstance(t, types.ForumTopicDeleted):
-                                                t_title = f"(Deleted) #{t_id}"
-                                            elif not t_title:
-                                                t_title = f"Topic #{t_id}"
+                                            # Filter Deleted/Closed
+                                            if isinstance(t, types.ForumTopicDeleted): t_title = f"(Deleted) #{t_id}"
+                                            elif not t_title: t_title = f"Topic #{t_id}"
                                             
-                                            # Normalisasi General
+                                            # Normalize General
                                             if t_id == 1 and ("Topic #1" in t_title or not t_title): 
                                                 t_title = "General 📌"
-                                            
+                                                
                                             all_topics.append({'id': t_id, 'title': t_title})
-
-                                    added_this_page = len(all_topics) - before_count
+                                            stats['topics_found'] += 1
+                                    
                                     last = res.topics[-1]
                                     offset_id = getattr(last, 'id', 0)
                                     offset_date = getattr(last, 'date', 0)
-                                    offset_topic = getattr(last, 'id', 0)
+                                    await asyncio.sleep(0.2) # Anti Flood
 
-                                    # Stop cepat jika pagination tidak menambah data baru (hindari loop offset deadlock)
-                                    if added_this_page == 0:
-                                        break
-
-                                    # Delay kecil agar aman dari FloodWait saat forum besar
-                                    await asyncio.sleep(0.08)
-
-                                # Sort & Safety Fallback
+                                # Sort & Fallback
                                 all_topics.sort(key=lambda x: x['id'])
                                 if not any(t['id'] == 1 for t in all_topics):
                                     all_topics.insert(0, {'id': 1, 'title': 'General (Topik Utama) 📌'})
-                                stats['topics_total'] += len(all_topics)
 
                             except Exception as forum_e:
-                                logger.error(f"      🔥 Forum Scan Error ({dialog.name}): {forum_e}")
+                                logger.error(f"Forum Scan Error {dialog.name}: {forum_e}")
                                 all_topics = [{'id': 1, 'title': 'General (Fallback - Scan Error)'}]
                         else:
-                            # Jika Library Jadul, tetap kirim fallback agar UI tetap bisa dipilih.
-                            all_topics = [{'id': 1, 'title': 'General (Fallback - Update Telethon untuk scan semua topik)'}]
+                            # Kalau API beneran gak ketemu
+                            all_topics = [{'id': 1, 'title': 'General (Fallback - API Missing)'}]
                     else:
                         stats['groups'] += 1
 
@@ -2068,17 +2045,17 @@ def scan_groups_api():
                     groups.append(g_data)
 
                 except Exception as group_e:
-                    logger.warning(f"   ⚠️ Skip Group Error: {group_e}")
+                    logger.warning(f"Skip Group Error: {group_e}")
                     stats['errors'] += 1
                     continue
 
         except Exception as e:
-            logger.critical(f"GLOBAL SCAN FATAL ERROR: {e}")
+            logger.critical(f"FATAL SCAN ERROR: {e}")
             return jsonify({'status': 'error', 'message': str(e)})
         finally:
             await client.disconnect()
             
-        logger.info(f"✅ Scan Complete. Summary: {stats}")
+        logger.info(f"✅ Scan Result: {stats}")
         return jsonify({
             'status': 'success', 
             'data': groups,
