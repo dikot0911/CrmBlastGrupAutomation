@@ -1881,48 +1881,47 @@ def check_qr_status():
 # SECTION 10: BOT FEATURES API (SCAN, TARGETS, IMPORT)
 # ==============================================================================
 
-# Pastikan import functions ada di paling atas (baris 13-an). 
-# Kalau belum ada, tambahkan: from telethon import functions
+# Pastikan import functions ada di paling atas file app.py. 
+# Kalau belum, tambahkan di Section 1: from telethon import functions
 
 @app.route('/scan_groups_api')
 @login_required
 def scan_groups_api():
     """
-    Advanced Group Scanner API (Multi-Account & Forum Support).
+    Advanced Group Scanner API (Fixed & Consolidated).
     Fitur:
     - Auto Switch Account via ?phone= parameter
-    - Deep Forum Topic Pagination (Max 10 pages)
+    - Deep Forum Topic Pagination (Max 5 pages/500 topics)
     - Metadata Extraction (Member count, Username)
     - Error Isolation (Satu grup error tidak mematikan proses scan)
     """
     user_id = session.get('user_id')
-    target_phone = request.args.get('phone') # Tangkap parameter akun
+    target_phone = request.args.get('phone') 
 
     if user_id is None:
         return jsonify({"status": "error", "message": "User not authenticated."}), 401
 
     async def _scan():
-        # --- 1. SETUP LIBRARIES & CHECK VERSIONS ---
+        # --- 1. SETUP LIBRARIES ---
         import telethon
         from telethon import utils, types
         from telethon.tl.types import InputPeerChannel
         
-        # Cek ketersediaan fitur Forum Topic di library
+        # Cek ketersediaan fitur Forum Topic
         HAS_RAW_API = False
         GetForumTopicsRequest = None
         try:
-            # Import Paksa dari source internal Telethon
             from telethon.tl.functions.channels import GetForumTopicsRequest
             HAS_RAW_API = True
-            logger.info(f"✅ [SCANNER] Telethon v{telethon.__version__} - Forum API Module Loaded.")
+            logger.info(f"✅ [SCANNER] Telethon Forum API Module Loaded.")
         except ImportError as e:
             logger.critical(f"❌ [SCANNER] Forum API Missing: {e}")
 
-        # --- 2. CONNECT TO TELEGRAM (MULTI-ACCOUNT LOGIC) ---
+        # --- 2. CONNECT TO TELEGRAM ---
         client = None
         conn_info = "Default Account"
-
-        # Opsi A: Login pakai akun spesifik (jika dipilih di dropdown)
+        
+        # Opsi A: Login pakai akun spesifik
         if target_phone:
             try:
                 res = supabase.table('telegram_accounts').select("session_string")\
@@ -1934,7 +1933,7 @@ def scan_groups_api():
             except Exception as e:
                 logger.error(f"⚠️ Gagal connect akun {target_phone}: {e}")
 
-        # Opsi B: Fallback ke akun default (jika Opsi A gagal/tidak dipilih)
+        # Opsi B: Fallback ke akun default
         if not client:
             client = await get_active_client(user_id)
             conn_info = "Auto-Default"
@@ -1948,153 +1947,104 @@ def scan_groups_api():
         stats = {'groups': 0, 'forums': 0, 'errors': 0, 'skipped': 0}
 
         try:
-            # --- 3. ITERATE DIALOGS (LIMIT 500) ---
-            # Kita ambil 500 dialog terakhir biar coverage-nya luas
+            # --- 3. SCANNING LOOP (CLEAN VERSION) ---
+            # Kita ambil 500 dialog terakhir
             async for dialog in client.iter_dialogs(limit=500):
                 try:
-                    # Filter: Hanya ambil Grup dan Supergroup
-                    # Private chat & Channel Broadcast biasanya di-skip
+                    # Filter: Hanya Grup dan Supergroup
                     if not dialog.is_group:
-                        # Note: dialog.is_group mencakup Chat & Channel(Megagroup)
                         stats['skipped'] += 1
                         continue 
 
                     entity = dialog.entity
                     real_id = utils.get_peer_id(entity)
                     
-                    # Extract Metadata Tambahan (Biar data makin kaya)
+                    # Metadata Extraction
                     member_count = getattr(entity, 'participants_count', 0)
-                    username = getattr(entity, 'username', None) # Public Username
-                    is_forum = getattr(dialog.entity, 'forum', False)
-                    topics_list = []
-
-                if is_forum:
-                    try:
-                        # Minta daftar topik ke Telegram
-                        input_channel = await client.get_input_entity(dialog.entity)
-                        req = functions.channels.GetForumTopicsRequest(
-                            channel=input_channel,
-                            offset_date=0,
-                            offset_id=0,
-                            offset_topic=0,
-                            limit=50 # Ambil 50 topik teratas sudah cukup
-                        )
-                        res = await client(req)
-                        
-                        # Masukkan topik ke list
-                        for t in res.topics:
-                            if hasattr(t, 'title'):
-                                topics_list.append({'id': t.id, 'title': t.title})
-                        
-                        # Tambahkan General sebagai fallback (ID 1)
-                        if not any(x['id'] == 1 for x in topics_list):
-                            topics_list.insert(0, {'id': 1, 'title': 'General/Utama 📌'})
-                    except Exception as e:
-                        logger.error(f"Gagal tarik topik {dialog.name}: {e}")
-
-                # Masukkan is_forum dan topics ke dalam hasil scan
-                groups.append({
-                    'id': real_id,
-                    'name': dialog.name,
-                    'is_forum': is_forum,
-                    'topics': topics_list # Ini yang bakal dibaca Frontend
-                })
+                    username = getattr(entity, 'username', None)
+                    is_forum = getattr(entity, 'forum', False)
                     
+                    all_topics = []
+
+                    # --- 4. DEEP SCAN FOR FORUMS ---
+                    if is_forum and HAS_RAW_API:
+                        stats['forums'] += 1
+                        logger.info(f"    🔍 Scanning Forum: {dialog.name}")
+                        
+                        try:
+                            # Siapkan InputChannel (Penting buat API low-level)
+                            access_hash = getattr(entity, 'access_hash', None)
+                            if access_hash:
+                                input_channel = InputPeerChannel(channel_id=entity.id, access_hash=access_hash)
+                            else:
+                                input_channel = await client.get_input_entity(real_id)
+
+                            # Pagination Variables
+                            offset_id = 0
+                            offset_date = 0
+                            offset_topic = 0
+                            
+                            # Scan max 5 pages (500 topics) biar gak kena FloodWait parah
+                            for page in range(5): 
+                                req = GetForumTopicsRequest(
+                                    channel=input_channel,
+                                    offset_date=offset_date,
+                                    offset_id=offset_id,
+                                    offset_topic=offset_topic,
+                                    limit=100,
+                                    q=''
+                                )
+                                res = await client(req)
+                                if not res.topics: break
+                                
+                                for t in res.topics:
+                                    t_id = getattr(t, 'id', None)
+                                    if t_id:
+                                        t_title = getattr(t, 'title', '')
+                                        
+                                        # Handle Tipe Topik (Deleted/Closed)
+                                        if isinstance(t, types.ForumTopicDeleted):
+                                            t_title = f"(Deleted) #{t_id}"
+                                        elif not t_title:
+                                            t_title = f"Topic #{t_id}"
+                                        
+                                        # Normalisasi General (ID 1)
+                                        if t_id == 1 and ("Topic #1" in t_title or not t_title): 
+                                            t_title = "General 📌"
+                                            
+                                        all_topics.append({'id': t_id, 'title': t_title})
+                                
+                                # Update Offset buat page selanjutnya
+                                last = res.topics[-1]
+                                offset_id = getattr(last, 'id', 0)
+                                offset_date = getattr(last, 'date', 0)
+                                await asyncio.sleep(0.2) # Jeda tipis anti-ban
+
+                            # Sort & Pastikan General selalu ada
+                            all_topics.sort(key=lambda x: x['id'])
+                            if not any(t['id'] == 1 for t in all_topics):
+                                all_topics.insert(0, {'id': 1, 'title': 'General (Topik Utama) 📌'})
+
+                        except Exception as forum_e:
+                            logger.error(f"      🔥 Forum Scan Error ({dialog.name}): {forum_e}")
+                            # Fallback minimal punya General
+                            all_topics = [{'id': 1, 'title': 'General (Fallback - Scan Error)'}]
+                    else:
+                        stats['groups'] += 1
+
+                    # --- 5. CONSTRUCT DATA & APPEND (SINGLE ENTRY) ---
+                    # Ini perbaikan utamanya: cuma satu kali append per grup
                     g_data = {
                         'id': real_id, 
                         'name': dialog.name, 
                         'is_forum': is_forum,
                         'username': f"@{username}" if username else None,
                         'members': member_count,
-                        'topics': []
+                        'topics': all_topics
                     }
-
-                    # --- 4. DEEP SCAN FOR FORUMS ---
-                    if is_forum:
-                        stats['forums'] += 1
-                        logger.info(f"   🔍 Scanning Forum: {dialog.name}")
-                        
-                        if HAS_RAW_API:
-                            try:
-                                # Siapkan InputChannel dengan Access Hash
-                                # Ini wajib buat request API level rendah
-                                access_hash = getattr(entity, 'access_hash', None)
-                                if not access_hash:
-                                    # Fallback fetch entity kalau hash tidak ada di cache
-                                    input_channel = await client.get_input_entity(real_id)
-                                else:
-                                    input_channel = InputPeerChannel(channel_id=entity.id, access_hash=access_hash)
-
-                                all_topics = []
-                                offset_id = 0
-                                offset_date = 0
-                                offset_topic = 0
-                                
-                                # PAGINATION LOOP (Max 10 Page = ~1000 Topics)
-                                # Biar gak berat, kita batasi 10 request per forum
-                                for page in range(10): 
-                                    req = GetForumTopicsRequest(
-                                        channel=input_channel,
-                                        offset_date=offset_date,
-                                        offset_id=offset_id,
-                                        offset_topic=offset_topic,
-                                        limit=100,
-                                        q=''
-                                    )
-                                    res = await client(req)
-                                    
-                                    if not res.topics: break # Stop kalau habis
-                                    
-                                    for t in res.topics:
-                                        t_id = getattr(t, 'id', None)
-                                        if t_id:
-                                            t_title = getattr(t, 'title', '')
-                                            
-                                            # Handle Tipe Topik (Deleted/Closed)
-                                            if isinstance(t, types.ForumTopicDeleted):
-                                                t_title = f"(Deleted) #{t_id}"
-                                            elif not t_title:
-                                                t_title = f"Topic #{t_id}"
-                                                
-                                            # Normalisasi Nama "General"
-                                            # ID 1 biasanya General, tapi kadang namanya beda
-                                            if t_id == 1 and ("Topic #1" in t_title or not t_title): 
-                                                t_title = "General 📌"
-                                            
-                                            all_topics.append({'id': t_id, 'title': t_title})
-                                    
-                                    # Update Offset untuk halaman berikutnya
-                                    last = res.topics[-1]
-                                    offset_id = getattr(last, 'id', 0)
-                                    offset_date = getattr(last, 'date', 0)
-                                    
-                                    # Sleep tipis biar server Telegram gak ngambek (FloodWait)
-                                    await asyncio.sleep(0.2)
-
-                                # Post-Processing Data Topik
-                                all_topics.sort(key=lambda x: x['id'])
-                                
-                                # Pastikan Topik General Selalu Ada (Fallback Safety)
-                                if not any(t['id'] == 1 for t in all_topics):
-                                    all_topics.insert(0, {'id': 1, 'title': 'General (Topik Utama) 📌'})
-                                    
-                                g_data['topics'] = all_topics
-
-                            except Exception as forum_e:
-                                logger.error(f"      🔥 Forum Scan Partial Error ({dialog.name}): {forum_e}")
-                                # Kalau gagal fetch topik, minimal balikin General biar bisa dipake
-                                g_data['topics'].append({'id': 1, 'title': 'General (Fallback - Scan Error)'})
-                        else:
-                            # Kalau library gak support
-                            g_data['topics'].append({'id': 1, 'title': 'General (Fallback - Library Old)'})
-                    else:
-                        stats['groups'] += 1
-
-                    # Masukkan ke list hasil
                     groups.append(g_data)
 
                 except Exception as group_e:
-                    # Error Isolation: Satu grup error jangan bikin mati semua
                     logger.warning(f"   ⚠️ Skip Group Error: {group_e}")
                     stats['errors'] += 1
                     continue
@@ -2109,19 +2059,19 @@ def scan_groups_api():
         return jsonify({
             'status': 'success', 
             'data': groups,
-            'meta': stats # Kirim statistik ke frontend
+            'meta': stats
         })
     
     return run_async(_scan())
-    
+
 @app.route('/save_bulk_targets', methods=['POST'])
 @login_required
 def save_bulk_targets():
-    user = session['user_id'] # Pake session langsung lebih aman buat API
+    user = session['user_id']
     data = request.json
     targets = data.get('targets', [])
     source_phone = data.get('source_phone')
-    template_name = data.get('template_name', 'Scan Result ' + datetime.now().strftime('%d/%m')) # <--- BARU
+    template_name = data.get('template_name', 'Scan Result ' + datetime.now().strftime('%d/%m'))
 
     if not targets:
         return jsonify({'status': 'error', 'message': 'Tidak ada grup yang dipilih'})
@@ -2144,7 +2094,7 @@ def save_bulk_targets():
                 'created_at': datetime.now().isoformat(),
                 'source_phone': source_phone,
                 'source_name': source_name,
-                'template_name': template_name # <--- SIMPAN KE DB
+                'template_name': template_name
             })
 
         supabase.table('blast_targets').insert(final_data).execute()
@@ -2166,7 +2116,7 @@ def api_get_crm_users():
     if source != 'all' and source != 'auto':
         query = query.eq('source_phone', source)
         
-    res = query.limit(1000).execute() # Limit 1000 biar gak berat
+    res = query.limit(1000).execute()
     return jsonify(res.data)
 
 @app.route('/import_crm_api', methods=['POST'])
@@ -2174,14 +2124,13 @@ def api_get_crm_users():
 def import_crm_api():
     user_id = session['user_id']
     data = request.json
-    source_phone = data.get('source_phone') # <--- Ini Format Benar dari DB (+62...)
+    source_phone = data.get('source_phone')
 
     if not source_phone:
         return jsonify({"status": "error", "message": "Target akun belum dipilih."})
     
     async def _import():
         try:
-            # Connect pakai akun yang dipilih user
             acc_res = supabase.table('telegram_accounts').select("session_string")\
                 .eq('user_id', user_id).eq('phone_number', source_phone).eq('is_active', True).execute()
             
@@ -2196,15 +2145,11 @@ def import_crm_api():
         
         count = 0
         try:
-            # KITA PAKE 'source_phone' DARI FRONTEND SEBAGAI LABEL
-            # Biar formatnya persis sama dengan nama foldernya
             final_source_label = source_phone 
 
-            async for dialog in client.iter_dialogs(limit=1000): # Naikkan limit biar puas
+            async for dialog in client.iter_dialogs(limit=1000):
                 if dialog.is_user and not dialog.entity.bot:
                     u = dialog.entity
-                    
-                    # Skip akun sendiri
                     if u.self: continue
 
                     data_payload = {
@@ -2212,7 +2157,7 @@ def import_crm_api():
                         "user_id": u.id,
                         "username": u.username,
                         "first_name": u.first_name,
-                        "source_phone": final_source_label, # <--- LABEL KONSISTEN (+62...)
+                        "source_phone": final_source_label,
                         "last_interaction": datetime.utcnow().isoformat(),
                         "created_at": datetime.utcnow().isoformat()
                     }
@@ -2228,36 +2173,27 @@ def import_crm_api():
             
     return run_async(_import())
     
-#telegram API Routes fot tamplates
+# --- TELEGRAM API ROUTES FOR TEMPLATES ---
 def parse_telegram_link(link):
     """
     Parser Link Telegram Cerdas.
-    Support:
-    - Public: t.me/username/123
-    - Private: t.me/c/1234567890/123
+    Support Public (t.me/user/123) & Private (t.me/c/12345/123)
     """
     try:
-        # Bersihin link dari https:// atau t.me/
         clean_link = link.replace("https://t.me/", "").replace("t.me/", "").strip()
         parts = clean_link.split('/')
         
-        # Validasi dasar
         if len(parts) < 2: return None, None
         
-        # Ambil Message ID (pasti yang terakhir)
         try:
             msg_id = int(parts[-1])
         except:
-            return None, None # Kalau bukan angka berarti salah link
+            return None, None
 
-        # Cek tipe channel (Private 'c' atau Public 'username')
         if parts[0] == 'c':
-            # Private Channel ID di link biasanya tanpa -100, jadi kita tambah manual
-            # Contoh: t.me/c/1791234567/100 -> ID asli: -1001791234567
             chat_id_raw = parts[1]
             chat_id = int(f"-100{chat_id_raw}")
         else:
-            # Public Channel (Username)
             chat_id = parts[0]
             
         return chat_id, msg_id
@@ -2292,19 +2228,17 @@ def import_targets_csv():
     template_name = request.form.get('template_name')
 
     if not file or not source_phone or not template_name:
-        return jsonify({"status": "error", "message": "Data tidak lengkap (File, Akun, Nama Template wajib)."})
+        return jsonify({"status": "error", "message": "Data tidak lengkap."})
 
     try:
-        # Baca CSV
         stream = io.StringIO(file.stream.read().decode("utf-8-sig"), newline=None)
         csv_input = csv.DictReader(stream)
         
         valid_rows = []
         for row in csv_input:
-            # Mapping kolom fleksibel (Group ID, Name)
             gid = row.get('group_id') or row.get('id')
             gname = row.get('group_name') or row.get('name') or 'Imported Group'
-            topics = row.get('topics') or row.get('topic_ids') # Optional
+            topics = row.get('topics') or row.get('topic_ids')
             
             if gid:
                 valid_rows.append({
@@ -2313,20 +2247,19 @@ def import_targets_csv():
                     "group_name": gname.strip(),
                     "topic_ids": topics.strip() if topics else None,
                     "source_phone": source_phone,
-                    "template_name": template_name, # Masuk ke folder template ini
+                    "template_name": template_name,
                     "created_at": datetime.utcnow().isoformat()
                 })
         
         if valid_rows:
             supabase.table('blast_targets').insert(valid_rows).execute()
-            return jsonify({"status": "success", "message": f"Berhasil import {len(valid_rows)} grup ke template '{template_name}'."})
+            return jsonify({"status": "success", "message": f"Berhasil import {len(valid_rows)} grup."})
         else:
             return jsonify({"status": "error", "message": "File CSV kosong atau format salah."})
 
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error: {str(e)}"})
 
-# --- UPDATE API FETCH ---
 @app.route('/api/fetch_message', methods=['POST'])
 @login_required
 def fetch_telegram_message():
@@ -2338,28 +2271,65 @@ def fetch_telegram_message():
         client = await get_active_client(user_id)
         if not client: return jsonify({'status': 'error', 'message': 'Telegram disconnected.'})
         try:
-            # Parsing Link
             entity, msg_id = parse_telegram_link(link)
             if not entity or not msg_id:
                 return jsonify({'status': 'error', 'message': 'Link tidak valid.'})
 
-            # Cek Pesan
             msg = await client.get_messages(entity, ids=msg_id)
             if not msg: return jsonify({'status': 'error', 'message': 'Pesan tidak ditemukan.'})
 
-            # Kita balikin ID-nya ke Frontend biar disimpen pas user klik Save
             return jsonify({
                 'status': 'success', 
                 'text': msg.text or "", 
                 'has_media': True if msg.media else False,
-                'source_chat_id': str(utils.get_peer_id(msg.peer_id)), # ID Chat
-                'source_message_id': msg.id # ID Pesan
+                'source_chat_id': str(utils.get_peer_id(msg.peer_id)),
+                'source_message_id': msg.id
             })
         except Exception as e:
             return jsonify({'status': 'error', 'message': str(e)})
         finally: await client.disconnect()
         
     return run_async(_fetch())
+
+# --- TAMBAHAN ROUTE API DARI TARGETS.HTML YANG SEMPAT HILANG ---
+# Agar fitur Rename & Edit di dashboard berfungsi
+
+@app.route('/api/target/rename_template', methods=['POST'])
+@login_required
+def rename_target_template_api():
+    user_id = session['user_id']
+    data = request.json
+    old_name = data.get('old_name')
+    new_name = data.get('new_name')
+    source_phone = data.get('source_phone')
+    
+    try:
+        supabase.table('blast_targets').update({'template_name': new_name})\
+            .eq('user_id', user_id)\
+            .eq('source_phone', source_phone)\
+            .eq('template_name', old_name)\
+            .execute()
+        return jsonify({'status': 'success', 'message': 'Template berhasil diubah!'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+
+@app.route('/api/target/update_group', methods=['POST'])
+@login_required
+def update_target_group_api():
+    user_id = session['user_id']
+    data = request.json
+    target_id = data.get('id')
+    new_name = data.get('group_name')
+    new_topics = data.get('topic_ids')
+    
+    try:
+        supabase.table('blast_targets').update({
+            'group_name': new_name,
+            'topic_ids': new_topics
+        }).eq('id', target_id).eq('user_id', user_id).execute()
+        return jsonify({'status': 'success', 'message': 'Data grup diperbarui.'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
 # ==============================================================================
 # SECTION 11: BROADCAST SYSTEM (REAL-TIME STREAMING & HUMAN MODE)
