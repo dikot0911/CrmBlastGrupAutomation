@@ -244,7 +244,11 @@
                                 <div class="min-w-0">
                                     <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Target</p>
                                     <p class="text-xs font-bold text-slate-700 truncate">
-                                        {% if s.target_group_id %}
+                                        {% if s.target_template_name %}
+                                            <span class="text-indigo-600 flex items-center gap-1">
+                                                <i class="fa-solid fa-folder-open"></i> {{ s.target_template_name }}
+                                            </span>
+                                        {% elif s.target_group_id %}
                                             Grup ID: {{ s.target_group_id }}
                                         {% else %}
                                             🌐 Semua Grup
@@ -486,3 +490,4 @@
     });
 </script>
 {% endblock %}
+
