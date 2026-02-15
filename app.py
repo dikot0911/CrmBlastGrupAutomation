@@ -1989,12 +1989,12 @@ def scan_groups_api():
                                 # Scan 5 Pages
                                 for page in range(5): 
                                     req = GetForumTopicsRequest(
-                                        channel=input_channel,
+                                        input_channel,           # <--- Perhatikan ini! Gak pake channel=
+                                        q='',                    # Query search kosong
                                         offset_date=offset_date,
                                         offset_id=offset_id,
                                         offset_topic=offset_topic,
-                                        limit=100,
-                                        q=''
+                                        limit=100
                                     )
                                     res = await client(req)
                                     if not res.topics: break
