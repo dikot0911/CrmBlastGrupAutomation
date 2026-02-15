@@ -1888,12 +1888,13 @@ def check_qr_status():
 @login_required
 def scan_groups_api():
     """
-    Advanced Group Scanner API (Fixed & Consolidated).
-    Fitur:
+    Advanced Group Scanner API (Ultimate Fix).
+    Fitur Lengkap:
     - Auto Switch Account via ?phone= parameter
-    - Deep Forum Topic Pagination (Max 5 pages/500 topics)
+    - Deep Forum Topic Pagination (Max 10 pages/1000 topics)
     - Metadata Extraction (Member count, Username)
     - Error Isolation (Satu grup error tidak mematikan proses scan)
+    - Anti-Duplicate Logic
     """
     user_id = session.get('user_id')
     target_phone = request.args.get('phone') 
@@ -1902,26 +1903,27 @@ def scan_groups_api():
         return jsonify({"status": "error", "message": "User not authenticated."}), 401
 
     async def _scan():
-        # --- 1. SETUP LIBRARIES ---
+        # --- 1. SETUP LIBRARIES & CHECK VERSIONS ---
         import telethon
         from telethon import utils, types
         from telethon.tl.types import InputPeerChannel
         
-        # Cek ketersediaan fitur Forum Topic
+        # Cek ketersediaan fitur Forum Topic di library
         HAS_RAW_API = False
         GetForumTopicsRequest = None
         try:
+            # Import Paksa dari source internal Telethon
             from telethon.tl.functions.channels import GetForumTopicsRequest
             HAS_RAW_API = True
             logger.info(f"✅ [SCANNER] Telethon Forum API Module Loaded.")
         except ImportError as e:
             logger.critical(f"❌ [SCANNER] Forum API Missing: {e}")
 
-        # --- 2. CONNECT TO TELEGRAM ---
+        # --- 2. CONNECT TO TELEGRAM (MULTI-ACCOUNT LOGIC) ---
         client = None
         conn_info = "Default Account"
-        
-        # Opsi A: Login pakai akun spesifik
+
+        # Opsi A: Login pakai akun spesifik (jika dipilih di dropdown)
         if target_phone:
             try:
                 res = supabase.table('telegram_accounts').select("session_string")\
@@ -1933,7 +1935,7 @@ def scan_groups_api():
             except Exception as e:
                 logger.error(f"⚠️ Gagal connect akun {target_phone}: {e}")
 
-        # Opsi B: Fallback ke akun default
+        # Opsi B: Fallback ke akun default (jika Opsi A gagal/tidak dipilih)
         if not client:
             client = await get_active_client(user_id)
             conn_info = "Auto-Default"
@@ -1947,11 +1949,11 @@ def scan_groups_api():
         stats = {'groups': 0, 'forums': 0, 'errors': 0, 'skipped': 0}
 
         try:
-            # --- 3. SCANNING LOOP (CLEAN VERSION) ---
-            # Kita ambil 500 dialog terakhir
+            # --- 3. ITERATE DIALOGS (LIMIT 500) ---
+            # Kita ambil 500 dialog terakhir biar coverage-nya luas
             async for dialog in client.iter_dialogs(limit=500):
                 try:
-                    # Filter: Hanya Grup dan Supergroup
+                    # Filter: Hanya ambil Grup dan Supergroup
                     if not dialog.is_group:
                         stats['skipped'] += 1
                         continue 
@@ -1959,33 +1961,35 @@ def scan_groups_api():
                     entity = dialog.entity
                     real_id = utils.get_peer_id(entity)
                     
-                    # Metadata Extraction
+                    # Extract Metadata Tambahan (Biar data makin kaya)
                     member_count = getattr(entity, 'participants_count', 0)
-                    username = getattr(entity, 'username', None)
-                    is_forum = getattr(entity, 'forum', False)
+                    username = getattr(entity, 'username', None) # Public Username
+                    is_forum = getattr(dialog.entity, 'forum', False)
                     
+                    # Container Topik (Gabungan logic lo yang tadinya pisah)
                     all_topics = []
 
-                    # --- 4. DEEP SCAN FOR FORUMS ---
+                    # --- 4. DEEP SCAN FOR FORUMS (PAGINATION 10 PAGES) ---
                     if is_forum and HAS_RAW_API:
                         stats['forums'] += 1
                         logger.info(f"    🔍 Scanning Forum: {dialog.name}")
                         
                         try:
-                            # Siapkan InputChannel (Penting buat API low-level)
+                            # Siapkan InputChannel dengan Access Hash
                             access_hash = getattr(entity, 'access_hash', None)
-                            if access_hash:
-                                input_channel = InputPeerChannel(channel_id=entity.id, access_hash=access_hash)
-                            else:
+                            if not access_hash:
+                                # Fallback fetch entity kalau hash tidak ada di cache
                                 input_channel = await client.get_input_entity(real_id)
+                            else:
+                                input_channel = InputPeerChannel(channel_id=entity.id, access_hash=access_hash)
 
-                            # Pagination Variables
                             offset_id = 0
                             offset_date = 0
                             offset_topic = 0
                             
-                            # Scan max 5 pages (500 topics) biar gak kena FloodWait parah
-                            for page in range(5): 
+                            # PAGINATION LOOP (Max 10 Page = ~1000 Topics)
+                            # Ini logic "Code Lama" lo yang gua pertahankan
+                            for page in range(10): 
                                 req = GetForumTopicsRequest(
                                     channel=input_channel,
                                     offset_date=offset_date,
@@ -1995,7 +1999,8 @@ def scan_groups_api():
                                     q=''
                                 )
                                 res = await client(req)
-                                if not res.topics: break
+                                
+                                if not res.topics: break # Stop kalau habis
                                 
                                 for t in res.topics:
                                     t_id = getattr(t, 'id', None)
@@ -2008,32 +2013,36 @@ def scan_groups_api():
                                         elif not t_title:
                                             t_title = f"Topic #{t_id}"
                                         
-                                        # Normalisasi General (ID 1)
+                                        # Normalisasi Nama "General"
                                         if t_id == 1 and ("Topic #1" in t_title or not t_title): 
                                             t_title = "General 📌"
                                             
                                         all_topics.append({'id': t_id, 'title': t_title})
                                 
-                                # Update Offset buat page selanjutnya
+                                # Update Offset untuk halaman berikutnya
                                 last = res.topics[-1]
                                 offset_id = getattr(last, 'id', 0)
                                 offset_date = getattr(last, 'date', 0)
-                                await asyncio.sleep(0.2) # Jeda tipis anti-ban
+                                
+                                # Sleep tipis biar server Telegram gak ngambek (FloodWait)
+                                await asyncio.sleep(0.2)
 
-                            # Sort & Pastikan General selalu ada
+                            # Post-Processing Data Topik
                             all_topics.sort(key=lambda x: x['id'])
+                            
+                            # Pastikan Topik General Selalu Ada (Fallback Safety)
                             if not any(t['id'] == 1 for t in all_topics):
                                 all_topics.insert(0, {'id': 1, 'title': 'General (Topik Utama) 📌'})
 
                         except Exception as forum_e:
-                            logger.error(f"      🔥 Forum Scan Error ({dialog.name}): {forum_e}")
-                            # Fallback minimal punya General
+                            logger.error(f"      🔥 Forum Scan Partial Error ({dialog.name}): {forum_e}")
+                            # Kalau gagal fetch topik, minimal balikin General biar bisa dipake
                             all_topics = [{'id': 1, 'title': 'General (Fallback - Scan Error)'}]
                     else:
                         stats['groups'] += 1
 
-                    # --- 5. CONSTRUCT DATA & APPEND (SINGLE ENTRY) ---
-                    # Ini perbaikan utamanya: cuma satu kali append per grup
+                    # --- 5. DATA CONSTRUCTION (Satu Kali Saja) ---
+                    # Ini bagian krusial biar gak double append
                     g_data = {
                         'id': real_id, 
                         'name': dialog.name, 
@@ -2042,9 +2051,12 @@ def scan_groups_api():
                         'members': member_count,
                         'topics': all_topics
                     }
+
+                    # Masukkan ke list hasil
                     groups.append(g_data)
 
                 except Exception as group_e:
+                    # Error Isolation: Satu grup error jangan bikin mati semua
                     logger.warning(f"   ⚠️ Skip Group Error: {group_e}")
                     stats['errors'] += 1
                     continue
@@ -2059,7 +2071,7 @@ def scan_groups_api():
         return jsonify({
             'status': 'success', 
             'data': groups,
-            'meta': stats
+            'meta': stats # Kirim statistik ke frontend
         })
     
     return run_async(_scan())
