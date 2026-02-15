@@ -15,14 +15,14 @@
                     <h1 class="text-2xl font-black text-slate-800 tracking-tight">Auto Reply Engine</h1>
                     <div class="flex items-center gap-2 mt-1">
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
-                            <i class="fa-solid fa-shield-halved"></i> RAM SAVER MODE
+                            <i class="fa-solid fa-shield-halved"></i> RAM SAVER ON
                         </span>
                         <span class="text-[10px] text-slate-400 font-mono px-2 border-l border-slate-200">v3.5 Turbo</span>
                     </div>
                 </div>
             </div>
             <p class="text-slate-500 text-sm max-w-2xl mt-2">
-                Aktifkan bot hanya pada akun yang diperlukan untuk menghemat resource. Bot tidak akan berjalan jika tidak memiliki keyword aktif.
+                Aktifkan bot hanya pada akun yang diperlukan. Bot tidak akan berjalan jika tidak memiliki keyword aktif (Hemat Resource).
             </p>
         </div>
     </div>
@@ -38,6 +38,21 @@
                 </div>
                 
                 <div class="divide-y divide-slate-50">
+                    <button @click="switchTab('all')" 
+                        class="w-full flex items-center gap-3 px-4 py-3 transition-all duration-200 hover:bg-slate-50 text-left relative"
+                        :class="currentTab === 'all' ? 'bg-indigo-50/50' : ''">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center transition-colors shadow-sm border border-slate-100 bg-white text-slate-400">
+                            <i class="fa-solid fa-globe text-lg"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-bold text-xs text-slate-700">Global Rules</p>
+                            <p class="text-[10px] text-slate-400">Cadangan untuk semua</p>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500">
+                            {{ grouped_keywords['all']|length }}
+                        </span>
+                    </button>
+
                     {% for acc in accounts %}
                     {% set phone = acc.phone_number %}
                     {% set specific_count = grouped_keywords[phone]|length if phone in grouped_keywords else 0 %}
@@ -52,7 +67,7 @@
                                          :class="currentTab === '{{ phone }}' ? 'bg-indigo-600 text-white' : 'bg-white text-blue-500'">
                                         <i class="fa-brands fa-telegram text-lg"></i>
                                     </div>
-                                    <div x-show="accountStatuses['{{ phone }}']" class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+                                    <div x-show="isBotActive('{{ phone }}')" class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full transition-transform" x-transition.scale></div>
                                 </div>
                                 
                                 <div class="min-w-0">
@@ -62,9 +77,9 @@
                             </button>
 
                             <div class="flex flex-col items-end gap-1">
-                                <label class="relative inline-flex items-center cursor-pointer">
+                                <label class="relative inline-flex items-center cursor-pointer" title="Nyalakan Auto Reply">
                                     <input type="checkbox" class="sr-only peer" 
-                                           x-model="accountStatuses['{{ phone }}']"
+                                           :checked="isBotActive('{{ phone }}')"
                                            @change="toggleBot('{{ phone }}', $event)"
                                            {% if total_rules == 0 %}disabled{% endif %}>
                                            
@@ -88,32 +103,16 @@
                             
                             {% if total_rules == 0 %}
                                 <span class="text-[9px] text-red-400 font-bold flex items-center gap-1">
-                                    <i class="fa-solid fa-triangle-exclamation"></i> Kosong
+                                    <i class="fa-solid fa-triangle-exclamation"></i> Keyword Kosong
                                 </span>
                             {% else %}
-                                <span class="text-[9px] text-slate-400">Siap Kerja</span>
+                                <span class="text-[9px] text-slate-400" x-text="isBotActive('{{ phone }}') ? 'Sedang Bekerja' : 'Istirahat'"></span>
                             {% endif %}
                         </div>
                     </div>
                     {% endfor %}
                 </div>
             </div>
-
-            <button @click="switchTab('all')" 
-                class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 shadow-sm"
-                :class="currentTab === 'all' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20">
-                    <i class="fa-solid fa-globe"></i>
-                </div>
-                <div class="flex-1 text-left">
-                    <p class="font-bold text-xs">Global Rules</p>
-                    <p class="text-[10px] opacity-80">Keyword cadangan untuk semua</p>
-                </div>
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-white/20">
-                    {{ grouped_keywords['all']|length }}
-                </span>
-            </button>
-
         </div>
 
         <div class="lg:col-span-8">
@@ -128,7 +127,7 @@
                         <span x-text="currentTabName"></span>
                     </h2>
                 </div>
-                <button @click="openConfig()" class="relative z-10 w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition">
+                <button @click="openConfig()" class="relative z-10 w-9 h-9 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition shadow-sm" title="Setting Pesan Pembuka">
                     <i class="fa-solid fa-gear"></i>
                 </button>
             </div>
@@ -185,7 +184,7 @@
                         <div class="flex flex-col items-center justify-center py-20 text-center">
                             <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4"><i class="fa-solid fa-box-open text-3xl text-slate-300"></i></div>
                             <h3 class="text-slate-800 font-bold">Folder Kosong</h3>
-                            <p class="text-slate-400 text-xs mt-1">Tambahkan keyword untuk mengaktifkan bot ini.</p>
+                            <p class="text-slate-400 text-xs mt-1">Belum ada rule di folder ini.</p>
                         </div>
                     {% endif %}
                 </div>
@@ -213,7 +212,7 @@
 
             <form action="/dashboard/auto-reply" method="POST" class="p-8 space-y-6">
                 <input type="hidden" name="target_phone" x-model="currentTab">
-                <input type="hidden" name="is_active" value="on"> 
+                <input type="hidden" name="is_active" value="on">
 
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Jeda Spam (Cooldown)</label>
@@ -230,8 +229,11 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Default Welcome Message</label>
-                    <textarea id="welcomeMsg" name="welcome_message" rows="4" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition leading-relaxed">{{ settings.welcome_message if settings else '' }}</textarea>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1 flex justify-between">
+                        <span>Default Welcome Message</span>
+                        <button type="button" onclick="insertTemplate()" class="text-[10px] text-indigo-500 hover:underline">+ Template</button>
+                    </label>
+                    <textarea id="welcomeMsg" name="welcome_message" rows="4" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition leading-relaxed" placeholder="Pesan ini dikirim jika chat tidak mengandung keyword apapun...">{{ settings.welcome_message if settings else '' }}</textarea>
                 </div>
 
                 <div class="pt-2">
@@ -245,21 +247,38 @@
 </div>
 
 <script>
+    // 1. DATA STATUS DARI BACKEND (Dipassing lewat Jinja ke JS Variable)
+    const rawActivePhones = {{ active_phones|tojson }};
+    
+    // 2. NORMALIZE PHONE (Biar match +62812 sama +62 812)
+    function normalizePhone(p) {
+        if(!p) return '';
+        return p.replace(/[^0-9+]/g, '').trim(); 
+    }
+
+    // 3. Populate Initial State
+    const initialStatus = {};
+    // Kita loop semua akun yang ada di halaman, cek apakah ada di active_phones
+    {% for acc in accounts %}
+        var p = "{{ acc.phone_number }}";
+        // Cek apakah versi bersih nomor ini ada di list aktif
+        var isActive = rawActivePhones.some(x => normalizePhone(x) === normalizePhone(p));
+        initialStatus[p] = isActive;
+    {% endfor %}
+
     function autoReplyLogic() {
         return {
             currentTab: '{{ active_tab }}',
-            accountStatuses: {
-                // Populate initial status from backend logic via Jinja injection if possible, 
-                // OR fetch via API on load. For now, we assume false and let user toggle.
-                // Better approach: Injects statuses here
-                {% for acc in accounts %}
-                    '{{ acc.phone_number }}': {{ 'true' if acc.phone_number in active_phones else 'false' }},
-                {% endfor %}
-            },
+            accountStatuses: initialStatus,
             
             get currentTabName() {
                 if (this.currentTab === 'all') return 'Global Rules';
                 return this.currentTab;
+            },
+
+            // Helper Cek Status (Normalize on the fly)
+            isBotActive(phone) {
+                return this.accountStatuses[phone] === true;
             },
 
             switchTab(tab) {
@@ -269,9 +288,6 @@
             async toggleBot(phone, event) {
                 const newState = event.target.checked;
                 
-                // Optimistic UI update (biar cepet)
-                // Tapi kalau API gagal, kita revert nanti
-                
                 try {
                     const res = await apiRequest('/api/toggle_auto_reply', 'POST', {
                         target_phone: phone,
@@ -279,18 +295,17 @@
                     });
                     
                     if (res.status === 'success') {
-                        // Success Toast (Optional)
-                        console.log("Bot state updated:", newState);
+                        // Update status lokal
+                        this.accountStatuses[phone] = newState;
                     } else {
-                        // Revert UI if error
+                        alert(res.message);
+                        event.target.checked = !newState; // Balikin switch
                         this.accountStatuses[phone] = !newState;
-                        alert(res.message); // Show error message (e.g. "Minimal 1 Keyword")
-                        event.target.checked = !newState; // Uncheck checkbox
                     }
                 } catch (e) {
-                    this.accountStatuses[phone] = !newState;
-                    alert("Gagal menghubungi server.");
+                    alert("Gagal koneksi server.");
                     event.target.checked = !newState;
+                    this.accountStatuses[phone] = !newState;
                 }
             },
 
