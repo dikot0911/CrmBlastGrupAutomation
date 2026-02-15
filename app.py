@@ -389,74 +389,66 @@ class AutoReplyManager:
 
 class ReplyEngine:
     """
-    Worker yang mendengarkan pesan masuk (Incoming Listener).
-    Menangani Auto-Reply Chat Pertama & Keyword Trigger.
+    Worker Cerdas untuk Auto-Reply.
+    Fitur: Multi-Account Isolation, Priority Logic (Specific > Global), Cooldown.
     """
-    active_listeners = {} # Memory Store buat nyimpen client yang lagi 'mendengar'
+    active_listeners = {} 
 
     @staticmethod
     def start_listener(user_id, client):
-        """
-        Pasang listener HANYA jika akun ini diizinkan di settingan.
-        """
-        # Cek apakah listener untuk sesi client ini udah jalan?
-        # Kita pake session_id client sebagai key biar unik per akun
         client_key = f"{user_id}_{id(client)}"
         if client_key in ReplyEngine.active_listeners: return 
 
-        # Ambil Settingan
         settings = AutoReplyManager.get_settings(user_id)
         if not settings or not settings.get('is_active'): return
 
-        # --- [LOGIC BARU: CEK TARGET AKUN] ---
-        target_phone = settings.get('target_phone', 'all')
-        
-        # Kita butuh tau nomor HP client ini siapa
-        # Karena get_me() itu async network call, kita ambil dari memory session string/database kalau bisa
-        # Tapi cara paling akurat adalah get_me (tapi berat).
-        # Trik: Kita anggap client yang dipassing ke sini sudah authorized.
+        target_phone_setting = settings.get('target_phone', 'all')
         
         async def _attach():
             try:
                 me = await client.get_me()
                 my_phone = f"+{me.phone}" if not str(me.phone).startswith('+') else str(me.phone)
                 
-                # JIKA setting bukan 'all' DAN nomor saya bukan target -> JANGAN DENGAR
-                if target_phone != 'all' and target_phone != my_phone:
-                    # logger.info(f"🔇 Listener Skipped for {my_phone} (Target: {target_phone})")
+                # Filter Level 1: Apakah akun ini diizinkan aktif?
+                if target_phone_setting != 'all' and target_phone_setting != my_phone:
                     return
 
-                # --- LOAD RESOURCES ---
+                # Load Resources
                 keywords = AutoReplyManager.get_keywords(user_id)
                 welcome_msg = settings.get('welcome_message')
                 cooldown = settings.get('cooldown_minutes', 60)
 
-                # --- DEFINE HANDLER ---
                 @client.on(events.NewMessage(incoming=True))
                 async def handler(event):
                     try:
+                        # Filter Dasar: Jangan respon diri sendiri, bot lain, atau grup/channel
                         if event.sender_id == me.id or event.message.via_bot_id: return
                         if event.is_group or event.is_channel: return
 
                         sender_id = event.sender_id
-                        chat_text = event.raw_text.lower()
+                        chat_text = event.raw_text.lower().strip()
                         response_text = None
 
-                        # --- [LOGIC BARU] CEK KEYWORD + TARGET ---
-                        # 1. Loop semua keyword user ini
-                        for rule in keywords:
-                            # Cek kata kunci
-                            if rule['keyword'] in chat_text:
-                                # Cek Kepemilikan (Target Phone)
-                                # Lolos jika: Rule ini untuk 'all' ATAU Rule ini khusus buat nomor HP saya
-                                rule_target = rule.get('target_phone', 'all')
-                                
-                                if rule_target == 'all' or rule_target == my_phone:
-                                    response_text = rule['response']
-                                    break # Ketemu! Stop loop.
+                        # --- LOGIC PINTAR PEMILIHAN KEYWORD ---
+                        # 1. Ambil keyword yang SPESIFIK buat akun ini
+                        specific_rules = [r for r in keywords if r.get('target_phone') == my_phone]
+                        # 2. Ambil keyword GLOBAL (all)
+                        global_rules = [r for r in keywords if r.get('target_phone') == 'all']
                         
-                        # 2. Cek Welcome (Cooldown Logic)
+                        # Gabung: Prioritaskan Spesifik dulu, baru Global
+                        # Jadi kalau ada keyword sama di Spesifik & Global, yang Spesifik yang menang
+                        active_rules = specific_rules + global_rules
+                        
+                        for rule in active_rules:
+                            # Support Partial Match (mengandung kata)
+                            if rule['keyword'] in chat_text:
+                                response_text = rule['response']
+                                logger.info(f"🤖 [AutoReply] {my_phone} reply to {sender_id} | Rule: {rule['keyword']}")
+                                break 
+
+                        # --- LOGIC WELCOME MESSAGE (JIKA GAK ADA KEYWORD) ---
                         if not response_text and welcome_msg:
+                            # Cek Cooldown
                             log_res = supabase.table('reply_logs').select("last_reply_at")\
                                 .eq('user_id', user_id).eq('sender_id', sender_id).execute()
                             
@@ -466,30 +458,31 @@ class ReplyEngine:
                                 diff_min = (datetime.now(pytz.utc) - last_time).total_seconds() / 60
                                 if diff_min < cooldown: should_reply = False
                             
-                            if should_reply: response_text = welcome_msg
+                            if should_reply: 
+                                response_text = welcome_msg
+                                logger.info(f"🤖 [AutoReply] {my_phone} send WELCOME to {sender_id}")
 
-                        # 3. Action
+                        # --- EKSEKUSI BALASAN ---
                         if response_text:
+                            # Simulasi Ngetik (Humanis)
                             async with client.action(event.chat_id, 'typing'):
-                                await asyncio.sleep(random.uniform(2.0, 5.0))
+                                await asyncio.sleep(random.uniform(2.0, 4.5))
+                            
                             await event.reply(response_text)
                             
-                            # Log Activity
+                            # Catat Log biar gak spam welcome message
                             log_data = {'user_id': user_id, 'sender_id': sender_id, 'last_reply_at': datetime.utcnow().isoformat()}
-                            supabase.table('reply_logs').delete().eq('user_id', user_id).eq('sender_id', sender_id).execute()
-                            supabase.table('reply_logs').insert(log_data).execute()
+                            supabase.table('reply_logs').upsert(log_data, on_conflict="user_id, sender_id").execute()
 
                     except Exception as e:
-                        print(f"ReplyHandler Error: {e}")
+                        logger.error(f"ReplyHandler Error ({my_phone}): {e}")
 
-                # Tandai aktif
                 ReplyEngine.active_listeners[client_key] = True
-                # print(f"👂 Auto-Reply ACTIVE on {my_phone}")
+                logger.info(f"👂 Auto-Reply Active on: {my_phone}")
 
             except Exception as e:
-                print(f"Listener Attach Error: {e}")
+                logger.error(f"Listener Attach Error: {e}")
 
-        # Jalankan async attach di background
         run_async(_attach())
             
 # ==============================================================================
@@ -2707,32 +2700,58 @@ def dashboard_auto_reply():
     user = get_dashboard_context()
     if not user: return redirect(url_for('login'))
     
-    # Handle Save Settings (General)
+    # 1. Handle Save Settings (Config Umum)
     if request.method == 'POST':
-        # ... (Kode simpan setting general SAMA AJA kayak sebelumnya) ...
-        # ... (Paste logic POST settingan disini) ...
-        pass # Ganti pass dengan kode lama lu
+        is_active = request.form.get('is_active') == 'on'
+        target_phone = request.form.get('target_phone') # Config Global Bot
+        cooldown = request.form.get('cooldown')
+        welcome_msg = request.form.get('welcome_message')
+        
+        data = {
+            'is_active': is_active,
+            'target_phone': target_phone,
+            'cooldown_minutes': int(cooldown) if cooldown else 60,
+            'welcome_message': welcome_msg,
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        AutoReplyManager.update_settings(user.id, data)
+        flash('Konfigurasi Auto Reply berhasil disimpan!', 'success')
+        return redirect(url_for('dashboard_auto_reply'))
 
-    # --- GET DATA ---
+    # 2. GET DATA
     settings = AutoReplyManager.get_settings(user.id)
     
-    # Filter Keyword (Tangkap dari URL dropdown)
-    filter_source = request.args.get('source', 'all')
-    keywords = AutoReplyManager.get_keywords(user.id, filter_source if filter_source != 'all' else None)
-    
-    # Ambil Akun Aktif buat Dropdown
+    # Ambil Akun Aktif (Buat Tab Folder)
     accounts = []
     try:
         acc_res = supabase.table('telegram_accounts').select("*").eq('user_id', user.id).eq('is_active', True).execute()
         accounts = acc_res.data if acc_res.data else []
     except: pass
+
+    # Ambil Semua Keyword
+    all_keywords = AutoReplyManager.get_keywords(user.id)
+    
+    # Logic Grouping (Penting Buat Folder System)
+    # Struktur: { 'all': [], '+628xxx': [], '+628yyy': [] }
+    grouped_keywords = {'all': []}
+    for acc in accounts:
+        grouped_keywords[acc['phone_number']] = []
+        
+    for k in all_keywords:
+        phone = k.get('target_phone', 'all')
+        if phone not in grouped_keywords: 
+            grouped_keywords[phone] = [] # Jaga-jaga kalau ada akun lama
+        grouped_keywords[phone].append(k)
+        
+    # UX: Biar pas abis nambah keyword gak balik ke tab awal, kita tangkap tab active dari URL
+    active_tab = request.args.get('tab', 'all') 
     
     return render_template('dashboard/auto_reply.html', 
                            user=user, 
                            settings=settings, 
-                           keywords=keywords,
                            accounts=accounts,
-                           current_filter=filter_source, # Kirim status filter ke HTML
+                           grouped_keywords=grouped_keywords, # Data Keyword yg udah rapi
+                           active_tab=active_tab,
                            active_page='autoreply')
 
 @app.route('/add_keyword', methods=['POST'])
@@ -2740,13 +2759,13 @@ def dashboard_auto_reply():
 def add_keyword_route():
     key = request.form.get('keyword')
     resp = request.form.get('response')
-    target = request.form.get('target_phone', 'all') # <--- TANGKAP TARGET
+    target = request.form.get('target_phone', 'all') # <--- PENTING: Tangkap target akun
     
     if key and resp:
         AutoReplyManager.add_keyword(session['user_id'], key, resp, target)
-        flash('Rule baru berhasil ditambahkan.', 'success')
+        flash(f'Keyword "{key}" berhasil ditambahkan untuk {target if target != "all" else "Semua Akun"}.', 'success')
         
-    return redirect(url_for('dashboard_auto_reply'))
+    return redirect(url_for('dashboard_auto_reply', tab=target)) # Balik ke tab yang sama
 
 @app.route('/delete_keyword/<int:id>')
 @login_required
