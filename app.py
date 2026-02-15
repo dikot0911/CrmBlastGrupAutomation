@@ -564,19 +564,49 @@ class SchedulerWorker:
                 .eq('run_minute', current_minute)\
                 .execute()
                 
-            schedules = res.data # Sekarang aman karena 'res' sudah ada
-            
+            schedules = res.data
             if not schedules: return
                 
-            logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal untuk {current_hour}:{current_minute} WIB")
+            logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal induk.")
             
             for task in schedules:
-                # Jalankan task di thread terpisah biar loop utama gak macet
-                threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
+                # [LOGIC BARU: EXPAND TEMPLATE SAAT RUNTIME]
+                # Cek apakah jadwal ini pakai Template Koleksi?
+                if task.get('target_template_name'):
+                    # Ambil nama template
+                    tmpl_name = task['target_template_name']
+                    user_id = task['user_id']
+                    
+                    # Cari semua grup yang ada di template ini (REAL-TIME FETCH)
+                    targets = supabase.table('blast_targets').select("*")\
+                        .eq('user_id', user_id)\
+                        .eq('template_name', tmpl_name)\
+                        .execute().data
+                        
+                    if targets:
+                        logger.info(f"📂 Expanding Collection '{tmpl_name}': {len(targets)} groups found.")
+                        
+                        # Loop bikin task virtual buat setiap grup dalam template
+                        for t in targets:
+                            # Bikin copy task biar gak ngerusak data asli
+                            sub_task = task.copy()
+                            # Override target dengan ID Grup spesifik dari template
+                            sub_task['target_group_id'] = t['id'] 
+                            # Pastikan sender kebawa
+                            sub_task['sender_phone'] = task.get('sender_phone') 
+                            
+                            # Jalankan Eksekusi
+                            threading.Thread(target=SchedulerWorker._execute_task, args=(sub_task,)).start()
+                    else:
+                        logger.warning(f"⚠️ Collection '{tmpl_name}' kosong pas mau jalan.")
+                
+                else:
+                    # Jadwal Biasa (Single Group) - Jalankan langsung
+                    threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
                 
         except Exception as e:
             logger.error(f"Scheduler Process Error: {e}")
-
+            
     @staticmethod
     def _execute_task(task):
         """
@@ -2523,65 +2553,45 @@ def add_schedule():
         sender_phone = 'auto'
 
     try:
-        # Cek apakah inputnya Template atau Grup Biasa
-        if target_input and target_input.startswith("TEMPLATE:"):
-            # Opsi A: User milih TEMPLATE -> Bikin Jadwal Massal
-            tmpl_name = target_input.replace("TEMPLATE:", "")
-            
-            # [FIX] Select kolom 'id' (Primary Key) juga, bukan cuma group_id
-            targets = supabase.table('blast_targets').select("id, group_id")\
-                .eq('user_id', user.id)\
-                .eq('template_name', tmpl_name)\
-                .execute().data
-                
-            if not targets:
-                flash('Template target kosong atau tidak ditemukan.', 'danger')
-                return redirect(url_for('dashboard_schedule'))
-                
-            # Loop bikin jadwal buat tiap grup (Batch Insert)
-            schedules_data = []
-            for t in targets:
-                schedules_data.append({
-                    'user_id': user.id,
-                    'run_hour': int(hour),
-                    'run_minute': int(minute),
-                    'template_id': int(template_id) if template_id else None,
-                    # [CRITICAL FIX] Gunakan Primary Key 'id', BUKAN 'group_id' Telegram
-                    'target_group_id': int(t['id']), 
-                    'sender_phone': sender_phone,
-                    'status': 'active',
-                    'created_at': datetime.now().isoformat()
-                })
-            
-            # Eksekusi Massal
-            if schedules_data:
-                supabase.table('blast_schedules').insert(schedules_data).execute()
-                flash(f'Berhasil membuat {len(schedules_data)} jadwal dari koleksi "{tmpl_name}"!', 'success')
-                
-        else:
-            # Opsi B: User milih Grup Satuan (Single)
-            # Pastikan ini ID database, bukan ID Telegram (kecuali kalau select option value-nya emang ID DB)
-            # Di HTML lo, value option adalah t.id (ID Database), jadi ini aman.
-            
-            final_target_id = int(target_input) if target_input else None
+        # Data Dasar (Default)
+        data = {
+            'user_id': user.id,
+            'run_hour': int(hour),
+            'run_minute': int(minute),
+            'template_id': int(template_id) if template_id else None,
+            'sender_phone': sender_phone,
+            'status': 'active',
+            'created_at': datetime.now().isoformat(),
+            'target_group_id': None,        # Default Kosong
+            'target_template_name': None    # Default Kosong
+        }
 
-            data = {
-                'user_id': user.id,
-                'run_hour': int(hour),
-                'run_minute': int(minute),
-                'template_id': int(template_id) if template_id else None,
-                'target_group_id': final_target_id,
-                'sender_phone': sender_phone,
-                'status': 'active',
-                'created_at': datetime.now().isoformat()
-            }
-            supabase.table('blast_schedules').insert(data).execute()
-            flash('Jadwal berhasil ditambahkan!', 'success')
+        # Logic Penentuan Target
+        if target_input and target_input.startswith("TEMPLATE:"):
+            # KASUS A: User milih TEMPLATE (Koleksi)
+            # Kita simpan NAMA TEMPLATE-nya aja, jadi cuma 1 Baris di Database
+            tmpl_name = target_input.replace("TEMPLATE:", "")
+            data['target_template_name'] = tmpl_name
+            
+            # Validasi tipis: Cek template ada isinya gak?
+            check = supabase.table('blast_targets').select("id").eq('template_name', tmpl_name).limit(1).execute()
+            if not check.data:
+                flash('Template target kosong/tidak ditemukan.', 'warning')
+                return redirect(url_for('dashboard_schedule'))
+
+        else:
+            # KASUS B: User milih Grup Satuan (Single)
+            if target_input:
+                # Disini kita simpan ID Database (Primary Key), bukan ID Telegram
+                data['target_group_id'] = int(target_input)
+
+        # Simpan ke DB (Cuma 1 baris, gak bakal double!)
+        supabase.table('blast_schedules').insert(data).execute()
+        flash('Jadwal berhasil disimpan!', 'success')
         
     except Exception as e:
         logger.error(f"Error add schedule: {e}")
-        # flash(f'Gagal membuat jadwal: {str(e)}', 'error') # Uncomment kalo mau liat error di UI
-        flash('Terjadi kesalahan saat menyimpan jadwal.', 'danger')
+        flash(f'Gagal membuat jadwal: {str(e)}', 'danger')
 
     return redirect(url_for('dashboard_schedule'))
 
