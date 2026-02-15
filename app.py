@@ -1965,7 +1965,40 @@ def scan_groups_api():
                     # Extract Metadata Tambahan (Biar data makin kaya)
                     member_count = getattr(entity, 'participants_count', 0)
                     username = getattr(entity, 'username', None) # Public Username
-                    is_forum = getattr(entity, 'forum', False)
+                    is_forum = getattr(dialog.entity, 'forum', False)
+                topics_list = []
+
+                if is_forum:
+                    try:
+                        # Minta daftar topik ke Telegram
+                        input_channel = await client.get_input_entity(dialog.entity)
+                        req = functions.channels.GetForumTopicsRequest(
+                            channel=input_channel,
+                            offset_date=0,
+                            offset_id=0,
+                            offset_topic=0,
+                            limit=50 # Ambil 50 topik teratas sudah cukup
+                        )
+                        res = await client(req)
+                        
+                        # Masukkan topik ke list
+                        for t in res.topics:
+                            if hasattr(t, 'title'):
+                                topics_list.append({'id': t.id, 'title': t.title})
+                        
+                        # Tambahkan General sebagai fallback (ID 1)
+                        if not any(x['id'] == 1 for x in topics_list):
+                            topics_list.insert(0, {'id': 1, 'title': 'General/Utama 📌'})
+                    except Exception as e:
+                        logger.error(f"Gagal tarik topik {dialog.name}: {e}")
+
+                # Masukkan is_forum dan topics ke dalam hasil scan
+                groups.append({
+                    'id': real_id,
+                    'name': dialog.name,
+                    'is_forum': is_forum,
+                    'topics': topics_list # Ini yang bakal dibaca Frontend
+                })
                     
                     g_data = {
                         'id': real_id, 
