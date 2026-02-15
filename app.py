@@ -1906,21 +1906,29 @@ def scan_groups_api():
         # [DEBUG WAJIB] Cek versi Telethon yang terinstall di Server
         logger.info(f"🧐 [DEBUG] Telethon Version Installed: {telethon.__version__}")
 
-        # Cek ketersediaan fitur Forum Topic
+        # Cek ketersediaan fitur Forum Topic lintas versi Telethon.
         HAS_RAW_API = False
         GetForumTopicsRequest = None
+        forum_api_source = None
         try:
-            from telethon.tl.functions.channels import GetForumTopicsRequest
+            from telethon.tl.functions.channels import GetForumTopicsRequest as _GetForumTopicsRequest
+            GetForumTopicsRequest = _GetForumTopicsRequest
             HAS_RAW_API = True
-            logger.info("✅ [SCANNER] Forum API (GetForumTopicsRequest) SIAP DIGUNAKAN.")
-        except ImportError:
-            # Fallback kompatibilitas: beberapa versi expose lewat namespace functions.
-            GetForumTopicsRequest = getattr(getattr(functions, "channels", object()), "GetForumTopicsRequest", None)
-            HAS_RAW_API = GetForumTopicsRequest is not None
-            if HAS_RAW_API:
-                logger.info("✅ [SCANNER] Forum API tersedia via fallback namespace.")
-            else:
-                logger.warning("⚠️ [SCANNER] Forum API tidak tersedia di versi Telethon ini. Scan forum akan dilewati.")
+            forum_api_source = "telethon.tl.functions.channels.GetForumTopicsRequest"
+        except Exception:
+            # Fallback: beberapa versi expose class di namespace functions.channels
+            for candidate in ("GetForumTopicsRequest", "GetForumTopics"):
+                maybe_cls = getattr(getattr(functions, "channels", object()), candidate, None)
+                if maybe_cls:
+                    GetForumTopicsRequest = maybe_cls
+                    HAS_RAW_API = True
+                    forum_api_source = f"functions.channels.{candidate}"
+                    break
+
+        if HAS_RAW_API:
+            logger.info(f"✅ [SCANNER] Forum API loaded via {forum_api_source}")
+        else:
+            logger.warning("⚠️ [SCANNER] Forum API tidak tersedia di versi Telethon ini. Fallback hanya General topic.")
 
         # --- 2. CONNECT TO TELEGRAM ---
         client = None
@@ -1949,7 +1957,7 @@ def scan_groups_api():
         logger.info(f"🚀 Starting Scan Process via {conn_info}...")
         
         groups = []
-        stats = {'groups': 0, 'forums': 0, 'errors': 0, 'skipped': 0}
+        stats = {'groups': 0, 'forums': 0, 'errors': 0, 'skipped': 0, 'topics_total': 0}
 
         try:
             # --- 3. SCANNING LOOP ---
@@ -1987,9 +1995,9 @@ def scan_groups_api():
                                 offset_id = 0
                                 offset_date = 0
                                 offset_topic = 0
-                                
-                                # Loop 10 halaman (Max 1000 topik)
-                                for page in range(10): 
+                                seen_topic_ids = set()
+                                # Deep pagination: lanjut sampai habis (dengan hard limit anti-loop)
+                                for page in range(100):
                                     req = GetForumTopicsRequest(
                                         channel=input_channel,
                                         offset_date=offset_date,
@@ -1999,11 +2007,14 @@ def scan_groups_api():
                                         q=''
                                     )
                                     res = await client(req)
-                                    if not res.topics: break
+                                    if not res.topics:
+                                        break
                                     
+                                    before_count = len(all_topics)
                                     for t in res.topics:
                                         t_id = getattr(t, 'id', None)
-                                        if t_id:
+                                        if t_id and t_id not in seen_topic_ids:
+                                            seen_topic_ids.add(t_id)
                                             t_title = getattr(t, 'title', '')
                                             if isinstance(t, types.ForumTopicDeleted):
                                                 t_title = f"(Deleted) #{t_id}"
@@ -2015,23 +2026,32 @@ def scan_groups_api():
                                                 t_title = "General 📌"
                                             
                                             all_topics.append({'id': t_id, 'title': t_title})
-                                    
+
+                                    added_this_page = len(all_topics) - before_count
                                     last = res.topics[-1]
                                     offset_id = getattr(last, 'id', 0)
                                     offset_date = getattr(last, 'date', 0)
-                                    await asyncio.sleep(0.2)
+                                    offset_topic = getattr(last, 'id', 0)
+
+                                    # Stop cepat jika pagination tidak menambah data baru (hindari loop offset deadlock)
+                                    if added_this_page == 0:
+                                        break
+
+                                    # Delay kecil agar aman dari FloodWait saat forum besar
+                                    await asyncio.sleep(0.08)
 
                                 # Sort & Safety Fallback
                                 all_topics.sort(key=lambda x: x['id'])
                                 if not any(t['id'] == 1 for t in all_topics):
                                     all_topics.insert(0, {'id': 1, 'title': 'General (Topik Utama) 📌'})
+                                stats['topics_total'] += len(all_topics)
 
                             except Exception as forum_e:
                                 logger.error(f"      🔥 Forum Scan Error ({dialog.name}): {forum_e}")
                                 all_topics = [{'id': 1, 'title': 'General (Fallback - Scan Error)'}]
                         else:
-                            # Jika Library Jadul
-                            all_topics = [{'id': 1, 'title': 'General (Error: Library Old)'}]
+                            # Jika Library Jadul, tetap kirim fallback agar UI tetap bisa dipilih.
+                            all_topics = [{'id': 1, 'title': 'General (Fallback - Update Telethon untuk scan semua topik)'}]
                     else:
                         stats['groups'] += 1
 
