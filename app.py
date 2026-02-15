@@ -847,40 +847,52 @@ class AutoReplyService:
 
     @classmethod
     async def _main_supervisor(cls):
-        """
-        Loop abadi yang mengecek database setiap 30 detik:
-        - Ada akun baru yg aktif? -> Nyalakan satpamnya.
-        - Ada akun yg logout/mati? -> Matikan satpamnya.
-        """
-        logger.info("👀 [SATPAM] Mulai memantau akun aktif...")
+        logger.info("👀 [SATPAM] Mulai patroli hemat RAM...")
         while True:
             try:
                 if supabase:
-                    # Ambil semua akun yang statusnya AKTIF
-                    res = supabase.table('telegram_accounts').select("*").eq('is_active', True).execute()
-                    accounts = res.data or []
+                    # 1. Ambil list akun Telegram yang terdaftar & aktif sesinya
+                    acc_res = supabase.table('telegram_accounts').select("*").eq('is_active', True).execute()
+                    all_accounts = acc_res.data or []
                     
+                    # 2. Ambil settingan Auto Reply yang statusnya ON (True)
+                    # Kita cuma mau akun yang DI-IZINKAN NYALA
+                    settings_res = supabase.table('auto_reply_settings').select("target_phone").eq('is_active', True).execute()
+                    allowed_phones = [s['target_phone'] for s in settings_res.data]
+                    
+                    # Tambahan: Kalau ada setting 'all' yang aktif, berarti semua akun boleh nyala?
+                    # Strategi Hemat RAM: TIDAK. Kita paksa user nyalain per akun biar sadar resource.
+                    # Tapi kalau lu mau 'all' ngetrigger semua, uncomment baris bawah:
+                    # if 'all' in allowed_phones: allowed_phones = [a['phone_number'] for a in all_accounts]
+
                     active_keys = []
                     
-                    for acc in accounts:
-                        # Buat Key Unik: IDUser_NomorHP
-                        key = f"{acc['user_id']}_{acc['phone_number']}"
-                        active_keys.append(key)
+                    for acc in all_accounts:
+                        phone = AutoReplyManager.normalize_phone(acc['phone_number'])
                         
-                        # Jika satpam untuk akun ini belum ada, buat baru!
-                        if key not in cls._clients:
-                            await cls._start_client(acc, key)
+                        # SYARAT LOGIN: 
+                        # 1. Nomor HP ada di daftar allowed_phones (Status ON)
+                        if phone in allowed_phones:
+                            key = f"{acc['user_id']}_{acc['phone_number']}"
+                            active_keys.append(key)
+                            
+                            if key not in cls._clients:
+                                await cls._start_client(acc, key)
+                        else:
+                            # Kalau status OFF tapi masih connect, matikan (Hemat RAM)
+                            key = f"{acc['user_id']}_{acc['phone_number']}"
+                            if key in cls._clients:
+                                await cls._stop_client(key)
                     
-                    # Bersih-bersih: Matikan satpam untuk akun yang udah gak ada di list aktif
+                    # 3. Cleanup sisa
                     for existing_key in list(cls._clients.keys()):
                         if existing_key not in active_keys:
                             await cls._stop_client(existing_key)
                             
             except Exception as e:
-                logger.error(f"⚠️ [SATPAM] Error Supervisor: {e}")
+                logger.error(f"⚠️ [SATPAM] Supervisor Error: {e}")
             
-            # Istirahat 30 detik sebelum cek DB lagi
-            await asyncio.sleep(30)
+            await asyncio.sleep(25) # Cek tiap 25 detik
 
     @classmethod
     async def _start_client(cls, acc_data, key):
@@ -2986,13 +2998,65 @@ def dashboard_auto_reply():
     # Ambil settingan spesifik tab
     current_settings = AutoReplyManager.get_settings(user.id, active_tab)
     
+    # Ambil list nomor HP yang statusnya AKTIF buat inisialisasi toggle JS
+    active_settings = supabase.table('auto_reply_settings').select("target_phone").eq('is_active', True).execute()
+    active_phones = [s['target_phone'] for s in active_settings.data] if active_settings.data else []
     return render_template('dashboard/auto_reply.html', 
                            user=user, 
                            settings=current_settings, 
                            accounts=accounts,
                            grouped_keywords=grouped,
                            active_tab=active_tab,
+                           active_phones=active_phones, # <--- TAMBAHAN PENTING
                            active_page='autoreply')
+
+@app.route('/api/toggle_auto_reply', methods=['POST'])
+@login_required
+def api_toggle_auto_reply():
+    user_id = session['user_id']
+    data = request.json
+    target_phone = data.get('target_phone')
+    desired_state = data.get('state') # True (Mau ON) atau False (Mau OFF)
+
+    try:
+        # 1. Kalau mau ON, Cek Syarat: Harus punya minimal 1 keyword
+        if desired_state:
+            rules = supabase.table('keyword_rules').select("id", count='exact')\
+                .eq('user_id', user_id).eq('target_phone', target_phone).execute()
+            
+            # Cek juga Global Rules
+            global_rules = supabase.table('keyword_rules').select("id", count='exact')\
+                .eq('user_id', user_id).eq('target_phone', 'all').execute()
+            
+            total_rules = (rules.count or 0) + (global_rules.count or 0)
+            
+            if total_rules == 0:
+                return jsonify({
+                    "status": "error", 
+                    "message": "⚠️ Minimal buat 1 Keyword (Rule) dulu sebelum mengaktifkan bot ini!"
+                }), 400
+
+        # 2. Update Setting
+        # Cek dulu row-nya ada gak
+        current = AutoReplyManager.get_settings(user_id, target_phone)
+        
+        # Siapkan data update
+        update_data = {
+            'user_id': user_id,
+            'target_phone': target_phone,
+            'is_active': desired_state,
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        # Simpan (Pakai fungsi manager yang udah kita buat)
+        AutoReplyManager.update_settings(user_id, update_data)
+        
+        status_msg = "✅ Bot Aktif" if desired_state else "zzz Bot Istirahat"
+        return jsonify({"status": "success", "message": status_msg})
+
+    except Exception as e:
+        logger.error(f"Toggle Error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/add_keyword', methods=['POST'])
 @login_required
