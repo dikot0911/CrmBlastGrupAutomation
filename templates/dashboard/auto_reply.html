@@ -27,16 +27,19 @@
                                 SYSTEM PAUSED
                             </span>
                         {% endif %}
-                        <span class="text-[10px] text-slate-400 font-mono px-2 border-l border-slate-200">v2.5.0</span>
+                        <span class="text-[10px] text-slate-400 font-mono px-2 border-l border-slate-200">v3.0.0 Pro</span>
                     </div>
                 </div>
             </div>
+            <p class="text-slate-500 text-sm max-w-2xl mt-2">
+                Pusat komando balasan otomatis. Kelola keyword dan pesan pembuka secara terpisah untuk setiap akun Telegram Anda.
+            </p>
         </div>
 
         <div class="flex gap-3 w-full md:w-auto">
             <button @click="openConfig()" class="flex-1 md:flex-none px-5 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 hover:text-indigo-600 transition shadow-sm flex items-center justify-center gap-2 group">
                 <i class="fa-solid fa-sliders group-hover:rotate-180 transition-transform duration-500"></i>
-                <span>Global Config</span>
+                <span x-text="currentTab === 'all' ? 'Global Config' : 'Account Config'"></span>
             </button>
         </div>
     </div>
@@ -44,26 +47,20 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         <div class="lg:col-span-3 flex flex-col gap-4 sticky top-24">
-            
             <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Database Folder</p>
-                
                 <div class="space-y-2">
                     <button @click="switchTab('all')" 
                         :class="currentTab === 'all' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-600 hover:bg-slate-50 border border-transparent'"
                         class="w-full flex items-center justify-between px-3 py-3 rounded-xl transition-all duration-200 group text-left relative overflow-hidden">
-                        
                         <div class="flex items-center gap-3 relative z-10">
                             <div :class="currentTab === 'all' ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500'" 
-                                 class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors">
-                                <i class="fa-solid fa-globe"></i>
-                            </div>
+                                 class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"><i class="fa-solid fa-globe"></i></div>
                             <div>
                                 <p class="font-bold text-xs">Global Rules</p>
-                                <p :class="currentTab === 'all' ? 'text-indigo-200' : 'text-slate-400'" class="text-[10px] font-medium">Berlaku Semua Akun</p>
+                                <p :class="currentTab === 'all' ? 'text-indigo-200' : 'text-slate-400'" class="text-[10px] font-medium">Semua Akun</p>
                             </div>
                         </div>
-                        
                         <span :class="currentTab === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'" 
                               class="text-[10px] font-bold px-2 py-0.5 rounded-md relative z-10">
                             {{ grouped_keywords['all']|length }}
@@ -76,18 +73,14 @@
                     <button @click="switchTab('{{ acc.phone_number }}')" 
                         :class="currentTab === '{{ acc.phone_number }}' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-600 hover:bg-slate-50 border border-transparent'"
                         class="w-full flex items-center justify-between px-3 py-3 rounded-xl transition-all duration-200 group text-left relative overflow-hidden">
-                        
                         <div class="flex items-center gap-3 relative z-10">
                             <div :class="currentTab === '{{ acc.phone_number }}' ? 'bg-white/20' : 'bg-blue-50 text-blue-500 group-hover:bg-indigo-50 group-hover:text-indigo-500'" 
-                                 class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors">
-                                <i class="fa-brands fa-telegram"></i>
-                            </div>
+                                 class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"><i class="fa-brands fa-telegram"></i></div>
                             <div class="min-w-0">
                                 <p class="font-bold text-xs truncate max-w-[120px]">{{ acc.first_name }}</p>
                                 <p :class="currentTab === '{{ acc.phone_number }}' ? 'text-indigo-200' : 'text-slate-400'" class="text-[10px] font-medium truncate">{{ acc.phone_number }}</p>
                             </div>
                         </div>
-                        
                         <span :class="currentTab === '{{ acc.phone_number }}' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'" 
                               class="text-[10px] font-bold px-2 py-0.5 rounded-md relative z-10">
                             {{ grouped_keywords[acc.phone_number]|length if acc.phone_number in grouped_keywords else 0 }}
@@ -96,7 +89,7 @@
                     {% endfor %}
                 </div>
             </div>
-
+            
             <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 p-4 rounded-2xl">
                 <div class="flex items-start gap-3">
                     <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-amber-500 shadow-sm flex-shrink-0">
@@ -105,19 +98,15 @@
                     <div>
                         <h4 class="text-xs font-bold text-amber-800 uppercase mb-1">Tips Folder</h4>
                         <p class="text-[10px] text-amber-700 leading-relaxed">
-                            Keyword di folder <b>Global Rules</b> akan dijawab oleh semua bot. Keyword di folder akun spesifik hanya dijawab oleh bot tersebut (Prioritas Tinggi).
+                            Keyword di folder akun spesifik akan diprioritaskan. Jika tidak ada, baru bot akan mencari di Global Rules.
                         </p>
                     </div>
                 </div>
             </div>
-
         </div>
 
         <div class="lg:col-span-9">
-            
-            <div class="bg-white rounded-t-2xl border border-slate-100 p-6 flex justify-between items-center relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
-                
+            <div class="bg-white rounded-t-2xl border border-slate-100 p-6 flex justify-between items-center relative overflow-hidden bg-pattern">
                 <div class="relative z-10">
                     <div class="flex items-center gap-2 mb-1">
                         <i class="fa-regular fa-folder-open text-indigo-500"></i>
@@ -132,62 +121,45 @@
             <div class="bg-slate-50 border-x border-slate-100 p-6">
                 <form action="/add_keyword" method="POST" class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:border-indigo-500 transition-all duration-300">
                     <input type="hidden" name="target_phone" x-model="currentTab">
-
                     <div class="flex flex-col md:flex-row gap-2">
                         <div class="relative w-full md:w-1/3">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-wider">JIKA</span>
-                            </div>
-                            <input type="text" name="keyword" required placeholder='User ketik "harga"...' 
-                                class="w-full pl-16 pr-4 py-3 bg-transparent border-b md:border-b-0 md:border-r border-slate-100 text-sm font-bold text-slate-800 placeholder-slate-300 focus:outline-none focus:bg-slate-50 rounded-xl transition">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><span class="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-wider">JIKA</span></div>
+                            <input type="text" name="keyword" required placeholder='User ketik "harga"...' class="w-full pl-16 pr-4 py-3 bg-transparent border-b md:border-b-0 md:border-r border-slate-100 text-sm font-bold text-slate-800 focus:outline-none rounded-xl">
                         </div>
-                        
                         <div class="relative w-full md:flex-1">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-wider">MAKA</span>
-                            </div>
-                            <input type="text" name="response" required placeholder="Balas: Cek PDF ini ya..." 
-                                class="w-full pl-16 pr-4 py-3 bg-transparent text-sm font-medium text-slate-600 placeholder-slate-300 focus:outline-none focus:bg-slate-50 rounded-xl transition">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><span class="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-wider">MAKA</span></div>
+                            <input type="text" name="response" required placeholder="Balas: Cek PDF ini ya..." class="w-full pl-16 pr-4 py-3 bg-transparent text-sm font-medium text-slate-600 focus:outline-none rounded-xl">
                         </div>
-
                         <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 transition-all transform active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap">
-                            <i class="fa-solid fa-plus"></i> <span class="hidden md:inline">Simpan Rule</span>
+                            <i class="fa-solid fa-plus"></i> <span class="hidden md:inline">Simpan</span>
                         </button>
                     </div>
                 </form>
             </div>
 
             <div class="bg-white border border-slate-100 rounded-b-2xl overflow-hidden min-h-[400px]">
+                {% set all_tabs = ['all'] %}
+                {% for acc in accounts %}{% set _ = all_tabs.append(acc.phone_number) %}{% endfor %}
                 
-                <div x-show="currentTab === 'all'" x-transition.opacity class="w-full">
-                    {% if grouped_keywords['all'] %}
+                {% for tab in all_tabs %}
+                <div x-show="currentTab === '{{ tab }}'" x-transition.opacity class="w-full" {% if tab != active_tab %}style="display: none;"{% endif %}>
+                    {% if tab in grouped_keywords and grouped_keywords[tab] %}
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
                                     <tr>
-                                        <th class="px-6 py-4 w-1/4">Keyword Trigger</th>
-                                        <th class="px-6 py-4">Bot Response</th>
+                                        <th class="px-6 py-4 w-1/4">Trigger</th>
+                                        <th class="px-6 py-4">Response</th>
                                         <th class="px-6 py-4 text-right w-20">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-50 text-sm">
-                                    {% for item in grouped_keywords['all'] %}
+                                    {% for item in grouped_keywords[tab] %}
                                     <tr class="group hover:bg-slate-50 transition-colors">
-                                        <td class="px-6 py-4">
-                                            <span class="inline-flex items-center gap-1 font-mono font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100 group-hover:bg-white transition-colors">
-                                                <i class="fa-solid fa-bolt text-[10px]"></i> {{ item.keyword }}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-start gap-3">
-                                                <i class="fa-solid fa-turn-up text-slate-300 mt-1 rotate-90"></i>
-                                                <p class="text-slate-600 leading-relaxed">{{ item.response }}</p>
-                                            </div>
-                                        </td>
+                                        <td class="px-6 py-4"><span class="font-mono font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">{{ item.keyword }}</span></td>
+                                        <td class="px-6 py-4 text-slate-600">{{ item.response }}</td>
                                         <td class="px-6 py-4 text-right">
-                                            <a href="/delete_keyword/{{ item.id }}" onclick="return confirm('Hapus keyword ini?')" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors ml-auto">
-                                                <i class="fa-regular fa-trash-can"></i>
-                                            </a>
+                                            <a href="/delete_keyword/{{ item.id }}" onclick="return confirm('Hapus?')" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors ml-auto"><i class="fa-regular fa-trash-can"></i></a>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -196,68 +168,13 @@
                         </div>
                     {% else %}
                         <div class="flex flex-col items-center justify-center py-20 text-center">
-                            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                                <i class="fa-solid fa-box-open text-3xl text-slate-300"></i>
-                            </div>
-                            <h3 class="text-slate-800 font-bold">Belum ada Global Rules</h3>
-                            <p class="text-slate-400 text-xs mt-1">Rule di sini akan berlaku untuk semua bot.</p>
-                        </div>
-                    {% endif %}
-                </div>
-
-                {% for acc in accounts %}
-                <div x-show="currentTab === '{{ acc.phone_number }}'" x-transition.opacity class="w-full" style="display: none;">
-                    {% if acc.phone_number in grouped_keywords and grouped_keywords[acc.phone_number] %}
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                    <tr>
-                                        <th class="px-6 py-4 w-1/4">Keyword Trigger</th>
-                                        <th class="px-6 py-4">Bot Response</th>
-                                        <th class="px-6 py-4 text-right w-20">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-50 text-sm">
-                                    {% for item in grouped_keywords[acc.phone_number] %}
-                                    <tr class="group hover:bg-slate-50 transition-colors">
-                                        <td class="px-6 py-4">
-                                            <span class="inline-flex items-center gap-1 font-mono font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-100 group-hover:bg-white transition-colors">
-                                                <i class="fa-solid fa-key text-[10px]"></i> {{ item.keyword }}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4">
-                                            <div class="flex items-start gap-3">
-                                                <i class="fa-solid fa-turn-up text-slate-300 mt-1 rotate-90"></i>
-                                                <p class="text-slate-600 leading-relaxed">{{ item.response }}</p>
-                                            </div>
-                                        </td>
-                                        <td class="px-6 py-4 text-right">
-                                            <a href="/delete_keyword/{{ item.id }}" onclick="return confirm('Hapus keyword ini?')" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors ml-auto">
-                                                <i class="fa-regular fa-trash-can"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="flex flex-col items-center justify-center py-20 text-center">
-                            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 relative">
-                                <i class="fa-brands fa-telegram text-3xl text-slate-300"></i>
-                                <div class="absolute -right-1 -bottom-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100">
-                                    <i class="fa-solid fa-plus text-[10px] text-indigo-500"></i>
-                                </div>
-                            </div>
-                            <h3 class="text-slate-800 font-bold">Belum ada rule khusus</h3>
-                            <p class="text-slate-400 text-xs mt-1 max-w-xs">
-                                Akun <b>{{ acc.first_name }}</b> belum punya keyword spesifik. Tambahkan di form atas.
-                            </p>
+                            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4"><i class="fa-solid fa-box-open text-3xl text-slate-300"></i></div>
+                            <h3 class="text-slate-800 font-bold">Folder Kosong</h3>
+                            <p class="text-slate-400 text-xs mt-1">Belum ada rule di folder ini.</p>
                         </div>
                     {% endif %}
                 </div>
                 {% endfor %}
-
             </div>
         </div>
     </div>
@@ -265,28 +182,27 @@
 
 <div id="configModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true">
     <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop" onclick="closeConfig()"></div>
-    
     <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
         <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg transform scale-95 opacity-0 transition-all duration-300 relative overflow-hidden" id="modalPanel">
             
-            <div class="bg-slate-900 px-8 py-6 flex justify-between items-center relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
+            <div class="bg-slate-900 px-8 py-6 flex justify-between items-center">
                 <div>
                     <h3 class="text-white font-bold text-lg flex items-center gap-2">
-                        <i class="fa-solid fa-sliders text-indigo-400"></i> Global Settings
+                        <i class="fa-solid fa-sliders text-indigo-400"></i>
+                        <span x-text="currentTab === 'all' ? 'Global Config' : 'Config: ' + currentTab"></span>
                     </h3>
-                    <p class="text-slate-400 text-xs mt-1">Pengaturan dasar bot penjawab.</p>
+                    <p class="text-slate-400 text-xs mt-1">Pengaturan Welcome & Cooldown.</p>
                 </div>
-                <button onclick="closeConfig()" class="text-slate-400 hover:text-white transition relative z-10 bg-white/10 w-8 h-8 rounded-full flex items-center justify-center">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <button onclick="closeConfig()" class="text-slate-400 hover:text-white transition bg-white/10 w-8 h-8 rounded-full flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
             <form action="/dashboard/auto-reply" method="POST" class="p-8 space-y-6">
+                <input type="hidden" name="target_phone" x-model="currentTab">
+
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between">
                     <div>
                         <span class="block text-sm font-bold text-slate-800">Status Auto Reply</span>
-                        <span class="text-xs text-slate-500">Matikan sistem untuk semua bot.</span>
+                        <span class="text-xs text-slate-500">Nyalakan/Matikan bot ini.</span>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" name="is_active" class="sr-only peer" {{ 'checked' if settings and settings.is_active else '' }}>
@@ -296,21 +212,21 @@
 
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Jeda Spam (Cooldown)</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                            <i class="fa-solid fa-hourglass-half"></i>
+                    <div class="flex gap-3">
+                        <div class="relative flex-1">
+                            <input type="number" name="cooldown_hours" value="{{ (settings.cooldown_minutes // 60) if settings else 1 }}" class="w-full pl-4 pr-12 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none" min="0">
+                            <span class="absolute right-4 top-3.5 text-xs text-slate-400 font-bold bg-slate-50 px-2 py-0.5 rounded">Jam</span>
                         </div>
-                        <input type="number" name="cooldown" value="{{ settings.cooldown_minutes if settings else 60 }}" class="w-full pl-10 pr-16 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition" min="1">
-                        <span class="absolute right-4 top-3.5 text-xs text-slate-400 font-bold bg-slate-50 px-2 py-0.5 rounded">Menit</span>
+                        <div class="relative flex-1">
+                            <input type="number" name="cooldown_minutes" value="{{ (settings.cooldown_minutes % 60) if settings else 0 }}" class="w-full pl-4 pr-12 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none" min="0" max="59">
+                            <span class="absolute right-4 top-3.5 text-xs text-slate-400 font-bold bg-slate-50 px-2 py-0.5 rounded">Mnt</span>
+                        </div>
                     </div>
-                    <p class="text-[10px] text-slate-400 mt-2 ml-1">Bot tidak akan membalas user yang sama dalam kurun waktu ini.</p>
+                    <p class="text-[10px] text-slate-400 mt-2 ml-1">Bot tidak akan mengirim welcome message ke orang yang sama dalam durasi ini.</p>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1 flex justify-between">
-                        <span>Default Welcome Message</span>
-                        <button type="button" onclick="insertTemplate()" class="text-[10px] text-indigo-500 hover:underline">+ Template</button>
-                    </label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Default Welcome Message</label>
                     <textarea id="welcomeMsg" name="welcome_message" rows="4" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition leading-relaxed" placeholder="Pesan ini dikirim jika chat tidak mengandung keyword apapun...">{{ settings.welcome_message if settings else '' }}</textarea>
                 </div>
 
@@ -331,13 +247,12 @@
             
             get currentTabName() {
                 if (this.currentTab === 'all') return 'Global Rules';
-                // Kita ambil nama dari tombol sidebar yang aktif (trik JS biar gak perlu data kompleks dari backend)
-                // Tapi untuk amannya, kita return nomor HP aja dulu
                 return this.currentTab;
             },
 
             switchTab(tab) {
-                this.currentTab = tab;
+                // REDIRECT PAGE (Wajib biar backend ngirim settingan yg bener)
+                window.location.href = `/dashboard/auto-reply?tab=${encodeURIComponent(tab)}`;
             },
 
             openConfig() {
@@ -367,12 +282,6 @@
         setTimeout(() => {
             modal.classList.add('hidden');
         }, 300);
-    }
-
-    function insertTemplate() {
-        const txt = document.getElementById('welcomeMsg');
-        txt.value = "Halo kak! 👋\nTerima kasih sudah menghubungi kami.\nAda yang bisa dibantu?";
-        txt.focus();
     }
 </script>
 
