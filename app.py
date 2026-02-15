@@ -2939,8 +2939,11 @@ def dashboard_auto_reply():
     user = get_dashboard_context()
     active_tab = request.args.get('tab', 'all') 
 
+    # --- HANDLE SAVE SETTINGS (Sama kayak sebelumnya) ---
     if request.method == 'POST':
         try:
+            # ... (kode save settings sama persis kayak sebelumnya) ...
+            # Copy paste logic POST sebelumnya di sini
             is_active = request.form.get('is_active') == 'on'
             target = request.form.get('target_phone')
             
@@ -2951,7 +2954,7 @@ def dashboard_auto_reply():
             
             data = {
                 'is_active': is_active,
-                'target_phone': target, # AutoReplyManager bakal normalize ini
+                'target_phone': target, 
                 'cooldown_minutes': total_minutes,
                 'welcome_message': request.form.get('welcome_message'),
                 'updated_at': datetime.utcnow().isoformat()
@@ -2964,7 +2967,7 @@ def dashboard_auto_reply():
             logger.error(f"Save Error: {e}")
             flash(f"Gagal: {e}", 'danger')
 
-    # GET DATA
+    # --- GET DATA ---
     accounts = []
     try:
         res = supabase.table('telegram_accounts').select("*").eq('user_id', user.id).eq('is_active', True).execute()
@@ -2974,16 +2977,13 @@ def dashboard_auto_reply():
     all_keywords = AutoReplyManager.get_keywords(user.id)
     grouped = {'all': []}
     
-    # Init folder akun
+    # Init folder
     for acc in accounts:
-        # PENTING: Gunakan nomor asli dari DB untuk key dictionary (biar match sama tab HTML)
         grouped[acc['phone_number']] = []
         
     for k in all_keywords:
-        # Pas grouping, kita normalize DULU target dari keyword biar nemu jodohnya
         raw_target = k.get('target_phone', 'all')
-        
-        # Cari key yang cocok di grouped (Match Normalized vs Raw)
+        # Logic grouping yang aman (Normalize dulu)
         matched_key = 'all'
         if raw_target != 'all':
             norm_target = AutoReplyManager.normalize_phone(raw_target)
@@ -2995,19 +2995,24 @@ def dashboard_auto_reply():
         if matched_key not in grouped: grouped[matched_key] = []
         grouped[matched_key].append(k)
         
-    # Ambil settingan spesifik tab
+    # [FIX] Ambil list active phones & Normalize biar match sama frontend
+    active_settings = supabase.table('auto_reply_settings').select("target_phone").eq('user_id', user.id).eq('is_active', True).execute()
+    
+    # Kita bikin list nomor HP yang udah dibersihin (tanpa spasi/dash)
+    active_phones_normalized = []
+    if active_settings.data:
+        for s in active_settings.data:
+            active_phones_normalized.append(AutoReplyManager.normalize_phone(s['target_phone']))
+
     current_settings = AutoReplyManager.get_settings(user.id, active_tab)
     
-    # Ambil list nomor HP yang statusnya AKTIF buat inisialisasi toggle JS
-    active_settings = supabase.table('auto_reply_settings').select("target_phone").eq('is_active', True).execute()
-    active_phones = [s['target_phone'] for s in active_settings.data] if active_settings.data else []
     return render_template('dashboard/auto_reply.html', 
                            user=user, 
                            settings=current_settings, 
                            accounts=accounts,
                            grouped_keywords=grouped,
                            active_tab=active_tab,
-                           active_phones=active_phones, # <--- TAMBAHAN PENTING
+                           active_phones=active_phones_normalized, # Kirim data yg udah bersih
                            active_page='autoreply')
 
 @app.route('/api/toggle_auto_reply', methods=['POST'])
