@@ -195,7 +195,6 @@
                             </table>
                         </div>
                     {% else %}
-                        {% include 'dashboard/partials/empty_keywords.html' %} 
                         <div class="flex flex-col items-center justify-center py-20 text-center">
                             <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                                 <i class="fa-solid fa-box-open text-3xl text-slate-300"></i>
@@ -332,8 +331,8 @@
             
             get currentTabName() {
                 if (this.currentTab === 'all') return 'Global Rules';
-                // Cari nama dari list akun (dilempar dari backend sbg json kalo mau dinamis bgt, tapi ini static loop di html)
-                // Kita pake trik simple string manipulation aja buat display
+                // Kita ambil nama dari tombol sidebar yang aktif (trik JS biar gak perlu data kompleks dari backend)
+                // Tapi untuk amannya, kita return nomor HP aja dulu
                 return this.currentTab;
             },
 
@@ -356,7 +355,6 @@
         }
     }
 
-    // Fungsi Close di luar Alpine biar bisa dipanggil dari onclick
     function closeConfig() {
         const modal = document.getElementById('configModal');
         const backdrop = document.getElementById('modalBackdrop');
