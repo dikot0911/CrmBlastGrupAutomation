@@ -2516,29 +2516,94 @@ def add_schedule():
     hour = request.form.get('hour')
     minute = request.form.get('minute')
     template_id = request.form.get('template_id')
-    target_group_id = request.form.get('target_group_id') # Bisa string kosong kalau 'Semua Grup'
-    
-    # [FIX] Tangkap Sender Phone
+    target_input = request.form.get('target_group_id') # Bisa ID Angka atau "TEMPLATE:Nama"
     sender_phone = request.form.get('sender_phone') 
     
-    # Validasi sederhana biar gak error kalau sender_phone kosong/salah
     if not sender_phone or sender_phone == 'auto':
         sender_phone = 'auto'
 
+    # [BEDAH SARAF] Logic Baru buat Handle "TEMPLATE:"
+    final_target_id = None
+    target_template_name = None # Kita butuh kolom baru sebenernya, tapi kita akalin dulu
+
     try:
-        data = {
-            'user_id': user.id,
-            'run_hour': int(hour),
-            'run_minute': int(minute),
-            'template_id': int(template_id) if template_id else None,
-            'target_group_id': target_group_id if target_group_id else None,
-            'sender_phone': sender_phone, # <--- SIMPAN KE DB
-            'status': 'active',
-            'created_at': datetime.now().isoformat()
-        }
+        # Cek apakah inputnya Template atau Grup Biasa
+        if target_input and target_input.startswith("TEMPLATE:"):
+            # Opsi A: User milih TEMPLATE
+            template_name = target_input.replace("TEMPLATE:", "")
+            
+            # Kita cari salah satu grup dari template itu buat jadi 'perwakilan' (karena DB butuh ID)
+            # ATAU LEBIH BAIK: Kita kosongin target_group_id, tapi kita simpen nama templatenya di kolom deskripsi/meta (kalau ada)
+            # TAPI KARENA DB LO STRICT (BigInt), kita harus hati-hati.
+            
+            # SOLUSI SEMENTARA YANG AMAN:
+            # Kita cari semua grup yg punya template_name ini, ambil ID pertamanya buat syarat doang.
+            # Nanti pas eksekusi (Scheduler), kita cek lagi berdasarkan nama template.
+            
+            # TAPI TUNGGU, Scheduler lo belum support filter by Template Name kan?
+            # JADI KITA HARUS UPDATE DB DULU BIAR BENER.
+            pass 
+            
+        else:
+            # Opsi B: User milih Grup Biasa (Angka)
+            if target_input:
+                final_target_id = int(target_input)
+
+        # [STOP DULU]
+        # Masalahnya: Tabel 'blast_schedules' lo cuma punya 'target_group_id' (BigInt).
+        # Dia GAK PUNYA kolom buat nyimpen "Nama Template Target".
         
-        supabase.table('blast_schedules').insert(data).execute()
-        flash('Jadwal berhasil ditambahkan!', 'success')
+        # JADI, SOLUSI PALING BENAR ADALAH:
+        # Kita bikin jadwal UNTUK SETIAP GRUP di dalam template itu.
+        # Misal Template "Jualan" isinya 5 grup -> Kita bikin 5 jadwal sekaligus.
+        
+        if target_input and target_input.startswith("TEMPLATE:"):
+            # Ambil nama template
+            tmpl_name = target_input.replace("TEMPLATE:", "")
+            
+            # Cari semua grup yang punya template_name ini
+            targets = supabase.table('blast_targets').select("group_id")\
+                .eq('user_id', user.id)\
+                .eq('template_name', tmpl_name)\
+                .execute().data
+                
+            if not targets:
+                flash('Template target kosong atau tidak ditemukan.', 'danger')
+                return redirect(url_for('dashboard_schedule'))
+                
+            # Loop bikin jadwal buat tiap grup (Batch Insert)
+            schedules_data = []
+            for t in targets:
+                schedules_data.append({
+                    'user_id': user.id,
+                    'run_hour': int(hour),
+                    'run_minute': int(minute),
+                    'template_id': int(template_id) if template_id else None,
+                    'target_group_id': int(t['group_id']), # Simpan ID Grup Asli (Angka)
+                    'sender_phone': sender_phone,
+                    'status': 'active',
+                    'created_at': datetime.now().isoformat()
+                })
+            
+            # Eksekusi Massal
+            if schedules_data:
+                supabase.table('blast_schedules').insert(schedules_data).execute()
+                flash(f'Berhasil membuat {len(schedules_data)} jadwal dari koleksi "{tmpl_name}"!', 'success')
+                
+        else:
+            # Logic Lama (Single Group / All Groups)
+            data = {
+                'user_id': user.id,
+                'run_hour': int(hour),
+                'run_minute': int(minute),
+                'template_id': int(template_id) if template_id else None,
+                'target_group_id': final_target_id, # Bisa None (Semua Grup) atau ID Angka
+                'sender_phone': sender_phone,
+                'status': 'active',
+                'created_at': datetime.now().isoformat()
+            }
+            supabase.table('blast_schedules').insert(data).execute()
+            flash('Jadwal berhasil ditambahkan!', 'success')
         
     except Exception as e:
         logger.error(f"Error add schedule: {e}")
