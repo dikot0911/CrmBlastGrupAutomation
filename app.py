@@ -343,73 +343,101 @@ class MessageTemplateManager:
 # ==============================================================================
 
 class AutoReplyManager:
+    """
+    Mengelola Data Pengaturan Auto Reply & Keyword Rules dari Database.
+    Fokus pada CRUD dan Logika Data.
+    """
+
     @staticmethod
-    def get_settings(user_id, target_phone='all'):
+    def normalize_phone(phone):
         """
-        Ambil settingan. 
-        Prioritas: Cari yang SPESIFIK dulu. Kalau gak ada, cari yang 'all' (Global).
-        Kalau dua-duanya gak ada, return Default object.
+        Membersihkan format nomor HP agar konsisten (+62812...)
+        Hapus spasi, strip, dan pastikan ada tanda plus.
         """
+        if not phone: return 'all'
+        if phone == 'all': return 'all'
+        clean = str(phone).replace(" ", "").replace("-", "").strip()
+        if not clean.startswith("+"): clean = "+" + clean
+        return clean
+
+    @staticmethod
+    def get_settings(user_id, raw_target='all'):
+        """
+        Mengambil settingan untuk akun tertentu.
+        PRIORITAS: 
+        1. Cari settingan KHUSUS nomor ini.
+        2. Kalau gak ada, cari settingan GLOBAL ('all').
+        3. Kalau gak ada juga, return Default (Mati).
+        """
+        target = AutoReplyManager.normalize_phone(raw_target)
+        
         if not supabase: return None
         
-        # Coba cari spesifik dulu
+        # 1. Coba cari settingan spesifik
         res = supabase.table('auto_reply_settings').select("*")\
-            .eq('user_id', user_id).eq('target_phone', target_phone).execute()
+            .eq('user_id', user_id).eq('target_phone', target).execute()
         
         if res.data:
             return res.data[0]
             
-        # Kalau spesifik gak ketemu, dan yang diminta bukan 'all', coba cari fallback 'all'
-        if target_phone != 'all':
-            res_global = supabase.table('auto_reply_settings').select("*")\
+        # 2. Fallback ke Global ('all') jika yang dicari bukan 'all'
+        if target != 'all':
+            res_glob = supabase.table('auto_reply_settings').select("*")\
                 .eq('user_id', user_id).eq('target_phone', 'all').execute()
-            if res_global.data:
-                return res_global.data[0]
+            if res_glob.data:
+                return res_glob.data[0]
 
-        # Default object kalau belum pernah disetting sama sekali
+        # 3. Default (Fitur Dianggap Mati)
         return {
             'is_active': False, 
             'cooldown_minutes': 60, 
             'welcome_message': '', 
-            'target_phone': target_phone
+            'target_phone': target
         }
 
     @staticmethod
     def update_settings(user_id, data):
-        # Pastikan ada target_phone
-        target = data.get('target_phone', 'all')
+        """
+        Simpan atau Update settingan.
+        """
+        # Normalize dulu target-nya biar gak double
+        data['target_phone'] = AutoReplyManager.normalize_phone(data.get('target_phone', 'all'))
         
-        # Cek apakah setting buat target ini udah ada?
+        # Cek existing
         existing = supabase.table('auto_reply_settings').select("id")\
-            .eq('user_id', user_id).eq('target_phone', target).execute()
+            .eq('user_id', user_id).eq('target_phone', data['target_phone']).execute()
             
         if existing.data:
             # Update
             supabase.table('auto_reply_settings').update(data)\
-                .eq('user_id', user_id).eq('target_phone', target).execute()
+                .eq('id', existing.data[0]['id']).execute()
         else:
-            # Insert Baru
+            # Insert
             data['user_id'] = user_id
             supabase.table('auto_reply_settings').insert(data).execute()
 
     @staticmethod
     def get_keywords(user_id):
-        # Ambil semua keyword (logic filtering ada di engine/frontend)
-        res = supabase.table('keyword_rules').select("*").eq('user_id', user_id).order('created_at', desc=True).execute()
+        """Ambil semua keyword milik user ini."""
+        res = supabase.table('keyword_rules').select("*")\
+            .eq('user_id', user_id).order('created_at', desc=True).execute()
         return res.data if res.data else []
 
     @staticmethod
-    def add_keyword(user_id, keyword, response, target_phone='all'):
+    def add_keyword(user_id, keyword, response, raw_target='all'):
+        """Tambah keyword baru ke database."""
+        target = AutoReplyManager.normalize_phone(raw_target)
         data = {
             'user_id': user_id, 
             'keyword': keyword.lower(), 
-            'response': response,
-            'target_phone': target_phone
+            'response': response, 
+            'target_phone': target
         }
         supabase.table('keyword_rules').insert(data).execute()
 
     @staticmethod
     def delete_keyword(id):
+        """Hapus keyword berdasarkan ID."""
         supabase.table('keyword_rules').delete().eq('id', id).execute()
 
 class ReplyEngine:
@@ -798,111 +826,124 @@ if supabase:
 
 class AutoReplyService:
     """
-    Service yang berjalan di background untuk menjaga koneksi Telegram tetap hidup
-    agar bisa menerima pesan masuk (Auto Reply) secara real-time.
+    Worker yang berjalan di background (Daemon Thread).
+    Tugas: Menjaga koneksi MTProto tetap hidup untuk mendengarkan pesan masuk.
     """
     _loop = None
-    _clients = {} # Database koneksi aktif: { 'user_id_phone': client_object }
+    _clients = {} # Database koneksi aktif di memori: { 'UserID_NoHP': ClientObject }
 
     @classmethod
     def start(cls):
-        # Jalankan di thread terpisah biar gak ganggu web server
-        threading.Thread(target=cls._background_process, daemon=True, name="AutoReplyService").start()
-        logger.info("🎧 AutoReply Service (Satpam) Berhasil Dinyalakan!")
+        """Fungsi Pemicu Utama (Dipanggil di paling bawah app.py)"""
+        threading.Thread(target=cls._background_process, daemon=True, name="AutoReplySatpam").start()
+        logger.info("👮‍♂️ [SATPAM] AutoReply Service BERHASIL DINYALAKAN!")
 
     @classmethod
     def _background_process(cls):
-        # Bikin Event Loop khusus buat thread ini
+        """Membuat Event Loop khusus untuk Thread Satpam"""
         cls._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(cls._loop)
         cls._loop.run_until_complete(cls._main_supervisor())
 
     @classmethod
     async def _main_supervisor(cls):
-        logger.info("🎧 AutoReply Supervisor is Watching...")
+        """
+        Loop abadi yang mengecek database setiap 30 detik:
+        - Ada akun baru yg aktif? -> Nyalakan satpamnya.
+        - Ada akun yg logout/mati? -> Matikan satpamnya.
+        """
+        logger.info("👀 [SATPAM] Mulai memantau akun aktif...")
         while True:
             try:
-                # 1. Ambil semua akun yang AKTIF dari database
                 if supabase:
+                    # Ambil semua akun yang statusnya AKTIF
                     res = supabase.table('telegram_accounts').select("*").eq('is_active', True).execute()
                     accounts = res.data or []
                     
                     active_keys = []
                     
                     for acc in accounts:
-                        # Kunci unik: UserID_NoHP
+                        # Buat Key Unik: IDUser_NomorHP
                         key = f"{acc['user_id']}_{acc['phone_number']}"
                         active_keys.append(key)
                         
-                        # Jika akun ini belum ada di memori satpam, kita konekin!
+                        # Jika satpam untuk akun ini belum ada, buat baru!
                         if key not in cls._clients:
                             await cls._start_client(acc, key)
                     
-                    # 2. Bersih-bersih (Kalo ada akun yang dilogout/dihapus, matikan koneksinya)
+                    # Bersih-bersih: Matikan satpam untuk akun yang udah gak ada di list aktif
                     for existing_key in list(cls._clients.keys()):
                         if existing_key not in active_keys:
                             await cls._stop_client(existing_key)
                             
             except Exception as e:
-                logger.error(f"AutoReply Supervisor Error: {e}")
+                logger.error(f"⚠️ [SATPAM] Error Supervisor: {e}")
             
-            # Cek database setiap 30 detik (biar gak berat)
+            # Istirahat 30 detik sebelum cek DB lagi
             await asyncio.sleep(30)
 
     @classmethod
     async def _start_client(cls, acc_data, key):
+        """Menghidupkan 1 Klien Telegram untuk 1 Akun"""
         try:
-            # Init Client
+            # 1. Login pakai Session String
             client = TelegramClient(StringSession(acc_data['session_string']), API_ID, API_HASH)
             await client.connect()
             
-            # Validasi Sesi
+            # 2. Cek apakah sesi masih valid?
             if not await client.is_user_authorized():
-                logger.warning(f"❌ Sesi Expired untuk {key}, melewatkan...")
+                logger.warning(f"❌ [SATPAM] Sesi Invalid/Expired: {key}")
                 await client.disconnect()
                 return
 
-            # --- PASANG KUPING (EVENT HANDLER) ---
-            # Kita pasang logic Auto Reply langsung disini
+            # Data Penting
             user_id = acc_data['user_id']
-            my_phone = acc_data['phone_number']
+            # Normalize nomor HP dari DB biar cocok sama settingan
+            my_phone = AutoReplyManager.normalize_phone(acc_data['phone_number'])
 
+            # --- 3. PASANG EVENT HANDLER (INTI LOGIC) ---
             @client.on(events.NewMessage(incoming=True))
             async def incoming_handler(event):
                 try:
-                    # Filter Dasar
+                    # A. FILTER AWAL (Anti Spam Grup/Channel)
                     me_obj = await client.get_me()
                     if event.sender_id == me_obj.id or event.message.via_bot_id: return
-                    if event.is_group or event.is_channel: return # Hanya personal chat
+                    if event.is_group or event.is_channel: return # STOP KALAU DARI GRUP!
 
                     sender_id = event.sender_id
                     chat_text = event.raw_text.lower().strip()
                     
-                    # [FIX] Ambil Settings SPESIFIK buat nomor HP ini (my_phone)
-                    # Jadi settings 'target_phone' akan otomatis sesuai dengan bot yang lagi jalan
+                    # B. AMBIL SETTINGAN (Realtime dari DB)
+                    # Panggil Manager: "Eh, akun nomor HP ini settingannya apa?"
                     settings = AutoReplyManager.get_settings(user_id, my_phone)
                     
+                    # Kalau fitur dimatikan, cuekin aja
                     if not settings or not settings.get('is_active'): return
-                    
-                    # Keyword Logic (Sama kayak sebelumnya, cuma hapus cek target_setting manual karena udah dihandle get_settings)
+
+                    # C. LOGIC PENCARIAN KEYWORD
                     keywords = AutoReplyManager.get_keywords(user_id)
                     response_text = None
 
-                    # LOGIC MATCHING (Sama)
-                    specific = [r for r in keywords if r.get('target_phone') == my_phone]
-                    global_r = [r for r in keywords if r.get('target_phone') == 'all']
-                    all_rules = specific + global_r
+                    # Prioritas: 
+                    # 1. Cari keyword yang TARGETNYA == NOMOR INI
+                    specific_rules = [r for r in keywords if AutoReplyManager.normalize_phone(r.get('target_phone')) == my_phone]
+                    # 2. Cari keyword yang TARGETNYA == ALL
+                    global_rules = [r for r in keywords if r.get('target_phone') == 'all']
+                    
+                    # Gabung (Specific duluan biar menang)
+                    all_rules = specific_rules + global_rules
 
                     for rule in all_rules:
+                        # Cek apakah keyword ada di dalam chat?
                         if rule['keyword'] in chat_text:
                             response_text = rule['response']
-                            logger.info(f"🤖 [AutoReply] {my_phone} menjawab '{rule['keyword']}' ke {sender_id}")
+                            logger.info(f"✅ [SATPAM] {my_phone} menjawab '{rule['keyword']}' ke {sender_id}")
                             break
                     
-                    # LOGIC WELCOME (Pakai settingan spesifik yg udah diambil di atas)
+                    # D. LOGIC WELCOME MESSAGE (Jika gak ada keyword)
                     if not response_text and settings.get('welcome_message'):
-                        # Cek Cooldown
-                        cooldown = settings.get('cooldown_minutes', 60)
+                        # Cek Cooldown (Jeda Spam)
+                        cooldown_min = settings.get('cooldown_minutes', 60)
                         log_res = supabase.table('reply_logs').select("last_reply_at")\
                             .eq('user_id', user_id).eq('sender_id', sender_id).execute()
                         
@@ -910,38 +951,47 @@ class AutoReplyService:
                         if log_res.data:
                             last_time = datetime.fromisoformat(log_res.data[0]['last_reply_at'].replace('Z', '+00:00'))
                             diff_min = (datetime.now(pytz.utc) - last_time).total_seconds() / 60
-                            if diff_min < cooldown: should_reply = False
+                            # Kalau masih dalam masa cooldown, jangan bales
+                            if diff_min < cooldown_min: should_reply = False
                         
                         if should_reply:
                             response_text = settings.get('welcome_message')
-                            logger.info(f"🤖 [AutoReply] {my_phone} kirim Welcome Message ke {sender_id}")
+                            logger.info(f"👋 [SATPAM] {my_phone} kirim Welcome Message ke {sender_id}")
 
-                    # KIRIM BALASAN
+                    # E. EKSEKUSI KIRIM PESAN
                     if response_text:
+                        # Akting ngetik dulu (Typing...)
                         async with client.action(event.chat_id, 'typing'):
-                            await asyncio.sleep(random.uniform(1.5, 4.0)) # Humanis delay
+                            await asyncio.sleep(random.uniform(2.0, 4.0)) # Jeda humanis
+                        
+                        # Kirim!
                         await event.reply(response_text)
                         
-                        # Catat Log
-                        log_payload = {'user_id': user_id, 'sender_id': sender_id, 'last_reply_at': datetime.utcnow().isoformat()}
-                        supabase.table('reply_logs').upsert(log_payload, on_conflict="user_id, sender_id").execute()
+                        # Catat log biar cooldown jalan
+                        log_data = {
+                            'user_id': user_id, 
+                            'sender_id': sender_id, 
+                            'last_reply_at': datetime.utcnow().isoformat()
+                        }
+                        supabase.table('reply_logs').upsert(log_data, on_conflict="user_id, sender_id").execute()
 
                 except Exception as handler_e:
                     logger.error(f"Handler Error {my_phone}: {handler_e}")
 
-            # Simpan client ke memori biar tetep hidup
+            # Simpan client ini ke memori biar gak mati
             cls._clients[key] = client
-            logger.info(f"👂 Satpam Aktif: {acc_data['phone_number']}")
+            logger.info(f"👂 [SATPAM] Aktif Mendengarkan: {my_phone}")
             
         except Exception as e:
             logger.error(f"Gagal start client {key}: {e}")
 
     @classmethod
     async def _stop_client(cls, key):
+        """Mematikan 1 Klien (Misal user logout atau hapus akun)"""
         client = cls._clients.pop(key, None)
         if client:
             await client.disconnect()
-            logger.info(f"🛑 Satpam Istirahat: {key}")
+            logger.info(f"💤 [SATPAM] Stop Listening: {key}")
     
 # ==============================================================================
 # SECTION 5: DATA ACCESS LAYER (DAL)
@@ -2875,73 +2925,72 @@ def update_template():
 @login_required
 def dashboard_auto_reply():
     user = get_dashboard_context()
-    if not user: return redirect(url_for('login'))
-    
-    # Ambil Tab Aktif (Default 'all')
     active_tab = request.args.get('tab', 'all') 
 
-    # --- HANDLE SAVE SETTINGS ---
     if request.method == 'POST':
         try:
-            # Tangkap Data Form
             is_active = request.form.get('is_active') == 'on'
-            target_phone_input = request.form.get('target_phone') # Ini dikirim dari hidden input di modal
+            target = request.form.get('target_phone')
             
-            # Logic Jam & Menit
             hours = int(request.form.get('cooldown_hours', 0))
             minutes = int(request.form.get('cooldown_minutes', 0))
             total_minutes = (hours * 60) + minutes
-            if total_minutes < 1: total_minutes = 1 # Minimal 1 menit
-            
-            welcome_msg = request.form.get('welcome_message')
+            if total_minutes < 1: total_minutes = 1
             
             data = {
                 'is_active': is_active,
-                'target_phone': target_phone_input,
+                'target_phone': target, # AutoReplyManager bakal normalize ini
                 'cooldown_minutes': total_minutes,
-                'welcome_message': welcome_msg,
+                'welcome_message': request.form.get('welcome_message'),
                 'updated_at': datetime.utcnow().isoformat()
             }
             
             AutoReplyManager.update_settings(user.id, data)
-            flash(f'Pengaturan untuk {target_phone_input} berhasil disimpan!', 'success')
-            return redirect(url_for('dashboard_auto_reply', tab=target_phone_input))
-            
+            flash('Pengaturan berhasil disimpan!', 'success')
+            return redirect(url_for('dashboard_auto_reply', tab=target))
         except Exception as e:
-            logger.error(f"Save Settings Error: {e}")
-            flash(f"Gagal menyimpan: {str(e)}", 'danger')
+            logger.error(f"Save Error: {e}")
+            flash(f"Gagal: {e}", 'danger')
 
-    # --- GET DATA ---
-    # Ambil Akun Aktif
+    # GET DATA
     accounts = []
     try:
-        acc_res = supabase.table('telegram_accounts').select("*").eq('user_id', user.id).eq('is_active', True).execute()
-        accounts = acc_res.data if acc_res.data else []
+        res = supabase.table('telegram_accounts').select("*").eq('user_id', user.id).eq('is_active', True).execute()
+        accounts = res.data or []
     except: pass
 
-    # Ambil Semua Keyword User Ini
     all_keywords = AutoReplyManager.get_keywords(user.id)
+    grouped = {'all': []}
     
-    # Grouping Keyword by Phone
-    grouped_keywords = {'all': []}
+    # Init folder akun
     for acc in accounts:
-        grouped_keywords[acc['phone_number']] = []
+        # PENTING: Gunakan nomor asli dari DB untuk key dictionary (biar match sama tab HTML)
+        grouped[acc['phone_number']] = []
         
     for k in all_keywords:
-        phone = k.get('target_phone', 'all')
-        if phone not in grouped_keywords:
-            grouped_keywords[phone] = []
-        grouped_keywords[phone].append(k)
+        # Pas grouping, kita normalize DULU target dari keyword biar nemu jodohnya
+        raw_target = k.get('target_phone', 'all')
         
-    # [NEW] Ambil Settingan KHUSUS TAB YANG AKTIF buat ditampilin di Modal
-    # Kalau user buka tab "Akun A", modal akan nunjukin settingan "Akun A"
+        # Cari key yang cocok di grouped (Match Normalized vs Raw)
+        matched_key = 'all'
+        if raw_target != 'all':
+            norm_target = AutoReplyManager.normalize_phone(raw_target)
+            for acc_phone in grouped.keys():
+                if AutoReplyManager.normalize_phone(acc_phone) == norm_target:
+                    matched_key = acc_phone
+                    break
+        
+        if matched_key not in grouped: grouped[matched_key] = []
+        grouped[matched_key].append(k)
+        
+    # Ambil settingan spesifik tab
     current_settings = AutoReplyManager.get_settings(user.id, active_tab)
     
     return render_template('dashboard/auto_reply.html', 
                            user=user, 
-                           settings=current_settings, # Pass settingan spesifik
+                           settings=current_settings, 
                            accounts=accounts,
-                           grouped_keywords=grouped_keywords,
+                           grouped_keywords=grouped,
                            active_tab=active_tab,
                            active_page='autoreply')
 
