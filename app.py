@@ -2522,47 +2522,14 @@ def add_schedule():
     if not sender_phone or sender_phone == 'auto':
         sender_phone = 'auto'
 
-    # [BEDAH SARAF] Logic Baru buat Handle "TEMPLATE:"
-    final_target_id = None
-    target_template_name = None # Kita butuh kolom baru sebenernya, tapi kita akalin dulu
-
     try:
         # Cek apakah inputnya Template atau Grup Biasa
         if target_input and target_input.startswith("TEMPLATE:"):
-            # Opsi A: User milih TEMPLATE
-            template_name = target_input.replace("TEMPLATE:", "")
-            
-            # Kita cari salah satu grup dari template itu buat jadi 'perwakilan' (karena DB butuh ID)
-            # ATAU LEBIH BAIK: Kita kosongin target_group_id, tapi kita simpen nama templatenya di kolom deskripsi/meta (kalau ada)
-            # TAPI KARENA DB LO STRICT (BigInt), kita harus hati-hati.
-            
-            # SOLUSI SEMENTARA YANG AMAN:
-            # Kita cari semua grup yg punya template_name ini, ambil ID pertamanya buat syarat doang.
-            # Nanti pas eksekusi (Scheduler), kita cek lagi berdasarkan nama template.
-            
-            # TAPI TUNGGU, Scheduler lo belum support filter by Template Name kan?
-            # JADI KITA HARUS UPDATE DB DULU BIAR BENER.
-            pass 
-            
-        else:
-            # Opsi B: User milih Grup Biasa (Angka)
-            if target_input:
-                final_target_id = int(target_input)
-
-        # [STOP DULU]
-        # Masalahnya: Tabel 'blast_schedules' lo cuma punya 'target_group_id' (BigInt).
-        # Dia GAK PUNYA kolom buat nyimpen "Nama Template Target".
-        
-        # JADI, SOLUSI PALING BENAR ADALAH:
-        # Kita bikin jadwal UNTUK SETIAP GRUP di dalam template itu.
-        # Misal Template "Jualan" isinya 5 grup -> Kita bikin 5 jadwal sekaligus.
-        
-        if target_input and target_input.startswith("TEMPLATE:"):
-            # Ambil nama template
+            # Opsi A: User milih TEMPLATE -> Bikin Jadwal Massal
             tmpl_name = target_input.replace("TEMPLATE:", "")
             
-            # Cari semua grup yang punya template_name ini
-            targets = supabase.table('blast_targets').select("group_id")\
+            # [FIX] Select kolom 'id' (Primary Key) juga, bukan cuma group_id
+            targets = supabase.table('blast_targets').select("id, group_id")\
                 .eq('user_id', user.id)\
                 .eq('template_name', tmpl_name)\
                 .execute().data
@@ -2579,7 +2546,8 @@ def add_schedule():
                     'run_hour': int(hour),
                     'run_minute': int(minute),
                     'template_id': int(template_id) if template_id else None,
-                    'target_group_id': int(t['group_id']), # Simpan ID Grup Asli (Angka)
+                    # [CRITICAL FIX] Gunakan Primary Key 'id', BUKAN 'group_id' Telegram
+                    'target_group_id': int(t['id']), 
                     'sender_phone': sender_phone,
                     'status': 'active',
                     'created_at': datetime.now().isoformat()
@@ -2591,13 +2559,18 @@ def add_schedule():
                 flash(f'Berhasil membuat {len(schedules_data)} jadwal dari koleksi "{tmpl_name}"!', 'success')
                 
         else:
-            # Logic Lama (Single Group / All Groups)
+            # Opsi B: User milih Grup Satuan (Single)
+            # Pastikan ini ID database, bukan ID Telegram (kecuali kalau select option value-nya emang ID DB)
+            # Di HTML lo, value option adalah t.id (ID Database), jadi ini aman.
+            
+            final_target_id = int(target_input) if target_input else None
+
             data = {
                 'user_id': user.id,
                 'run_hour': int(hour),
                 'run_minute': int(minute),
                 'template_id': int(template_id) if template_id else None,
-                'target_group_id': final_target_id, # Bisa None (Semua Grup) atau ID Angka
+                'target_group_id': final_target_id,
                 'sender_phone': sender_phone,
                 'status': 'active',
                 'created_at': datetime.now().isoformat()
@@ -2607,7 +2580,8 @@ def add_schedule():
         
     except Exception as e:
         logger.error(f"Error add schedule: {e}")
-        flash(f'Gagal membuat jadwal: {str(e)}', 'error')
+        # flash(f'Gagal membuat jadwal: {str(e)}', 'error') # Uncomment kalo mau liat error di UI
+        flash('Terjadi kesalahan saat menyimpan jadwal.', 'danger')
 
     return redirect(url_for('dashboard_schedule'))
 
