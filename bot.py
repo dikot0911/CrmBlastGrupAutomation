@@ -13,7 +13,7 @@ from telegram.ext import (
     MessageHandler, 
     filters
 )
-from telegram.error import BadRequest, Forbidden
+from telegram.error import BadRequest, Forbidden, Conflict
 from supabase import create_client
 
 # ==============================================================================
@@ -462,13 +462,22 @@ async def send_blast_report_card(app_context, user_id, success, failed):
     except Exception as e:
         logger.error(f"Failed sending report card: {e}")
 
+async def on_bot_error(update: object, context: ContextTypes.DEFAULT_TYPE):
+    """Minimal error handler supaya Conflict tidak spam traceback penuh."""
+    err = context.error
+    if isinstance(err, Conflict):
+        logger.warning("⚠️ Telegram polling conflict terdeteksi. Menunggu instance lain berhenti...")
+        await asyncio.sleep(5)
+        return
+    logger.exception("Unhandled telegram bot error", exc_info=err)
+
 # ==============================================================================
 # MAIN EXECUTION
 # ==============================================================================
 
 def run_bot_process():
     """Entry Point untuk Thread di Flask"""
-    if not BOT_TOKEN or BOT_TOKEN == "DUMMY_TOKEN":
+    if not BOT_TOKEN or BOT_TOKEN == "DUMMY_TOKEN_TO_PREVENT_CRASH":
         print("❌ BOT STOP: Token belum diisi.")
         return
 
@@ -484,6 +493,7 @@ def run_bot_process():
     # Add Handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(callback_router))
+    app.add_error_handler(on_bot_error)
     
     # Run Polling (Blocking di Thread ini)
     app.run_polling(stop_signals=None, drop_pending_updates=True)
