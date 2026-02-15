@@ -345,28 +345,47 @@
 {% block scripts %}
 <script>
     // --- DATA STORE ---
-    // Simpan data target dari backend ke JS Variable
-    const allTargets = [
+    // Kita simpan data mentah dari backend
+    const rawTargets = [
         {% for t in targets %}
         {
             id: "{{ t.id }}",
-            name: "{{ t.group_name }}",
-            // Pastikan field template_name juga di-render jika ada di backend logic baru
-            template_name: "{{ t.template_name if t.template_name else 'No Collection' }}", 
+            group_name: "{{ t.group_name }}",
+            // Pastikan template_name ada isinya
+            template_name: "{{ t.template_name if t.template_name else 'Tanpa Nama' }}", 
             source_phone: "{{ t.source_phone }}" 
         },
         {% endfor %}
     ];
 
-    function scheduleManager() {
-        return {
-            // Alpine Logic (Optional, for now mostly vanilla JS below)
-        }
+    // --- HELPER: GROUPING BY TEMPLATE ---
+    // Fungsi ini bakal ngerapihin data biar jadi: { "Nama Template": [List ID Grup] }
+    function getGroupedTemplates(phoneFilter) {
+        let groups = {};
+        
+        rawTargets.forEach(t => {
+            // Filter berdasarkan akun pengirim (kalau mode spesifik)
+            if (phoneFilter && phoneFilter !== 'auto' && t.source_phone !== phoneFilter) return;
+
+            let tmpl = t.template_name;
+            if (!groups[tmpl]) {
+                groups[tmpl] = {
+                    name: tmpl,
+                    source: t.source_phone,
+                    ids: [], // Kumpulan ID grup dalam template ini
+                    count: 0
+                };
+            }
+            groups[tmpl].ids.push(t.id);
+            groups[tmpl].count++;
+        });
+        
+        return Object.values(groups);
     }
 
     // --- SHARED: UPDATE TARGET DROPDOWN ---
     // Mode: 'create' atau 'edit'
-    function updateTargetOptions(mode, selectedTargetId = null) {
+    function updateTargetOptions(mode, selectedValue = null) {
         const senderSelect = document.getElementById(mode + 'SenderSelect');
         const targetSelect = document.getElementById(mode + 'TargetSelect');
         const selectedPhone = senderSelect.value;
@@ -374,43 +393,46 @@
         // Reset Options
         targetSelect.innerHTML = '';
 
-        // Default: Semua Grup
-        let defaultOpt = document.createElement('option');
-        
-        if (selectedPhone === 'auto') {
-            defaultOpt.value = "";
-            defaultOpt.text = "-- Kirim ke SEMUA Grup (Mode Auto) --";
-            targetSelect.appendChild(defaultOpt);
-            
-            // Show All Targets
-            allTargets.forEach(t => {
+        // Opsi 1: Semua Grup (GLOBAL)
+        let globalOpt = document.createElement('option');
+        globalOpt.value = ""; // Value kosong artinya kirim ke semua
+        globalOpt.text = (selectedPhone === 'auto') 
+            ? "🌍 Kirim ke SEMUA Grup (Mode Auto)" 
+            : `🌍 Semua Grup dari ${selectedPhone}`;
+        targetSelect.appendChild(globalOpt);
+
+        // Ambil data template yang sudah dikelompokkan
+        const templates = getGroupedTemplates(selectedPhone);
+
+        if (templates.length > 0) {
+            templates.forEach(t => {
                 let opt = document.createElement('option');
-                opt.value = t.id;
-                opt.text = `[${t.source_phone}] ${t.name}`;
-                if(String(t.id) === String(selectedTargetId)) opt.selected = true;
+                // Value-nya kita isi dengan gabungan ID grup dipisah koma (biar backend tau isinya apa aja)
+                // ATAU: Lo bisa kirim nama templatenya aja kalau backend lo support filter by template_name
+                // SEMENTARA KITA KIRIM NAMA TEMPLATE SBG VALUE (Biar Logic Backend gak berubah banyak)
+                
+                // [PENTING] Karena di backend (app.py) lo nyimpen 'target_group_id', 
+                // ini sebenernya kurang pas kalau kita mau kirim "Satu Template".
+                // TAPI, biar UI lo rapi dulu, kita akali valuenya.
+                
+                // SEMENTARA: Kita disable opsi per-template kalau backend belum support 'template_id' di jadwal.
+                // TAPI KARENA LO MINTA UI DULUAN:
+                
+                opt.value = "TEMPLATE:" + t.name; // Kasih tanda ini Template
+                opt.text = `📂 ${t.name} (${t.count} Grup)`;
+                
+                // Logic seleksi (agak tricky karena value-nya string custom)
+                if (selectedValue && selectedValue.startsWith("TEMPLATE:") && selectedValue === opt.value) {
+                    opt.selected = true;
+                }
+                
                 targetSelect.appendChild(opt);
             });
         } else {
-            defaultOpt.value = "";
-            defaultOpt.text = `-- Semua Grup dari ${selectedPhone} --`;
-            targetSelect.appendChild(defaultOpt);
-
-            // Filter Targets by Phone
-            const filtered = allTargets.filter(t => t.source_phone === selectedPhone);
-            if(filtered.length > 0) {
-                filtered.forEach(t => {
-                    let opt = document.createElement('option');
-                    opt.value = t.id;
-                    opt.text = t.name;
-                    if(String(t.id) === String(selectedTargetId)) opt.selected = true;
-                    targetSelect.appendChild(opt);
-                });
-            } else {
-                let empty = document.createElement('option');
-                empty.text = "⚠️ Tidak ada grup di akun ini";
-                empty.disabled = true;
-                targetSelect.appendChild(empty);
-            }
+            let empty = document.createElement('option');
+            empty.text = "⚠️ Belum ada template target";
+            empty.disabled = true;
+            targetSelect.appendChild(empty);
         }
     }
 
@@ -420,17 +442,19 @@
         const backdrop = document.getElementById('editBackdrop');
         const panel = document.getElementById('editPanel');
 
-        // Populate Data
+        // Populate Data Basic
         document.getElementById('editScheduleId').value = scheduleData.id;
         document.getElementById('editHour').value = scheduleData.run_hour;
         document.getElementById('editMinute').value = scheduleData.run_minute;
         document.getElementById('editTemplateSelect').value = scheduleData.template_id || "";
         
-        // Handle Dependent Dropdowns
+        // Handle Sender
         const senderVal = (scheduleData.sender_phone && scheduleData.sender_phone !== 'auto') ? scheduleData.sender_phone : 'auto';
         document.getElementById('editSenderSelect').value = senderVal;
         
-        // Update Target Dropdown based on Sender, then select the target
+        // Update Target Options & Select Value
+        // Note: Disini kita butuh logic pintar buat tau dia milih template mana
+        // (Ini butuh penyesuaian di backend sebenernya, tapi sementara kita load dulu)
         updateTargetOptions('edit', scheduleData.target_group_id);
 
         // Show Animation
@@ -456,7 +480,7 @@
         }, 300);
     }
 
-    // Initialize Dropdown for Create Form on Load
+    // Initialize Dropdown
     document.addEventListener('DOMContentLoaded', () => {
         updateTargetOptions('create');
     });
