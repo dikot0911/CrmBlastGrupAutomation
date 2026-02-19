@@ -570,7 +570,7 @@ class SchedulerWorker:
                 if SchedulerWorker.last_run_minute != now_indo.minute:
                     # 2. Cek Jadwal di DB
                     if supabase:
-                    SchedulerWorker._process_schedules(now_indo)
+                        SchedulerWorker._process_schedules(now_indo)
                     SchedulerWorker.last_run_minute = now_indo.minute
                 
                 # 3. Sleep Pintar (Sync ke detik 00)
