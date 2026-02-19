@@ -590,20 +590,20 @@ class SchedulerWorker:
                 .eq('run_minute', f_minute)\
                 .execute().data
                 
-            for job in upcoming:
-                msg = (
-                    "⏳ **PENGINGAT JADWAL**\n\n"
-                    f"Jadwal Blast akan berjalan dalam **5 menit lagi** "
-                    f"(Pukul {f_hour}:{f_minute:02d} WIB).\n\n"
-                    "Pastikan akun Telegram pengirim (Sender) Anda aktif/online agar proses lancar."
-                )
-                threading.Thread(target=send_telegram_alert, args=(job['user_id'], msg)).start()
+            if upcoming:
+                for job in upcoming:
+                    msg = (
+                        "⏳ **PENGINGAT JADWAL**\n\n"
+                        f"Jadwal Blast akan berjalan dalam **5 menit lagi** "
+                        f"(Pukul {f_hour}:{f_minute:02d} WIB).\n\n"
+                        "Pastikan akun Telegram pengirim (Sender) Anda aktif/online agar proses lancar."
+                    )
+                    threading.Thread(target=send_telegram_alert, args=(job['user_id'], msg)).start()
             
-            # --- 2. EKSEKUSI JADWAL SEKARANG (INI YANG KEMAREN ILANG) ---
+            # --- 2. EKSEKUSI JADWAL SEKARANG ---
             current_hour = current_time_indo.hour
             current_minute = current_time_indo.minute
 
-            # [FIX UTAMA] Definisikan variabel 'res' disini!
             res = supabase.table('blast_schedules').select("*")\
                 .eq('is_active', True)\
                 .eq('run_hour', current_hour)\
@@ -616,39 +616,9 @@ class SchedulerWorker:
             logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal induk.")
             
             for task in schedules:
-                # [LOGIC BARU: EXPAND TEMPLATE SAAT RUNTIME]
-                # Cek apakah jadwal ini pakai Template Koleksi?
-                if task.get('target_template_name'):
-                    # Ambil nama template
-                    tmpl_name = task['target_template_name']
-                    user_id = task['user_id']
-                    
-                    # Cari semua grup yang ada di template ini (REAL-TIME FETCH)
-                    targets = supabase.table('blast_targets').select("*")\
-                        .eq('user_id', user_id)\
-                        .eq('template_name', tmpl_name)\
-                        .execute().data
-                        
-                    if targets:
-                        logger.info(f"📂 Expanding Collection '{tmpl_name}': {len(targets)} groups found.")
-                        
-                        # Loop bikin task virtual buat setiap grup dalam template
-                        for t in targets:
-                            # Bikin copy task biar gak ngerusak data asli
-                            sub_task = task.copy()
-                            # Override target dengan ID Grup spesifik dari template
-                            sub_task['target_group_id'] = t['id'] 
-                            # Pastikan sender kebawa
-                            sub_task['sender_phone'] = task.get('sender_phone') 
-                            
-                            # Jalankan Eksekusi
-                            threading.Thread(target=SchedulerWorker._execute_task, args=(sub_task,)).start()
-                    else:
-                        logger.warning(f"⚠️ Collection '{tmpl_name}' kosong pas mau jalan.")
-                
-                else:
-                    # Jadwal Biasa (Single Group) - Jalankan langsung
-                    threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
+                # KITA CUMA BIKIN 1 THREAD PER JADWAL!
+                # Gak peduli isi targetnya 1 grup atau 1 folder isi 100 grup, tetep 1 antrian.
+                threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
                 
         except Exception as e:
             logger.error(f"Scheduler Process Error: {e}")
