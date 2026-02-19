@@ -946,10 +946,16 @@ class AutoReplyService:
                     all_rules = specific_rules + global_rules
 
                     for rule in all_rules:
-                        # Cek apakah keyword ada di dalam chat?
-                        if rule['keyword'] in chat_text:
+                        # 1. Ambil keyword dari database, split berdasarkan koma
+                        # Contoh di DB: "halo, hai, pagi kak" -> jadi list ['halo', 'hai', 'pagi kak']
+                        trigger_words = [w.strip() for w in rule['keyword'].split(',') if w.strip()]
+                        
+                        # 2. Cek apakah ada SATU SAJA dari kata/frasa itu di dalam chat_text
+                        matched = any(word in chat_text for word in trigger_words)
+                        
+                        if matched:
                             response_text = rule['response']
-                            logger.info(f"✅ [SATPAM] {my_phone} menjawab '{rule['keyword']}' ke {sender_id}")
+                            logger.info(f"✅ [SATPAM] {my_phone} menjawab trigger ke {sender_id}")
                             break
                     
                     # D. LOGIC WELCOME MESSAGE (Jika gak ada keyword)
