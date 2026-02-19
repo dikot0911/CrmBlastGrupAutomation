@@ -2775,22 +2775,35 @@ def edit_schedule():
 @app.route('/update_schedule', methods=['POST'])
 @login_required
 def update_schedule():
-    s_id = request.form.get('schedule_id')
-    user_id = session['user_id']
-    
     try:
-        data = {
+        schedule_id = request.form.get('schedule_id')
+        
+        # Ambil data dari form Edit
+        update_data = {
             'run_hour': int(request.form.get('hour')),
             'run_minute': int(request.form.get('minute')),
             'sender_phone': request.form.get('sender_phone'),
-            'target_group_id': request.form.get('target_group_id') or None,
-            'template_id': int(request.form.get('template_id')) if request.form.get('template_id') else None
+            'template_id': request.form.get('template_id'),
+            'target_template_name': request.form.get('target_template_name') # Bisa kosong (berarti global)
         }
         
-        supabase.table('blast_schedules').update(data).eq('id', s_id).eq('user_id', user_id).execute()
-        flash('Jadwal berhasil diperbarui!', 'success')
+        # Kalau form ngirim nama folder kosong (""), kita ubah jadi None di database
+        if not update_data['target_template_name']:
+            update_data['target_template_name'] = None
+            
+        # Eksekusi update!
+        if schedule_id:
+            supabase.table('blast_schedules').update(update_data)\
+                .eq('id', schedule_id)\
+                .eq('user_id', session['user_id'])\
+                .execute()
+            flash('✅ Jadwal berhasil di-update!', 'success')
+        else:
+            flash('❌ ID Jadwal tidak valid.', 'danger')
+            
     except Exception as e:
-        flash(f'Gagal update jadwal: {str(e)}', 'danger')
+        logger.error(f"Gagal Edit Jadwal: {e}")
+        flash('❌ Gagal memperbarui jadwal.', 'danger')
         
     return redirect(url_for('dashboard_schedule'))
 
