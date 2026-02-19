@@ -545,10 +545,13 @@ class ReplyEngine:
 class SchedulerWorker:
     """
     Worker cerdas dengan TIMEZONE WIB (Asia/Jakarta).
-    Fitur: Human Behavior, Smart Retry (3 Phase), Anti-Flood, & Anti-Double.
+    Fitur: Human Behavior, Smart Retry (3 Phase), & Anti-Flood.
     """
-    last_run_minute = None # Penanda biar jadwal gak jalan 2x di menit yg sama
-
+    # [UPGRADE] Penanda waktu biar jadwal gak kepanggil 2 kali di menit yang sama
+    last_run_minute = None
+    _exec_guard_lock = threading.Lock()
+    _executed_run_keys = {}
+    
     @staticmethod
     def start():
         threading.Thread(target=SchedulerWorker._loop, daemon=True, name="SchedulerEngine").start()
@@ -556,26 +559,28 @@ class SchedulerWorker:
 
     @staticmethod
     def _loop():
-        """Main Loop: Cek setiap detik"""
+        """Main Loop: Cek setiap detik ke-00"""
         while True:
             try:
+                # 1. Ambil Waktu Sekarang (WIB)
                 tz_indo = pytz.timezone('Asia/Jakarta')
                 now_indo = datetime.now(tz_indo)
 
-                # Cegah Double Trigger: Pastikan cuma jalan 1x dalam 1 menit yang sama
+                # [UPGRADE] Cek agar tidak memproses jadwal 2x di menit yang persis sama
                 if SchedulerWorker.last_run_minute != now_indo.minute:
+                    # 2. Cek Jadwal di DB
                     if supabase:
                         SchedulerWorker._process_schedules(now_indo)
                     SchedulerWorker.last_run_minute = now_indo.minute
                 
-                # Sleep Pintar (Sync ke detik 00)
+                # 3. Sleep Pintar (Sync ke detik 00)
                 sleep_time = 60 - datetime.now().second
                 if sleep_time < 0: sleep_time = 1
                 time.sleep(sleep_time)
                 
             except Exception as e:
                 logger.error(f"Scheduler Loop Error: {e}")
-                time.sleep(10)
+                time.sleep(60)
 
     @staticmethod
     def _process_schedules(current_time_indo):
@@ -585,26 +590,27 @@ class SchedulerWorker:
             f_hour = future_time.hour
             f_minute = future_time.minute
             
+            # Cek jadwal 5 menit ke depan
             upcoming = supabase.table('blast_schedules').select("user_id")\
                 .eq('is_active', True)\
                 .eq('run_hour', f_hour)\
                 .eq('run_minute', f_minute)\
                 .execute().data
                 
-            if upcoming:
-                for job in upcoming:
-                    msg = (
-                        "⏳ **PENGINGAT JADWAL**\n\n"
-                        f"Jadwal Blast akan berjalan dalam **5 menit lagi** "
-                        f"(Pukul {f_hour}:{f_minute:02d} WIB).\n\n"
-                        "Pastikan akun Telegram pengirim (Sender) Anda aktif/online agar proses lancar."
-                    )
-                    threading.Thread(target=send_telegram_alert, args=(job['user_id'], msg)).start()
+            for job in upcoming:
+                msg = (
+                    "⏳ **PENGINGAT JADWAL**\n\n"
+                    f"Jadwal Blast akan berjalan dalam **5 menit lagi** "
+                    f"(Pukul {f_hour}:{f_minute:02d} WIB).\n\n"
+                    "Pastikan akun Telegram pengirim (Sender) Anda aktif/online agar proses lancar."
+                )
+                threading.Thread(target=send_telegram_alert, args=(job['user_id'], msg)).start()
             
-            # --- 2. EKSEKUSI JADWAL SEKARANG ---
+            # --- 2. EKSEKUSI JADWAL SEKARANG (INI YANG KEMAREN ILANG) ---
             current_hour = current_time_indo.hour
             current_minute = current_time_indo.minute
 
+            # [FIX UTAMA] Definisikan variabel 'res' disini!
             res = supabase.table('blast_schedules').select("*")\
                 .eq('is_active', True)\
                 .eq('run_hour', current_hour)\
@@ -617,8 +623,7 @@ class SchedulerWorker:
             logger.info(f"🚀 EXECUTE: Ditemukan {len(schedules)} jadwal induk.")
             
             for task in schedules:
-                # [FIX GUBRAK] Kita lempar 1 TASK UTUH ke eksekutor.
-                # Gak perlu dipecah-pecah jadi banyak thread disini biar gak nyepam notif.
+                # [KITA PERTAHANKAN LOGIC LU]
                 threading.Thread(target=SchedulerWorker._execute_task, args=(task,)).start()
                 
         except Exception as e:
@@ -627,16 +632,30 @@ class SchedulerWorker:
     @staticmethod
     def _execute_task(task):
         """
-        [STRICT MODE] Eksekusi Task dengan Keamanan Niche Akun & Anti Crash.
+        [STRICT MODE] Eksekusi Task dengan Keamanan Niche Akun.
         """
         user_id = task['user_id']
+        schedule_id = task.get('id')
         template_id = task.get('template_id') 
         target_group_id = task.get('target_group_id') 
-        target_template_name = task.get('target_template_name') # Bisa berisi nama folder target
-        sender_phone = task.get('sender_phone') 
+        target_template_name = task.get('target_template_name') # [UPGRADE] Tambah parameter Folder
+        sender_phone = task.get('sender_phone') # Ini nomor HP pengirim yang dipilih
+
+        # Guard anti-eksekusi ganda lintas thread/proses web (minimalkan spam notif "Selesai")
+        tz_indo = pytz.timezone('Asia/Jakarta')
+        run_key = f"{schedule_id}:{datetime.now(tz_indo).strftime('%Y%m%d%H%M')}"
+        with SchedulerWorker._exec_guard_lock:
+            now_ts = time.time()
+            SchedulerWorker._executed_run_keys = {
+                k: v for k, v in SchedulerWorker._executed_run_keys.items() if (now_ts - v) < 7200
+            }
+            if run_key in SchedulerWorker._executed_run_keys:
+                logger.warning(f"⏭️ Skip duplicate task execution: {run_key}")
+                return
+            SchedulerWorker._executed_run_keys[run_key] = now_ts
         
-        # 1. Siapkan Konten (Fix "Halo Pesan Terjadwal")
-        message_content = None
+        # 1. Siapkan Konten
+        message_content = "Halo! Ini pesan terjadwal otomatis."
         source_media = None
         
         if template_id:
@@ -646,9 +665,10 @@ class SchedulerWorker:
                 if tmpl.get('source_chat_id'):
                     source_media = {'chat': int(tmpl['source_chat_id']), 'id': int(tmpl['source_message_id'])}
 
-        # Jika user milih "Manual" di jadwal (Template kosong), BATALKAN! Jangan kirim "Halo!"
-        if not message_content:
-            send_telegram_alert(user_id, f"❌ **Jadwal Dibatalkan!**\nTemplate Pesan tidak valid atau kosong. Harap edit jadwal dan pilih Template Pesan yang benar.")
+        # [UPGRADE ANTI-HALO] Kalau ternyata pesan masih bawaan "Halo" dan template kosong, BATALKAN!
+        if message_content == "Halo! Ini pesan terjadwal otomatis." and not template_id:
+            logger.error(f"Task Batal: Template kosong/manual untuk User {user_id}")
+            send_telegram_alert(user_id, "❌ **Jadwal Dibatalkan!**\nTemplate Pesan tidak valid (Mode Manual). Harap edit jadwal dan pilih Template yang benar.")
             return
 
         # 2. Worker Async Utama
@@ -656,35 +676,48 @@ class SchedulerWorker:
             client = None
             conn_error = None
             
-            # --- A. LOGIC KONEKSI "STRICT" (DENGAN BYPASS SATPAM) ---
+            # --- A. LOGIC KONEKSI "STRICT" ---
             try:
+                # Cek apakah user milih akun SPESIFIK atau AUTO?
                 is_specific_sender = (sender_phone and sender_phone != 'auto')
 
                 if is_specific_sender:
+                    # KASUS 1: USER MILIH AKUN SPESIFIK
                     res = supabase.table('telegram_accounts').select("session_string")\
                         .eq('user_id', user_id).eq('phone_number', sender_phone).eq('is_active', True).execute()
                     
                     if res.data:
-                        # PENTING: Gunakan sequential_updates=True biar gak tabrakan sama Auto Reply
+                        # [UPGRADE ANTI-CRASH] Tambahkan sequential_updates=True
                         client = TelegramClient(StringSession(res.data[0]['session_string']), API_ID, API_HASH, sequential_updates=True)
                         await client.connect()
                     else:
+                        # JIKA AKUN SPESIFIK MATI -> LANGSUNG STOP
                         conn_error = f"⛔ Akun {sender_phone} mati/logout. Task dibatalkan demi keamanan branding."
                 
                 else:
-                    client = await get_active_client(user_id)
-                    if not client:
+                    # KASUS 2: USER MILIH "AUTO"
+                    # [UPGRADE ANTI-TABRAKAN] Tembak database langsung biar gak bentrok sama get_active_client() milik AutoReply
+                    res_auto = supabase.table('telegram_accounts').select("session_string, phone_number")\
+                        .eq('user_id', user_id).eq('is_active', True).execute()
+                        
+                    if res_auto.data:
+                        client = TelegramClient(StringSession(res_auto.data[0]['session_string']), API_ID, API_HASH, sequential_updates=True)
+                        await client.connect()
+                    else:
                         conn_error = "Tidak ada akun Telegram yang aktif sama sekali."
                 
                 # JIKA GAGAL KONEK
                 if not client or not await client.is_user_authorized():
+                    # Catat Log Gagal
                     supabase.table('blast_logs').insert({
                         "user_id": user_id, "group_name": "SYSTEM", "group_id": 0,
                         "status": "FAILED", "error_message": conn_error or "Auth Failed",
                         "created_at": datetime.utcnow().isoformat()
                     }).execute()
                     
+                    # Lapor Bot
                     send_telegram_alert(user_id, f"❌ **Jadwal Gagal!**\n{conn_error}")
+                    if client: await client.disconnect()
                     return 
 
             except Exception as e:
@@ -703,17 +736,18 @@ class SchedulerWorker:
                         if src_msg and src_msg.media: media_obj = src_msg.media
                     except: pass
 
-                # Ambil Target Berdasarkan Group ID atau Folder(Template Name)
+                # Ambil Target
                 targets_query = supabase.table('blast_targets').select("*").eq('user_id', user_id)
+                # [UPGRADE] Tambah logic pencarian target berdasarkan nama Folder
                 if target_template_name:
                     targets_query = targets_query.eq('template_name', target_template_name)
-                elif target_group_id:
+                elif target_group_id: 
                     targets_query = targets_query.eq('id', target_group_id)
-                
+                    
                 raw_targets = targets_query.execute().data
                 
                 if not raw_targets:
-                    send_telegram_alert(user_id, "⚠️ Jadwal dibatalkan: Target grup kosong/tidak ditemukan.")
+                    send_telegram_alert(user_id, "⚠️ Target grup kosong.")
                     return
 
                 # FLATTEN TARGETS
@@ -732,25 +766,34 @@ class SchedulerWorker:
                             'group_name': tg.get('group_name', 'Unknown')
                         })
 
-                # --- C. PROCESS QUEUE (Sistem Antrian) ---
+                # --- C. PROCESS QUEUE ---
                 async def process_queue(queue_list, attempt_phase):
                     next_retry_queue = []
                     success_count = 0
+                    processed_since_break = 0
+                    break_after = random.randint(20, 25)
                     
                     for idx, item in enumerate(queue_list):
-                        if idx > 0 and idx % 20 == 0: await asyncio.sleep(random.randint(60, 120))
+                        if processed_since_break >= break_after:
+                            rest_seconds = random.randint(120, 300)
+                            logger.info(
+                                f"☕ Human break (phase {attempt_phase}) user={user_id} rest={rest_seconds}s"
+                            )
+                            await asyncio.sleep(rest_seconds)
+                            processed_since_break = 0
+                            break_after = random.randint(20, 25)
 
                         try:
                             entity = await client.get_entity(item['group_id'])
                             await client.send_read_acknowledge(entity)
                             
-                            # [FIX BANNED TYPING] Dibungkus try-except agar tidak crash
+                            # [UPGRADE ANTI-BANNED] Tameng Error Typing
                             try:
                                 async with client.action(entity, 'typing'): 
                                     await asyncio.sleep(random.uniform(2, 5))
                             except Exception as typing_err:
-                                logger.warning(f"Skip typing action for {item['group_name']}: {typing_err}")
-                                pass # Lanjut kirim pesan
+                                logger.warning(f"Skip typing action untuk {item['group_name']}: {typing_err}")
+                                pass # Biarin aja error pura-pura ngetiknya, yang penting pesan tetep dikirim
 
                             final_msg = message_content.replace("{name}", item['group_name'])
                             
@@ -761,26 +804,25 @@ class SchedulerWorker:
                                 "user_id": user_id, "group_name": item['group_name'], "group_id": item['group_id'], 
                                 "status": "SUCCESS", "created_at": datetime.utcnow().isoformat()
                             }).execute()
-                            
                             success_count += 1
+                            processed_since_break += 1
                             
-                            # Jeda aman antar grup biar gak flood wait
-                            await asyncio.sleep(random.randint(4, 10))
+                            await asyncio.sleeprandom.uniform(4.0, 10.0))
 
                         except Exception as e:
                             err = str(e)
-                            if "FloodWait" in err or "SlowMode" in err: 
-                                next_retry_queue.append(item)
+                            if "FloodWait" in err or "SlowMode" in err: next_retry_queue.append(item)
                             else:
                                 supabase.table('blast_logs').insert({
                                     "user_id": user_id, "group_name": item['group_name'], "status": "FAILED", 
                                     "error_message": err, "created_at": datetime.utcnow().isoformat()
                                 }).execute()
+                            processed_since_break += 1
                             await asyncio.sleep(2)
 
                     return next_retry_queue, success_count
                 
-                # --- D. EKSEKUSI (Jalanin Antrian) ---
+                # --- D. EKSEKUSI ---
                 total_success = 0
                 retry_1, s1 = await process_queue(send_queue, 1)
                 total_success += s1
@@ -795,13 +837,16 @@ class SchedulerWorker:
                         _, s3 = await process_queue(retry_2, 3)
                         total_success += s3
 
-                # HANYA MENGIRIM 1 NOTIFIKASI DI AKHIR
-                send_telegram_alert(user_id, f"✅ **Jadwal Selesai!**\nTotal Terkirim: {total_success} Grup/Topik")
+                send_telegram_alert(user_id, f"✅ **Jadwal Selesai!**\nTotal Terkirim: {total_success}")
 
             finally: 
                 if client: await client.disconnect()
         
         run_async(_async_send())
+
+# Jalankan Scheduler saat app start
+if supabase:
+    SchedulerWorker.start()
 
 
 # ==============================================================================
@@ -1324,6 +1369,8 @@ def dashboard_overview():
     end = start + per_page - 1
     
     logs = []
+    schedules = []
+    targets = []
     total_logs = 0
     total_pages = 0
     stats = {} # [FIX 2] Container untuk statistik kartu
