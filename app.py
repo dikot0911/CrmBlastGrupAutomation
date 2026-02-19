@@ -2729,6 +2729,49 @@ def start_broadcast():
 # SECTION 12: CRUD ROUTES (SCHEDULE, TARGETS, & TEMPLATES)
 # ==============================================================================
 
+@app.route('/edit_schedule', methods=['POST'])
+@login_required
+def edit_schedule():
+    """Jalur API untuk menyimpan hasil editan jadwal share"""
+    try:
+        schedule_id = request.form.get('schedule_id')
+        run_hour = int(request.form.get('run_hour'))
+        run_minute = int(request.form.get('run_minute'))
+        sender_phone = request.form.get('sender_phone')
+        target_val = request.form.get('target_audience') 
+        template_id = request.form.get('template_id')
+        
+        # Pecah target (Logic ini sama kayak pas lu bikin jadwal baru)
+        target_template_name = None
+        target_group_id = None
+        
+        if target_val and target_val.startswith('folder_'):
+            target_template_name = target_val.replace('folder_', '')
+        elif target_val and target_val.startswith('group_'):
+            target_group_id = target_val.replace('group_', '')
+            
+        update_data = {
+            'run_hour': run_hour,
+            'run_minute': run_minute,
+            'sender_phone': sender_phone,
+            'template_id': template_id,
+            'target_template_name': target_template_name,
+            'target_group_id': target_group_id
+        }
+        
+        # Eksekusi update ke database Supabase
+        if schedule_id:
+            supabase.table('blast_schedules').update(update_data).eq('id', schedule_id).eq('user_id', session['user_id']).execute()
+            flash('Jadwal berhasil diperbarui!', 'success')
+        else:
+            flash('ID Jadwal tidak ditemukan.', 'danger')
+            
+    except Exception as e:
+        logger.error(f"Error edit schedule: {e}")
+        flash('Gagal memperbarui jadwal.', 'danger')
+        
+    return redirect(url_for('dashboard_schedule'))
+
 @app.route('/update_schedule', methods=['POST'])
 @login_required
 def update_schedule():
