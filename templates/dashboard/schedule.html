@@ -5,7 +5,6 @@
 <div class="max-w-7xl mx-auto animate-fade-in pb-32" x-data="scheduleManager()">
     
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 relative overflow-hidden group">
             <div class="absolute right-0 top-0 w-24 h-24 bg-indigo-50 rounded-full -mr-6 -mt-6 transition-transform group-hover:scale-110"></div>
             <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 z-10">
@@ -114,14 +113,13 @@
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Target Audiens</label>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Target Audiens (Folder)</label>
                                 <div class="relative group">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <i class="fa-solid fa-bullseye text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
+                                        <i class="fa-solid fa-folder-open text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
                                     </div>
-                                    <select name="target_group_id" id="createTargetSelect" class="w-full pl-10 pr-10 py-3.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-bold text-slate-700 cursor-pointer appearance-none hover:border-indigo-300 shadow-sm">
-                                        <option value="">-- Pilih Akun Dulu --</option>
-                                    </select>
+                                    <select name="target_template_name" id="createTargetSelect" class="w-full pl-10 pr-10 py-3.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-bold text-slate-700 cursor-pointer appearance-none hover:border-indigo-300 shadow-sm">
+                                        </select>
                                     <div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                                         <i class="fa-solid fa-chevron-down text-xs"></i>
                                     </div>
@@ -138,7 +136,7 @@
                                         <i class="fa-regular fa-file-lines text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
                                     </div>
                                     <select name="template_id" class="w-full pl-10 pr-10 py-3.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition text-sm font-bold text-slate-700 cursor-pointer appearance-none hover:border-indigo-300 shadow-sm">
-                                        <option value="">-- Kirim Pesan Manual (Input Saat Eksekusi) --</option>
+                                        <option value="">-- Tanpa Template (Bisa Error) --</option>
                                         {% for t in templates %}
                                             <option value="{{ t.id }}">{{ t.name }}</option>
                                         {% endfor %}
@@ -173,7 +171,6 @@
             {% if not schedules %}
             <div class="flex flex-col items-center justify-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-200 text-center relative overflow-hidden group">
                 <div class="absolute inset-0 bg-slate-50/50 [mask-image:radial-gradient(ellipse_at_center,white,transparent)]"></div>
-                
                 <div class="relative z-10 mb-6 group-hover:scale-110 transition-transform duration-500">
                     <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg border border-slate-100 relative">
                         <i class="fa-solid fa-stopwatch text-4xl text-slate-300 group-hover:text-indigo-400 transition-colors"></i>
@@ -182,7 +179,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <h3 class="text-xl font-bold text-slate-700 relative z-10">Belum Ada Jadwal Aktif</h3>
                 <p class="text-slate-400 max-w-sm mt-2 text-sm relative z-10">
                     Bot sedang beristirahat. Tambahkan jadwal blast melalui formulir di sebelah kiri agar bot bekerja otomatis.
@@ -193,9 +189,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {% for s in schedules %}
                 <div class="bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:shadow-indigo-100/50 transition-all duration-300 group relative overflow-hidden flex flex-col h-full">
-                    
                     <div class="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
                     <div class="p-6 flex-1 flex flex-col">
                         <div class="flex justify-between items-start mb-5">
                             <div class="flex flex-col">
@@ -210,8 +204,8 @@
                                 </span>
                             </div>
                             
-                            <div class="flex gap-2">
-                                <button onclick="openEditModal({{ s|tojson }})" class="w-8 h-8 rounded-xl bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition flex items-center justify-center border border-slate-100" title="Edit Jadwal">
+                            <div class="flex gap-2 relative z-20">
+                                <button type="button" onclick='openEditModal({{ s|tojson }})' class="w-8 h-8 rounded-xl bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition flex items-center justify-center border border-slate-100" title="Edit Jadwal">
                                     <i class="fa-solid fa-pen-to-square text-sm"></i>
                                 </button>
                                 <a href="/delete_schedule/{{ s.id }}" onclick="return confirm('Hapus jadwal ini?')" class="w-8 h-8 rounded-xl bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition flex items-center justify-center border border-slate-100" title="Hapus">
@@ -236,22 +230,18 @@
                                     </p>
                                 </div>
                             </div>
-
+                            
                             <div class="flex items-center gap-3 p-2 rounded-xl bg-slate-50/50 border border-slate-100">
                                 <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
-                                    <i class="fa-solid fa-bullseye text-xs"></i>
+                                    <i class="fa-solid fa-folder-open text-xs"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Target</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Target Folder</p>
                                     <p class="text-xs font-bold text-slate-700 truncate">
                                         {% if s.target_template_name %}
-                                            <span class="text-indigo-600 flex items-center gap-1">
-                                                <i class="fa-solid fa-folder-open"></i> {{ s.target_template_name }}
-                                            </span>
-                                        {% elif s.target_group_id %}
-                                            Grup ID: {{ s.target_group_id }}
+                                            <span class="text-indigo-600">{{ s.target_template_name }}</span>
                                         {% else %}
-                                            🌐 Semua Grup
+                                            <span class="text-emerald-600">🌍 Semua Grup</span>
                                         {% endif %}
                                     </p>
                                 </div>
@@ -262,9 +252,11 @@
                                     <i class="fa-solid fa-file-lines text-xs"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pesan</p>
-                                    <p class="text-xs font-bold text-slate-700 truncate" title="{{ s.template_name }}">
-                                        {{ s.template_name if s.template_name else 'Custom Manual' }}
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Template Pesan</p>
+                                    <p class="text-xs font-bold text-slate-700 truncate" title="ID: {{ s.template_id }}">
+                                        {% for t in templates %}
+                                            {% if t.id == s.template_id %}{{ t.name }}{% endif %}
+                                        {% endfor %}
                                     </p>
                                 </div>
                             </div>
@@ -283,10 +275,11 @@
     <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
         <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg transform scale-95 opacity-0 transition-all duration-300 relative overflow-hidden" id="editPanel">
             
-            <form action="/update_schedule" method="POST" id="editForm"> <input type="hidden" name="schedule_id" id="editScheduleId">
+            <form action="/update_schedule" method="POST" id="editForm"> 
+                <input type="hidden" name="schedule_id" id="editScheduleId">
                 
                 <div class="bg-slate-900 px-8 py-6 flex justify-between items-center relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-6 -mt-6"></div>
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500/20 rounded-full blur-2xl -mr-6 -mt-6"></div>
                     <h3 class="text-white font-bold text-lg relative z-10 flex items-center gap-2">
                         <i class="fa-solid fa-pen-to-square text-indigo-400"></i> Edit Jadwal
                     </h3>
@@ -295,23 +288,27 @@
                     </button>
                 </div>
 
-                <div class="p-8 space-y-5">
+                <div class="p-8 space-y-5 bg-white">
                     
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Jam (WIB)</label>
-                            <input type="number" name="hour" id="editHour" min="0" max="23" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-lg font-bold font-mono text-center focus:ring-indigo-500 focus:border-indigo-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Menit</label>
-                            <input type="number" name="minute" id="editMinute" min="0" max="59" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-lg font-bold font-mono text-center focus:ring-indigo-500 focus:border-indigo-500">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Waktu Eksekusi (WIB)</label>
+                        <div class="flex items-center gap-3">
+                            <div class="relative flex-1">
+                                <input type="number" name="hour" id="editHour" min="0" max="23" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-2xl font-black font-mono text-center focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                                <span class="absolute top-2 right-2 text-[8px] font-bold text-slate-400">JAM</span>
+                            </div>
+                            <span class="text-2xl font-black text-slate-300 pb-1">:</span>
+                            <div class="relative flex-1">
+                                <input type="number" name="minute" id="editMinute" min="0" max="59" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-2xl font-black font-mono text-center focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                                <span class="absolute top-2 right-2 text-[8px] font-bold text-slate-400">MNT</span>
+                            </div>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Akun Pengirim</label>
-                        <select name="sender_phone" id="editSenderSelect" onchange="updateTargetOptions('edit')" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-indigo-500">
-                            <option value="auto">⚡ Otomatis</option>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Akun Pengirim</label>
+                        <select name="sender_phone" id="editSenderSelect" onchange="updateTargetOptions('edit')" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none cursor-pointer">
+                            <option value="auto">⚡ Otomatis (Rotasi)</option>
                             {% for acc in accounts %}
                                 <option value="{{ acc.phone_number }}">{{ acc.first_name }} ({{ acc.phone_number }})</option>
                             {% endfor %}
@@ -319,15 +316,15 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Target Audiens</label>
-                        <select name="target_group_id" id="editTargetSelect" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-indigo-500">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Target Audiens (Folder)</label>
+                        <select name="target_template_name" id="editTargetSelect" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none cursor-pointer">
                             </select>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Template Pesan</label>
-                        <select name="template_id" id="editTemplateSelect" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-indigo-500">
-                            <option value="">-- Manual --</option>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Template Pesan</label>
+                        <select name="template_id" id="editTemplateSelect" required class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none cursor-pointer">
+                            <option value="">-- Pilih Template --</option>
                             {% for t in templates %}
                                 <option value="{{ t.id }}">{{ t.name }}</option>
                             {% endfor %}
@@ -337,7 +334,7 @@
 
                 <div class="px-8 py-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
                     <button type="button" onclick="closeEditModal()" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-white transition">Batal</button>
-                    <button type="submit" class="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition">Simpan Perubahan</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition">Update Jadwal</button>
                 </div>
             </form>
         </div>
@@ -348,120 +345,111 @@
 
 {% block scripts %}
 <script>
-    // --- DATA STORE ---
-    // Kita simpan data mentah dari backend
+    // ==============================================================================
+    // CORE LOGIC JAVASCRIPT: MENYELARASKAN DATA DATABASE DENGAN FORM UI
+    // ==============================================================================
+    
+    // 1. Ambil data mentah target dari backend (Jinja ke JS Array)
     const rawTargets = [
         {% for t in targets %}
         {
             id: "{{ t.id }}",
             group_name: "{{ t.group_name }}",
-            // Pastikan template_name ada isinya
             template_name: "{{ t.template_name if t.template_name else 'Tanpa Nama' }}", 
             source_phone: "{{ t.source_phone }}" 
         },
         {% endfor %}
     ];
 
-    // --- HELPER: GROUPING BY TEMPLATE ---
-    // Fungsi ini bakal ngerapihin data biar jadi: { "Nama Template": [List ID Grup] }
+    // 2. Fungsi Mengelompokkan Grup ke dalam "Folder/Template"
     function getGroupedTemplates(phoneFilter) {
         let groups = {};
-        
         rawTargets.forEach(t => {
-            // Filter berdasarkan akun pengirim (kalau mode spesifik)
+            // Kalau filter bukan 'auto', buang akun yg gak sesuai
             if (phoneFilter && phoneFilter !== 'auto' && t.source_phone !== phoneFilter) return;
 
             let tmpl = t.template_name;
             if (!groups[tmpl]) {
-                groups[tmpl] = {
-                    name: tmpl,
-                    source: t.source_phone,
-                    ids: [], // Kumpulan ID grup dalam template ini
-                    count: 0
-                };
+                groups[tmpl] = { name: tmpl, count: 0 };
             }
-            groups[tmpl].ids.push(t.id);
             groups[tmpl].count++;
         });
-        
         return Object.values(groups);
     }
 
-    // --- SHARED: UPDATE TARGET DROPDOWN ---
-    // Mode: 'create' atau 'edit'
-    function updateTargetOptions(mode, selectedValue = null) {
+    // 3. Update isi Dropdown Target (Dipakai Form Create & Edit)
+    // Parameter `preselectedValue` dipakai khusus pas mode 'edit' biar otomatis kepilih
+    function updateTargetOptions(mode, preselectedValue = null) {
         const senderSelect = document.getElementById(mode + 'SenderSelect');
         const targetSelect = document.getElementById(mode + 'TargetSelect');
         const selectedPhone = senderSelect.value;
 
-        // Reset Options
+        // Kosongkan isi dropdown lama
         targetSelect.innerHTML = '';
 
-        // Opsi 1: Semua Grup (GLOBAL)
+        // OPSI 1: Kirim ke Semua Grup
         let globalOpt = document.createElement('option');
-        globalOpt.value = ""; // Value kosong artinya kirim ke semua
+        globalOpt.value = ""; // Kosong = Kirim ke semua
         globalOpt.text = (selectedPhone === 'auto') 
             ? "🌍 Kirim ke SEMUA Grup (Mode Auto)" 
             : `🌍 Semua Grup dari ${selectedPhone}`;
+        
+        // Cek kalau targetnya emang "Semua Grup" (value kosong)
+        if (preselectedValue === "" || preselectedValue === null) {
+            globalOpt.selected = true;
+        }
         targetSelect.appendChild(globalOpt);
 
-        // Ambil data template yang sudah dikelompokkan
+        // OPSI 2: Kirim ke Folder Tertentu
         const templates = getGroupedTemplates(selectedPhone);
-
         if (templates.length > 0) {
             templates.forEach(t => {
                 let opt = document.createElement('option');
-                // Value-nya kita isi dengan gabungan ID grup dipisah koma (biar backend tau isinya apa aja)
-                // ATAU: Lo bisa kirim nama templatenya aja kalau backend lo support filter by template_name
-                // SEMENTARA KITA KIRIM NAMA TEMPLATE SBG VALUE (Biar Logic Backend gak berubah banyak)
+                // Value = Nama Folder (karena di backend parameter lu namanya `target_template_name`)
+                opt.value = t.name; 
+                opt.text = `📂 Folder: ${t.name} (${t.count} Grup)`;
                 
-                // [PENTING] Karena di backend (app.py) lo nyimpen 'target_group_id', 
-                // ini sebenernya kurang pas kalau kita mau kirim "Satu Template".
-                // TAPI, biar UI lo rapi dulu, kita akali valuenya.
-                
-                // SEMENTARA: Kita disable opsi per-template kalau backend belum support 'template_id' di jadwal.
-                // TAPI KARENA LO MINTA UI DULUAN:
-                
-                opt.value = "TEMPLATE:" + t.name; // Kasih tanda ini Template
-                opt.text = `📂 ${t.name} (${t.count} Grup)`;
-                
-                // Logic seleksi (agak tricky karena value-nya string custom)
-                if (selectedValue && selectedValue.startsWith("TEMPLATE:") && selectedValue === opt.value) {
+                // Kalau nama foldernya sama kayak yang di database jadwal, otomatis selected!
+                if (preselectedValue === t.name) {
                     opt.selected = true;
                 }
                 
                 targetSelect.appendChild(opt);
             });
-        } else {
-            let empty = document.createElement('option');
-            empty.text = "⚠️ Belum ada template target";
-            empty.disabled = true;
-            targetSelect.appendChild(empty);
         }
     }
 
-    // --- MODAL LOGIC ---
+    // ==============================================================================
+    // FUNGSI MODAL POP-UP EDIT
+    // ==============================================================================
     function openEditModal(scheduleData) {
+        // Logika Pengamanan Data: Pastikan data tidak undefined
+        if (!scheduleData) return;
+
         const modal = document.getElementById('editModal');
         const backdrop = document.getElementById('editBackdrop');
         const panel = document.getElementById('editPanel');
 
-        // Populate Data Basic
+        // 1. Tembak data ID, Jam, dan Menit ke Input
         document.getElementById('editScheduleId').value = scheduleData.id;
-        document.getElementById('editHour').value = scheduleData.run_hour;
-        document.getElementById('editMinute').value = scheduleData.run_minute;
-        document.getElementById('editTemplateSelect').value = scheduleData.template_id || "";
+        document.getElementById('editHour').value = scheduleData.run_hour.toString().padStart(2, '0');
+        document.getElementById('editMinute').value = scheduleData.run_minute.toString().padStart(2, '0');
         
-        // Handle Sender
-        const senderVal = (scheduleData.sender_phone && scheduleData.sender_phone !== 'auto') ? scheduleData.sender_phone : 'auto';
+        // 2. Set Akun Pengirim
+        const senderVal = (scheduleData.sender_phone && scheduleData.sender_phone !== 'auto') 
+                          ? scheduleData.sender_phone : 'auto';
         document.getElementById('editSenderSelect').value = senderVal;
         
-        // Update Target Options & Select Value
-        // Note: Disini kita butuh logic pintar buat tau dia milih template mana
-        // (Ini butuh penyesuaian di backend sebenernya, tapi sementara kita load dulu)
-        updateTargetOptions('edit', scheduleData.target_group_id);
+        // 3. Set Template Pesan (Pastikan type data int/string cocok)
+        document.getElementById('editTemplateSelect').value = scheduleData.template_id || "";
+        
+        // 4. Update Dropdown Target SEBELUM Modal Muncul!
+        // Kita kirim target_template_name (nama folder) biar kepilih otomatis.
+        // Jika null/kosong, berarti dia mode "Semua Grup"
+        const savedTarget = scheduleData.target_template_name || ""; 
+        updateTargetOptions('edit', savedTarget);
 
-        // Show Animation
+        // 5. Efek Animasi Muncul
         modal.classList.remove('hidden');
         setTimeout(() => {
             backdrop.classList.remove('opacity-0');
@@ -475,6 +463,7 @@
         const backdrop = document.getElementById('editBackdrop');
         const panel = document.getElementById('editPanel');
 
+        // Efek Animasi Hilang
         backdrop.classList.add('opacity-0');
         panel.classList.remove('opacity-100', 'scale-100');
         panel.classList.add('opacity-0', 'scale-95');
@@ -484,10 +473,10 @@
         }, 300);
     }
 
-    // Initialize Dropdown
+    // Eksekusi pas halaman pertama kali direload
     document.addEventListener('DOMContentLoaded', () => {
+        // Inisialisasi dropdown di Form Create
         updateTargetOptions('create');
     });
 </script>
 {% endblock %}
-
