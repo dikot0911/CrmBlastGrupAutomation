@@ -656,7 +656,7 @@ class SchedulerWorker:
             client = None
             conn_error = None
             
-            # --- A. LOGIC KONEKSI "STRICT" ---
+            # --- A. LOGIC KONEKSI "STRICT" (DENGAN BYPASS SATPAM) ---
             try:
                 is_specific_sender = (sender_phone and sender_phone != 'auto')
 
@@ -665,7 +665,8 @@ class SchedulerWorker:
                         .eq('user_id', user_id).eq('phone_number', sender_phone).eq('is_active', True).execute()
                     
                     if res.data:
-                        client = TelegramClient(StringSession(res.data[0]['session_string']), API_ID, API_HASH)
+                        # PENTING: Gunakan sequential_updates=True biar gak tabrakan sama Auto Reply
+                        client = TelegramClient(StringSession(res.data[0]['session_string']), API_ID, API_HASH, sequential_updates=True)
                         await client.connect()
                     else:
                         conn_error = f"⛔ Akun {sender_phone} mati/logout. Task dibatalkan demi keamanan branding."
