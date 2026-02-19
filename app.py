@@ -570,7 +570,7 @@ class SchedulerWorker:
                 if SchedulerWorker.last_run_minute != now_indo.minute:
                     # 2. Cek Jadwal di DB
                     if supabase:
-                        SchedulerWorker._process_schedules(now_indo)
+                    SchedulerWorker._process_schedules(now_indo)
                     SchedulerWorker.last_run_minute = now_indo.minute
                 
                 # 3. Sleep Pintar (Sync ke detik 00)
@@ -807,7 +807,7 @@ class SchedulerWorker:
                             success_count += 1
                             processed_since_break += 1
                             
-                            await asyncio.sleeprandom.uniform(4.0, 10.0))
+                            await asyncio.sleep(random.uniform(4.0, 10.0))
 
                         except Exception as e:
                             err = str(e)
@@ -847,7 +847,6 @@ class SchedulerWorker:
 # Jalankan Scheduler saat app start
 if supabase:
     SchedulerWorker.start()
-
 
 # ==============================================================================
 # SECTION 4.7: AUTO REPLY BACKGROUND SERVICE (SATPAM 24 JAM)
