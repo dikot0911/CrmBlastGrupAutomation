@@ -978,11 +978,17 @@ class AutoReplyService:
 
                     # E. EKSEKUSI KIRIM PESAN
                     if response_text:
-                        # Akting ngetik dulu (Typing...)
-                        async with client.action(event.chat_id, 'typing'):
-                            await asyncio.sleep(random.uniform(2.0, 4.0)) # Jeda humanis
-                        
-                        # Kirim!
+                        try:
+                            # Pake await event.get_input_chat() biar Telethon otomatis nyari Entity-nya yg bener
+                            input_chat = await event.get_input_chat()
+                            async with client.action(input_chat, 'typing'):
+                                await asyncio.sleep(random.uniform(1.5, 3.0))
+                        except Exception as type_err:
+                            logger.warning(f"Typing effect di-skip (Entity blm cache): {type_err}")
+                            # Kalau gagal pura-pura ngetik, biarin aja, yang penting pesannya tetep kekirim
+                            pass 
+
+                        # Kirim balasannya!
                         await event.reply(response_text)
                         
                         # Catat log biar cooldown jalan
@@ -3088,6 +3094,29 @@ def delete_keyword_route(id):
     AutoReplyManager.delete_keyword(id)
     flash('Keyword dihapus.', 'success')
     return redirect(url_for('dashboard_auto_reply'))
+
+@app.route('/edit_keyword', methods=['POST'])
+@login_required
+def edit_keyword_route():
+    try:
+        rule_id = request.form.get('rule_id')
+        new_keyword = request.form.get('keyword')
+        new_response = request.form.get('response')
+        target_phone = request.form.get('target_phone')
+        
+        if rule_id and new_keyword and new_response:
+            supabase.table('keyword_rules').update({
+                'keyword': new_keyword.lower(),
+                'response': new_response
+            }).eq('id', rule_id).eq('user_id', session['user_id']).execute()
+            flash('Keyword berhasil diupdate!', 'success')
+            
+    except Exception as e:
+        logger.error(f"Error edit keyword: {e}")
+        flash('Gagal update keyword.', 'danger')
+        
+    return redirect(url_for('dashboard_auto_reply', tab=target_phone))
+    
 # ==============================================================================
 # SECTION 13: SUPER ADMIN PANEL
 # ==============================================================================
