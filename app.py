@@ -1,50 +1,81 @@
+# ==============================================================================
+# 🔥 BLASTPRO SAAS AUTOMATION - BACKEND ENGINE v4.5 🔥
+# ==============================================================================
+
+# --- 1. STANDARD LIBRARIES ---
 import os
 import asyncio
 import logging
 import threading
 import json
 import time
-import httpx
-import pytz
-import telethon
 import csv
 import io
 import random
-import qrcode
-import base64
-import uuid
 import string
+import uuid
 from io import BytesIO
 from functools import wraps 
 from datetime import datetime, timedelta
+
+# --- 2. THIRD-PARTY LIBRARIES ---
+import httpx
+import pytz
+import qrcode
+import base64
 from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_from_directory, Response, stream_with_context
 
-# --- TELETHON & SUPABASE ---
+# --- 3. CORE SERVICES (TELETHON & SUPABASE) ---
 from telethon import TelegramClient, errors, functions, types, utils, events
 from telethon.sessions import StringSession
 from supabase import create_client, Client
+
+# --- 4. BLASTPRO CUSTOM MODULES (SECURITY & MAILER) ---
+# Memanggil The 7 Gates of Hell dari folder utils
+from utils.security import (
+    PasswordVault, TokenManager, AntiSpamGuard, InputSanitizer,
+    WeakPasswordError, SpamEmailError, SecurityViolation,
+    TokenExpiredError, InvalidTokenError, SessionDefender
+)
+from utils.mailer import mailer
 
 # ==============================================================================
 # SECTION 1: SYSTEM CONFIGURATION & ENVIRONMENT SETUP
 # ==============================================================================
 
-# [FIX 1: LOGGER WAJIB PALING ATAS]
+# [LOGGER SETUP KASTA DEWA]
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-logger = logging.getLogger("BlastProSAAS")
+logger = logging.getLogger("BlastPro_Core")
 
 # Initialize Flask Application
 app = Flask(__name__)
 
-# Security Configuration
+# [SECURITY CONFIGURATION]
 app.secret_key = os.getenv('SECRET_KEY', 'rahasia_Blast_Pro_Saas_ultimate_key_v99_production_ready')
 
-# [FIX 2: IMPORT MODUL LAIN SETELAH LOGGER JADI]
+# Deteksi Environment: Kalau lagi di lokal (komputer), gausah pake aturan ketat HTTPS
+IS_PRODUCTION = os.getenv('FLASK_ENV') == 'production'
+
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION  # True di Render (HTTPS), False di Lokal (HTTP)
+app.config['SESSION_COOKIE_HTTPONLY'] = True 
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' 
+
+# Inisialisasi Mesin Pembuat Token Email
+token_manager = TokenManager(secret_key=app.secret_key)
+
+# Upload Configuration
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# [DYNAMIC IMPORTS] Mencegah circular import crash
 try:
     from demo_routes import demo_bp
     if demo_bp:
@@ -55,21 +86,8 @@ except ImportError:
 try:
     from bot import run_bot_process
 except ImportError as e:
-    # Sekarang aman panggil logger disini
     logger.warning(f"⚠️ Modul bot.py tidak ditemukan atau error: {e}")
     run_bot_process = None
-
-# Session Configuration
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-app.config['SESSION_COOKIE_SECURE'] = True  
-app.config['SESSION_COOKIE_HTTPONLY'] = True 
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax' 
-
-# Upload Configuration
-UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # ==============================================================================
 # SECTION 2: DATABASE CONNECTION (SUPABASE)
@@ -84,15 +102,11 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     supabase = None
 else:
     try:
-        # [FIX] Perhatikan spasi di baris bawah ini! (Harus menjorok ke dalam)
-        from supabase.lib.client_options import ClientOptions
-        
-        # Inisialisasi Client
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        
+        # Inisialisasi Client Supabase
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
         logger.info("✅ Supabase API Connected Successfully.")
     except Exception as e:
-        logger.critical(f"❌ Supabase Failed: {e}")
+        logger.critical(f"❌ Supabase Connection Failed: {e}")
         supabase = None
 
 # ==============================================================================
@@ -103,11 +117,13 @@ else:
 API_ID = int(os.getenv('API_ID', '0')) 
 API_HASH = os.getenv('API_HASH', '')
 
+if API_ID == 0 or not API_HASH:
+    logger.warning("⚠️ WARNING: API_ID atau API_HASH Telegram belum disetting di Environment!")
+
 # In-Memory State Storage
-# Digunakan untuk rate limiting dan caching sementara objek client saat login.
-login_states = {} 
-# In-Memory Storage untuk QR Login (Client Object disimpan sementara disini)
-qr_sessions = {}
+login_states = {}   # Digunakan untuk rate limiting dan tracking login
+qr_sessions = {}    # Storage untuk QR Login (Client Object disimpan sementara)
+broadcast_states = {} # Melacak status broadcast tiap user ('running' / 'stopped')
 
 # ==============================================================================
 # SECTION 4: BACKGROUND SYSTEMS (WORKERS & UTILITIES)
