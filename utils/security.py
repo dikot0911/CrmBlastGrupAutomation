@@ -62,7 +62,7 @@ class PasswordVault:
         Mencegah Rainbow Table & Dictionary Attacks.
         """
         # werkzeug otomatis membuat salt random untuk setiap hash
-        return generate_password_hash(password, method='pbkdf2:sha256:600000')
+        return generate_password_hash(password, method='pbkdf2:sha256:260000')
 
     @staticmethod
     def verify_password(hashed_password: str, plain_password: str) -> bool:
