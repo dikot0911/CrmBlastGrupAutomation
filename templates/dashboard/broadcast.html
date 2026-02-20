@@ -427,18 +427,266 @@
 </style>
 
 <script>
-    // --- MINI CRM LOGIC (MODAL) ---
-    // Keranjang memori khusus buat modal
-    let modalSelectionState = new Set();
+    // --- SETUP ---
+    const messageInput = document.getElementById('messageInput');
+    const previewText = document.getElementById('previewText');
+    const previewImg = document.getElementById('previewImg');
+    const previewContainer = document.getElementById('previewImageContainer');
+    const cloudContainer = document.getElementById('mockupCloudMedia');
+    const logContent = document.getElementById('logContent');
+    const btnStop = document.getElementById('btnStop');
+    
+    // --- 1. EDITOR & PREVIEW LOGIC ---
+    function updatePreview() {
+        let val = messageInput.value;
+        if (!val) val = "Halo {name}, tulis pesanmu...";
+        
+        val = val.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+        val = val.replace(/__(.*?)__/g, '<i>$1</i>');
+        val = val.replace(/\n/g, '<br>');
+        val = val.replace(/{name}/g, '<span class="bg-yellow-200 text-yellow-800 px-1 rounded text-[9px] font-bold mx-0.5">Nama</span>');
+        
+        previewText.innerHTML = val;
+    }
 
-    // Event Listener buat search box (Pake debounce biar ga spam API)
+    function insertTag(tag) {
+        const start = messageInput.selectionStart;
+        const end = messageInput.selectionEnd;
+        const text = messageInput.value;
+        messageInput.value = text.substring(0, start) + tag + text.substring(end);
+        messageInput.focus();
+        updatePreview();
+    }
+
+    function previewImage(event) {
+        const file = event.target.files[0];
+        if(file) {
+            document.getElementById('fileLabel').innerText = file.name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewContainer.classList.remove('hidden');
+                cloudContainer.classList.add('hidden'); // Hide cloud
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // --- 2. TEMPLATE & FETCH LOGIC (FIXED) ---
+    function setMode(mode) {
+        const fetchSec = document.getElementById('fetchSection');
+        const btnM = document.getElementById('btnTabManual');
+        const btnF = document.getElementById('btnTabFetch');
+        
+        if(mode === 'fetch') {
+            fetchSec.classList.remove('hidden');
+            // Styling Tombol Aktif
+            btnF.classList.add('bg-white', 'text-indigo-600', 'shadow-sm');
+            btnF.classList.remove('text-gray-500', 'hover:bg-white/50', 'hover:text-gray-700');
+            // Styling Tombol Pasif
+            btnM.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm');
+            btnM.classList.add('text-gray-500', 'hover:text-gray-700');
+        } else {
+            fetchSec.classList.add('hidden');
+            // Styling Tombol Aktif
+            btnM.classList.add('bg-white', 'text-indigo-600', 'shadow-sm');
+            btnM.classList.remove('text-gray-500', 'hover:text-gray-700');
+            // Styling Tombol Pasif
+            btnF.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm');
+            btnF.classList.add('text-gray-500', 'hover:text-gray-700');
+        }
+    }
+
+    async function fetchContent() {
+        const link = document.getElementById('teleLinkInput').value;
+        const btn = document.getElementById('btnFetch');
+        if(!link) return alert("Link kosong!");
+        
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>'; 
+        btn.disabled = true;
+        try {
+            const res = await fetch('/api/fetch_message', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({link: link})
+            });
+            const data = await res.json();
+            if(data.status === 'success') {
+                messageInput.value = data.text;
+                document.getElementById('sourceChatId').value = data.source_chat_id;
+                document.getElementById('sourceMessageId').value = data.source_message_id;
+                
+                if(data.has_media) {
+                    document.getElementById('imageUploadSection').classList.add('hidden');
+                    document.getElementById('fetchStatus').classList.remove('hidden');
+                    previewContainer.classList.add('hidden');
+                    cloudContainer.classList.remove('hidden');
+                    cloudContainer.classList.add('flex');
+                }
+                updatePreview();
+                showToast('Konten berhasil ditarik!', 'success');
+            } else { showToast("Gagal: " + data.message, 'error'); }
+        } catch(e) { showToast("Error koneksi API", 'error'); }
+        finally { btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> TARIK'; btn.disabled = false; }
+    }
+
+    function loadTemplate() {
+        const select = document.getElementById('templateSelect');
+        const opt = select.options[select.selectedIndex];
+        if(opt.value) {
+            messageInput.value = opt.getAttribute('data-msg');
+            const chat = opt.getAttribute('data-chat');
+            const msgid = opt.getAttribute('data-msgid');
+            
+            if(chat && msgid && chat !== 'None') {
+                document.getElementById('sourceChatId').value = chat;
+                document.getElementById('sourceMessageId').value = msgid;
+                document.getElementById('imageUploadSection').classList.add('hidden');
+                document.getElementById('fetchStatus').classList.remove('hidden');
+                cloudContainer.classList.remove('hidden');
+                cloudContainer.classList.add('flex');
+            } else {
+                resetFetch();
+            }
+            updatePreview();
+        }
+    }
+
+    function resetFetch() {
+        document.getElementById('sourceChatId').value = "";
+        document.getElementById('sourceMessageId').value = "";
+        document.getElementById('fetchStatus').classList.add('hidden');
+        document.getElementById('imageUploadSection').classList.remove('hidden');
+        cloudContainer.classList.add('hidden');
+        cloudContainer.classList.remove('flex');
+    }
+
+    // --- 3. BROADCAST CONTROL ---
+    function toggleTargetMode() {
+        const mode = document.getElementById('targetType').value;
+        const box = document.getElementById('manualSelectionBox');
+        if(mode === 'manual') box.classList.remove('hidden');
+        else box.classList.add('hidden');
+    }
+
+    function clearLog() {
+        logContent.innerHTML = '<div class="text-gray-500 italic">> Log cleared.</div>';
+    }
+
+    async function stopBroadcast() {
+        if(!confirm("Yakin hentikan broadcast? Pesan yang sedang antre akan dibatalkan.")) return;
+        try {
+            await fetch('/api/broadcast/stop', {method: 'POST'});
+            logContent.innerHTML += '<div class="text-red-500 font-bold border-t border-gray-800 mt-2 pt-2">> STOP COMMAND RECEIVED. Stopping...</div>';
+            btnStop.disabled = true;
+        } catch(e) { showToast("Gagal stop broadcast", "error"); }
+    }
+
+    async function startBroadcast() {
+        const msg = messageInput.value;
+        if(!msg) return showToast("Pesan tidak boleh kosong!", "error");
+
+        const btn = document.getElementById('btnBlast');
+        btn.disabled = true;
+        btn.innerHTML = '<div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-100 transition-opacity duration-500"></div><div class="relative flex items-center gap-3"><i class="fa-solid fa-circle-notch fa-spin"></i><span>BLASTING...</span></div>';
+        btnStop.disabled = false;
+        
+        logContent.innerHTML = '<div class="text-blue-400 font-bold">> Initializing Broadcast Engine v4.0...</div>';
+
+        const formData = new FormData();
+        formData.append('message', msg);
+        
+        // Cek Akun Pengirim
+        const sender = document.querySelector('input[name="sender_phone"]:checked');
+        if(!sender) {
+            btn.disabled = false;
+            btn.innerHTML = '<div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><div class="relative flex items-center gap-3"><i class="fa-solid fa-rocket animate-pulse"></i><span>EKSEKUSI BROADCAST</span></div>';
+            return showToast("Pilih akun pengirim!", "error");
+        }
+        formData.append('sender_phone', sender.value);
+        
+        // Target Logic
+        const targetType = document.getElementById('targetType').value;
+        if(targetType === 'manual') {
+            const selectedIds = document.getElementById('selectedIdsInput').value;
+            if (!selectedIds) {
+                btn.disabled = false;
+                btn.innerHTML = '<div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><div class="relative flex items-center gap-3"><i class="fa-solid fa-rocket animate-pulse"></i><span>EKSEKUSI BROADCAST</span></div>';
+                return showToast("Anda belum memilih kontak satupun!", "error");
+            }
+            formData.append('target_option', 'selected');
+            formData.append('selected_ids', selectedIds);
+        } else {
+            formData.append('target_option', 'all');
+        }
+
+        // Template Info (Cloud Media)
+        formData.append('template_id', document.getElementById('templateSelect').value);
+
+        // Manual Image
+        const img = document.getElementById('imageInput').files[0];
+        if(img) formData.append('image', img);
+
+        try {
+            const response = await fetch('/start_broadcast', {
+                method: 'POST',
+                body: formData
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, {stream: true});
+                const lines = chunk.split('\n');
+                
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                        const data = JSON.parse(line);
+                        
+                        if (data.type === 'progress') {
+                            const color = data.status === 'success' ? 'text-[#27C93F]' : 'text-[#FF5F56]';
+                            const icon = data.status === 'success' ? '✓' : '✗';
+                            logContent.innerHTML += `<div class="${color} font-mono">> ${icon} ${data.log}</div>`;
+                        } else if (data.type === 'start') {
+                            logContent.innerHTML += `<div class="text-[#FFBD2E] font-bold">> Target Found: ${data.total}. Executing...</div>`;
+                        } else if (data.type === 'done') {
+                            logContent.innerHTML += `<div class="text-indigo-400 font-bold border-t border-gray-800 mt-2 pt-2">> DONE! Success: ${data.success}, Failed: ${data.failed}</div>`;
+                            btn.disabled = false;
+                            btn.innerHTML = '<div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><div class="relative flex items-center gap-3"><i class="fa-solid fa-rocket animate-pulse"></i><span>EKSEKUSI BROADCAST</span></div>';
+                            btnStop.disabled = true;
+                            showToast("Broadcast Selesai!", "success");
+                        } else if (data.type === 'error') {
+                             logContent.innerHTML += `<div class="text-red-500 font-bold border-t border-gray-800 mt-2">> FATAL ERROR: ${data.msg}</div>`;
+                        }
+                        
+                        // Auto scroll log
+                        logContent.scrollTop = logContent.scrollHeight;
+                        
+                    } catch (e) { console.log("Parse Error", line); }
+                }
+            }
+        } catch (e) {
+            showToast("Server Error: " + e, "error");
+            btn.disabled = false;
+            btn.innerHTML = '<div class="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-600 opacity-100 transition-opacity duration-500"></div><div class="relative flex items-center gap-3"><i class="fa-solid fa-rotate-right"></i><span>COBA LAGI</span></div>';
+            btnStop.disabled = true;
+        }
+    }
+
+    // --- 4. MINI CRM LOGIC (MODAL) ---
+    let modalSelectionState = new Set();
     let searchTimeout;
+
     document.getElementById('apiSearchInput').addEventListener('input', function() {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => fetchCrmData(), 500); // Tunggu 0.5 detik baru tembak API
+        searchTimeout = setTimeout(() => fetchCrmData(), 500); 
     });
 
-    // Fungsi Fetch API (Fix Bug Tanda Plus)
     async function fetchCrmData() {
         const tbody = document.getElementById('apiTableBody');
         const loading = document.getElementById('apiLoadingState');
@@ -449,7 +697,6 @@
         tbody.innerHTML = '';
 
         try {
-            // [FIX]: folder sekarang di-encode biar tanda + (plus) gak berubah jadi spasi di backend
             const res = await fetch(`/api/get_crm_users?source=${encodeURIComponent(folder)}&q=${encodeURIComponent(search)}`);
             const data = await res.json();
             
@@ -465,7 +712,6 @@
         }
     }
 
-    // Fungsi Render HTML Tabel dalam Modal
     function renderApiTable(users) {
         const tbody = document.getElementById('apiTableBody');
         tbody.innerHTML = '';
@@ -481,7 +727,6 @@
             return;
         }
 
-        // Bikin list HTML buat tiap user
         let html = '';
         let allChecked = true;
 
@@ -514,8 +759,8 @@
                     ${usernameHtml}
                 </td>
                 <td class="p-4 text-right">
-                    <button onclick="handleSingleSelect('${u.user_id}')" class="text-xs bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-600 font-bold px-3 py-1.5 rounded-lg transition shadow-sm">
-                        Pilih
+                    <button onclick="handleSingleSelect('${u.user_id}')" class="text-xs ${isChecked ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'} hover:bg-indigo-700 hover:text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm">
+                        ${isChecked ? 'Terpilih' : 'Pilih'}
                     </button>
                 </td>
             </tr>`;
@@ -526,7 +771,6 @@
         updateModalCounter();
     }
 
-    // Modal Checkbox Handlers
     function toggleApiSelectAll() {
         const master = document.getElementById('apiSelectAll');
         const checkboxes = document.querySelectorAll('.api-user-check');
@@ -537,6 +781,8 @@
             else modalSelectionState.delete(cb.value);
         });
         updateModalCounter();
+        // Render ulang biar tombol "Pilih" berubah warna
+        fetchCrmData();
     }
 
     function handleApiCheckbox(cb) {
@@ -544,10 +790,19 @@
         else modalSelectionState.delete(cb.value);
         updateModalCounter();
         
-        // Update master check
         const total = document.querySelectorAll('.api-user-check').length;
         const checked = document.querySelectorAll('.api-user-check:checked').length;
         document.getElementById('apiSelectAll').checked = (total === checked && total > 0);
+        
+        // Refresh baris itu saja (ubah warna tombol)
+        const btn = cb.closest('tr').querySelector('button');
+        if(cb.checked) {
+            btn.className = "text-xs bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm";
+            btn.innerText = "Terpilih";
+        } else {
+            btn.className = "text-xs bg-gray-100 text-gray-600 hover:bg-indigo-700 hover:text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm";
+            btn.innerText = "Pilih";
+        }
     }
 
     function handleSingleSelect(userId) {
@@ -562,30 +817,23 @@
         document.getElementById('modalSelectedCount').innerText = modalSelectionState.size;
     }
 
-    // Pindah data dari Modal ke Halaman Utama (Apply)
     function applySelection() {
         if (modalSelectionState.size === 0) {
-            alert("Pilih minimal 1 kontak!");
-            return;
+            return showToast("Pilih minimal 1 kontak dulu!", "error");
         }
 
-        // Gabungin array id pake koma, lempar ke input hidden di halaman utama
         const idString = Array.from(modalSelectionState).join(',');
         document.getElementById('selectedIdsInput').value = idString;
-        
-        // Update tulisan angka besar di luar modal
         document.getElementById('selectedCountDisplay').innerText = modalSelectionState.size;
         
-        // Tutup modal
         closeDatabaseModal();
         showToast(`Berhasil menambahkan ${modalSelectionState.size} kontak!`, 'success');
     }
 
-    // MODAL TRIGGERS
+    // [FIX UTAMA]: Logic Open Modal diperkuat biar gak error kalau string kosong
     function openDatabaseModal() {
-        // Ambil data yang ada di input hidden kalau sblmnya udah milih
         const exist = document.getElementById('selectedIdsInput').value;
-        if(exist) {
+        if(exist && exist.trim() !== "") {
             modalSelectionState = new Set(exist.split(',').filter(x => x));
         } else {
             modalSelectionState.clear();
@@ -603,7 +851,6 @@
             panel.classList.add('opacity-100', 'scale-100'); 
         }, 10);
 
-        // Fetch data pas modal kebuka
         fetchCrmData();
     }
 
@@ -616,6 +863,39 @@
         panel.classList.add('opacity-0', 'scale-95');
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
+    
+    // Custom Toast Notification System
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        let bgClass, iconClass, iconBg;
+        
+        if (type === 'success') {
+            bgClass = 'bg-gray-900 border-gray-700';
+            iconBg = 'bg-emerald-500/20 text-emerald-400';
+            iconClass = 'fa-solid fa-circle-check';
+        } else if (type === 'error') {
+            bgClass = 'bg-red-900 border-red-800';
+            iconBg = 'bg-red-500/20 text-red-300';
+            iconClass = 'fa-solid fa-circle-exclamation';
+        } else {
+            bgClass = 'bg-gray-900 border-gray-700';
+            iconBg = 'bg-blue-500/20 text-blue-400';
+            iconClass = 'fa-solid fa-circle-info';
+        }
+
+        toast.className = `transform transition-all duration-500 ease-out translate-x-full opacity-0 pointer-events-auto flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${bgClass}`;
+        toast.innerHTML = `
+            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${iconBg}"><i class="${iconClass}"></i></div>
+            <p class="text-sm font-bold text-white mr-4">${message}</p>
+            <button onclick="this.parentElement.remove()" class="ml-auto text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
+        setTimeout(() => {
+            toast.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => toast.remove(), 500);
+        }, 4000);
+    }
 </script>
 {% endblock %}
-
