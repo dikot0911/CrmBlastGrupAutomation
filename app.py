@@ -1382,8 +1382,30 @@ def dashboard_overview():
             import math
             total_pages = math.ceil(total_logs / per_page)
 
-            logs = supabase.table('blast_logs').select("*").eq('user_id', uid)\
+            # 1. Ambil data mentah dari database
+            logs_raw = supabase.table('blast_logs').select("*").eq('user_id', uid)\
                 .order('created_at', desc=True).range(start, end).execute().data
+
+            # 2. [UPGRADE] Konversi Zona Waktu (UTC ke WIB)
+            logs = []
+            if logs_raw:
+                for log in logs_raw:
+                    if log.get('created_at'):
+                        try:
+                            # Baca jam asli dari server Supabase (UTC)
+                            utc_dt = datetime.fromisoformat(log['created_at'].replace('Z', '+00:00'))
+                            # Tambah 7 Jam biar sesuai jam tangan lu (WIB)
+                            wib_dt = utc_dt + timedelta(hours=7)
+                            
+                            # Cetak variabel baru buat dikirim ke HTML
+                            log['wib_time'] = wib_dt.strftime('%H:%M:%S')
+                            log['wib_date'] = wib_dt.strftime('%Y-%m-%d')
+                        except Exception as e:
+                            # Kalau tanggal error, pake potongan string bawaan
+                            log['wib_time'] = log['created_at'][11:19] if len(log['created_at']) > 18 else "--:--:--"
+                            log['wib_date'] = log['created_at'][:10] if len(log['created_at']) >= 10 else "Unknown"
+                    
+                    logs.append(log)
             
             # B. Ambil Data Jadwal & Target
             schedules = supabase.table('blast_schedules').select("*").eq('user_id', uid).execute().data
