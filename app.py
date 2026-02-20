@@ -2744,8 +2744,8 @@ def process_spintax(text):
 @login_required
 def start_broadcast():
     """
-    Broadcast Engine v3.0 (Human Ultimate).
-    Fitur: Typing Indicator, Random Delay, Spintax, Stop Signal.
+    Broadcast Engine v4.0 (Enterprise Ultimate).
+    Fitur: Anti-Duplicate, Smart Catch Error, Anti-Timeout Gunicorn (Heartbeat).
     """
     user_id = session['user_id']
     broadcast_states[user_id] = 'running'
@@ -2779,21 +2779,28 @@ def start_broadcast():
         manual_image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         image_file.save(manual_image_path)
 
-    # Tentukan Target
-    targets = []
+    # Tentukan Target (Raw)
+    targets_raw = []
     if target_option == 'selected' and selected_ids_str:
         target_ids = [int(x) for x in selected_ids_str.split(',') if x.strip().isdigit()]
         if target_ids:
             res = supabase.table('tele_users').select("*").in_('user_id', target_ids).eq('owner_id', user_id).execute()
-            targets = res.data
+            targets_raw = res.data
     else:
         res = supabase.table('tele_users').select("*").eq('owner_id', user_id).limit(5000).execute()
-        targets = res.data
+        targets_raw = res.data
 
-    if not targets:
+    if not targets_raw:
         return jsonify({"error": "Target audiens kosong."})
 
-    # GENERATOR FUNCTION
+    # --- [UPGRADE 1]: PENYARING DUPLIKAT ---
+    # Membersihkan kontak dobel jika user tersimpan di > 1 folder
+    unique_targets = {}
+    for t in targets_raw:
+        unique_targets[t['user_id']] = t
+    targets = list(unique_targets.values())
+
+    # GENERATOR FUNCTION (STREAMING)
     def generate():
         yield json.dumps({"type": "start", "total": len(targets)}) + "\n"
         
@@ -2841,10 +2848,17 @@ def start_broadcast():
                         rest_time = random.randint(120, 240)
                         yield json.dumps({
                             "type": "progress", "current": idx, "total": len(targets),
-                            "status": "warning", "log": f"☕ Mode Humanis: Istirahat {rest_time}s...",
+                            "status": "warning", "log": f"☕ Istirahat {rest_time}s (Mencegah Limit)...",
                             "success": success_count, "failed": fail_count
                         }) + "\n"
-                        await asyncio.sleep(rest_time)
+                        
+                        # --- [UPGRADE 2]: ANTI-TIMEOUT HEARTBEAT ---
+                        # Tidur dicicil per 1 detik sambil ngirim spasi kosong.
+                        # Ini menipu Gunicorn biar nyangka script lagi sibuk ngirim data, jadi ga akan di-kill!
+                        for _ in range(rest_time):
+                            if broadcast_states.get(user_id) == 'stopped': break
+                            await asyncio.sleep(1)
+                            yield " \n" 
 
                     u_name = user.get('first_name') or "Kak"
                     personalized_msg = final_message_template.replace("{name}", u_name)
@@ -2859,7 +2873,7 @@ def start_broadcast():
                     try:
                         entity = await client.get_input_entity(int(user['user_id']))
                         
-                        # [HUMAN TOUCH] Simulasi Ngetik
+                        # Simulasi Ngetik
                         async with client.action(entity, 'typing'):
                             await asyncio.sleep(random.uniform(1.5, 4.5))
 
@@ -2879,13 +2893,24 @@ def start_broadcast():
                     except Exception as e:
                         fail_count += 1
                         error_msg = str(e)
-                        ui_log = f"Gagal: {error_msg[:15]}..."
                         
-                        if "FloodWait" in error_msg:
+                        # --- [UPGRADE 3]: SMART CATCH ERROR ---
+                        if "Could not find the input entity" in error_msg or "Cannot find any entity" in error_msg:
+                            ui_log = f"Gagal: Pengirim tidak mengenali ID {u_name}."
+                            error_msg = "Belum pernah interaksi / ID tidak valid."
+                        elif "FloodWait" in error_msg:
                             import re
                             wait_sec = int(re.search(r'\d+', error_msg).group()) if re.search(r'\d+', error_msg) else 60
+                            ui_log = f"Gagal: Terkena FloodWait."
                             yield json.dumps({"type": "progress", "log": f"⏳ Telegram minta istirahat {wait_sec}s...", "status": "warning"}) + "\n"
-                            await asyncio.sleep(wait_sec)
+                            
+                            # Pakai heartbeat lagi saat kena FloodWait
+                            for _ in range(wait_sec):
+                                if broadcast_states.get(user_id) == 'stopped': break
+                                await asyncio.sleep(1)
+                                yield " \n"
+                        else:
+                            ui_log = f"Gagal: {error_msg[:20]}..."
 
                     # 4. LOGGING & UPDATE UI
                     try:
@@ -2909,8 +2934,12 @@ def start_broadcast():
                         "failed": fail_count
                     }) + "\n"
 
-                    # 5. JEDA ANTAR PESAN (Human Interval)
-                    await asyncio.sleep(random.uniform(4.0, 12.0))
+                    # 5. JEDA ANTAR PESAN (Anti-Timeout Heartbeat)
+                    delay = random.uniform(4.0, 12.0)
+                    for _ in range(int(delay)):
+                        if broadcast_states.get(user_id) == 'stopped': break
+                        await asyncio.sleep(1)
+                        yield " \n" # Spasi ini disembunyikan otomatis oleh JS di frontend
 
             except Exception as e:
                 yield json.dumps({"type": "error", "msg": f"System Error: {str(e)}"}) + "\n"
@@ -2920,8 +2949,7 @@ def start_broadcast():
                 if manual_image_path and os.path.exists(manual_image_path):
                     os.remove(manual_image_path)
                 
-                # --- [TAMBAHAN BARU: LAPORAN KE BOT] ---
-                # Kirim notif "Selesai" lengkap dengan statistik & tombol cek error
+                # Laporan ke Bot
                 if success_count > 0 or fail_count > 0:
                     report_msg = (
                         f"🚀 **BROADCAST SELESAI!**\n"
@@ -2932,10 +2960,9 @@ def start_broadcast():
                         f"─────────────────\n"
                         f"_Klik tombol di bawah untuk melihat detail._"
                     )
-                    # Jalankan di background thread biar gak bikin loading web lama
                     threading.Thread(
                         target=send_telegram_alert, 
-                        args=(user_id, report_msg, True) # True = Munculin Tombol
+                        args=(user_id, report_msg, True)
                     ).start()
 
                 yield json.dumps({"type": "done", "success": success_count, "failed": fail_count}) + "\n"
@@ -2949,7 +2976,13 @@ def start_broadcast():
                     yield loop.run_until_complete(runner.__anext__())
                 except StopAsyncIteration:
                     break
+        except GeneratorExit:
+            # Mengamankan koneksi kalau user tiba-tiba nutup tab browser di tengah blast
+            logger.warning(f"Client disconnected during broadcast (User: {user_id}).")
+            broadcast_states[user_id] = 'stopped'
         finally:
+            # Tutup memory loop secara elegan
+            loop.run_until_complete(runner.aclose())
             loop.close()
 
     return Response(stream_with_context(generate()), mimetype='application/json')
