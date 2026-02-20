@@ -1245,92 +1245,155 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """Halaman Login dengan Validasi Hash dan Email Verification"""
+    if 'user_id' in session:
+        return redirect(url_for('dashboard_home'))
+
     if request.method == 'POST':
-        if not supabase:
-            flash('System Error: Database Disconnected.', 'danger')
-            return render_template('auth/login.html')
-        
-        email = request.form.get('email')
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password')
         
+        if not email or not password:
+            flash("Email dan Password wajib diisi!", "danger")
+            return redirect(url_for('login'))
+
         try:
-            res = supabase.table('users').select("*").eq('email', email).execute()
+            # Ambil data user dari DB
+            res = supabase.table('users').select('*').eq('email', email).execute()
+            
             if res.data:
                 user = res.data[0]
-                # Verifikasi Password Hash
-                if check_password_hash(user['password'], password):
-                    # Cek Banned Status
-                    if user.get('is_banned'):
-                        flash('⛔ Akun Anda telah disuspend karena pelanggaran.', 'danger')
+                stored_password = user.get('password') # Ini sekarang isinya Hash pbkdf2...
+                
+                # 1. Verify Hash Password
+                if PasswordVault.verify_password(stored_password, password):
+                    
+                    # 2. Cek Gerbang Verifikasi Email
+                    # (Kalau database lama is_verified-nya kosong/None, kita anggap aja False)
+                    if not user.get('is_verified', False):
+                        flash("Akun Anda belum diverifikasi! Silakan cek email Anda.", "warning")
                         return redirect(url_for('login'))
-                    
-                    # Login Sukses
+                        
+                    # Login Sukses!
                     session['user_id'] = user['id']
-                    session.permanent = True
+                    session['username'] = user['username']
                     
-                    # Routing berdasarkan Role
-                    if user.get('is_admin'):
-                        return redirect(url_for('super_admin_dashboard'))
-                    return redirect(url_for('dashboard_overview'))
-            
-            flash('Kombinasi Email atau Password salah.', 'danger')
-            
+                    flash(f"Selamat datang kembali, {user['username']}!", "success")
+                    return redirect(url_for('dashboard_home'))
+                else:
+                    flash("Password salah. Silakan coba lagi.", "danger")
+            else:
+                flash("Email tidak terdaftar di sistem kami.", "danger")
+                
         except Exception as e:
-            logger.error(f"Login Exception: {e}")
-            flash('Terjadi kesalahan sistem internal.', 'danger')
+            logger.error(f"Login Error: {e}")
+            flash("Terjadi kesalahan saat memproses login.", "danger")
             
     return render_template('auth/login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    # Tangkap kode referral dari URL (misal: /register?ref=BABA123)
-    ref_param = request.args.get('ref')
-    
+    """Halaman Pendaftaran dengan Validasi Anti-Spam & Enkripsi Hash"""
+    # Jika user sudah login, tendang ke dashboard
+    if 'user_id' in session:
+        return redirect(url_for('dashboard_home'))
+
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        # Tangkap ref code dari form hidden input juga (kalau ada)
-        ref_code_input = request.form.get('referral_code') or ref_param
-        
+        raw_username = request.form.get('username')
+        raw_email = request.form.get('email')
+        raw_password = request.form.get('password')
+
+        if not raw_username or not raw_email or not raw_password:
+            flash("Semua kolom wajib diisi!", "danger")
+            return redirect(url_for('register'))
+
+        # 1. Sanitasi Input (Anti XSS)
+        username = InputSanitizer.sanitize_username(raw_username)
+        email = raw_email.strip().lower()
+
         try:
-            # 1. Validasi Email Duplikat (Sama kayak lama)
-            exist = supabase.table('users').select("id").eq('email', email).execute()
-            if exist.data:
-                flash('Email sudah terdaftar.', 'warning')
-                return redirect(url_for('register'))
+            # 2. Pertahanan Lapis Pertama: Cek Spam Email
+            AntiSpamGuard.is_clean_email(email)
             
-            # 2. Cek Upline (Siapa yang ngajak?)
-            upline_id = None
-            if ref_code_input:
-                upline_res = supabase.table('users').select("id").eq('referral_code', ref_code_input).execute()
-                if upline_res.data:
-                    upline_id = upline_res.data[0]['id']
+            # 3. Pertahanan Lapis Kedua: Cek Kekuatan Password
+            PasswordVault.validate_complexity(raw_password)
             
-            # 3. Create User Baru (+ Referral Code & Upline)
-            hashed_pw = generate_password_hash(password)
-            new_ref_code = generate_ref_code() # Bikin kode unik buat dia
+            # --- [UPGRADE LOGIC: ANTI NYANGKUT] ---
+            existing_user = supabase.table('users').select('id, is_verified').or_(f"email.eq.{email},username.eq.{username}").execute()
             
-            new_user = {
-                'email': email,
-                'password': hashed_pw,
-                'created_at': datetime.utcnow().isoformat(),
-                'is_admin': False,
-                'is_banned': False,
-                'plan_tier': 'Starter',
-                'referral_code': new_ref_code, # <--- INI BARU
-                'referred_by': upline_id,      # <--- INI BARU (Disimpan biar tau harus bagi komisi ke siapa)
-                'wallet_balance': 0
+            if existing_user.data:
+                user_check = existing_user.data[0]
+                # Kalau udah terdaftar DAN udah diverifikasi = Tolak
+                if user_check.get('is_verified'):
+                    flash("Email atau Username sudah terdaftar dan aktif! Silakan langsung Login.", "warning")
+                    return redirect(url_for('login'))
+                else:
+                    # Kalau terdaftar TAPI BELUM diverifikasi = HAPUS akun lamanya, biar dia bisa daftar/kirim OTP ulang!
+                    supabase.table('users').delete().eq('id', user_check['id']).execute()
+                
+            # 4. Pertahanan Lapis Ketiga: HASHING PASSWORD!
+            hashed_password = PasswordVault.hash_password(raw_password)
+            
+            # 5. Simpan ke Database
+            new_user_data = {
+                "username": username,
+                "email": email,
+                "password": hashed_password, 
+                "is_verified": False,        
+                "created_at": datetime.utcnow().isoformat()
             }
-            supabase.table('users').insert(new_user).execute()
+            res = supabase.table('users').insert(new_user_data).execute()
             
-            flash('Pendaftaran Berhasil! Silakan login.', 'success')
+            if res.data:
+                # 6. Generate Token & Lempar Email ke Background
+                token = token_manager.generate_verification_token(email)
+                verify_url = url_for('verify_email', token=token, _external=True)
+                
+                mailer.send_verification_email(
+                    to_email=email, 
+                    user_name=username, 
+                    verify_url=verify_url
+                )
+                
+                flash("Pendaftaran berhasil! Cek kotak masuk atau folder Spam email Anda untuk verifikasi.", "success")
+                return redirect(url_for('login'))
+            else:
+                flash("Gagal mendaftar, terjadi gangguan pada server.", "danger")
+            
+    return render_template('auth/register.html')
+
+@app.route('/verify/<token>')
+def verify_email(token):
+    """Rute untuk menangkap klik link dari Email"""
+    try:
+        # Verifikasi token (Maksimal umur token 1 jam = 3600 detik)
+        email = token_manager.verify_token(token, expiration_seconds=3600)
+        
+        # Cek user di DB
+        user_req = supabase.table('users').select('id, is_verified').eq('email', email).execute()
+        
+        if not user_req.data:
+            flash("Pengguna tidak ditemukan atau telah dihapus.", "danger")
+            return redirect(url_for('register'))
+            
+        if user_req.data[0].get('is_verified'):
+            flash("Akun Anda sudah terverifikasi sebelumnya. Silakan Login.", "info")
             return redirect(url_for('login'))
             
-        except Exception as e:
-            logger.error(f"Register Error: {e}")
-            flash('Gagal mendaftar.', 'danger')
-            
-    return render_template('auth/register.html', ref=ref_param)
+        # Update is_verified jadi TRUE
+        supabase.table('users').update({'is_verified': True}).eq('email', email).execute()
+        flash("🔥 Mantap! Email berhasil diverifikasi. Silakan Login ke Dashboard.", "success")
+        return redirect(url_for('login'))
+        
+    except TokenExpiredError as e:
+        flash(str(e), "warning")
+    except InvalidTokenError as e:
+        flash(str(e), "danger")
+    except Exception as e:
+        logger.error(f"Verify Route Error: {e}")
+        flash("Gagal memverifikasi email. Pastikan link tidak terpotong.", "danger")
+        
+    return redirect(url_for('login'))
 
 @app.route('/logout')
 def logout():
