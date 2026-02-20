@@ -108,7 +108,7 @@
                                 <div>
                                     <span class="text-xs font-bold text-amber-800 uppercase tracking-wider block mb-0.5">Target Terpilih</span>
                                     <div class="flex items-baseline gap-1">
-                                        <span class="text-2xl font-black text-gray-900 leading-none" id="selectedCountDisplay">{{ count_selected }}</span>
+                                        <span class="text-2xl font-black text-gray-900 leading-none" id="selectedCountDisplay">{{ count_selected if count_selected else 0 }}</span>
                                         <span class="text-xs font-bold text-gray-500">Kontak</span>
                                     </div>
                                 </div>
@@ -119,7 +119,7 @@
                                 <span class="sm:hidden">Buka</span>
                             </button>
                         </div>
-                        <input type="hidden" id="selectedIdsInput" name="selected_ids" value="{{ selected_ids }}">
+                        <input type="hidden" id="selectedIdsInput" name="selected_ids" value="{{ selected_ids if selected_ids else '' }}">
                     </div>
                 </div>
             </div>
@@ -133,8 +133,8 @@
                     </h3>
                     
                     <div class="flex bg-gray-200/80 rounded-xl p-1 shadow-inner w-full sm:w-auto">
-                        <button onclick="setMode('manual')" id="btnTabManual" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition">Tulis Manual</button>
-                        <button onclick="setMode('fetch')" id="btnTabFetch" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-gray-500 hover:text-gray-700 transition">Ambil Link</button>
+                        <button type="button" onclick="setMode('manual')" id="btnTabManual" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg bg-white text-indigo-600 shadow-sm transition">Tulis Manual</button>
+                        <button type="button" onclick="setMode('fetch')" id="btnTabFetch" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-gray-500 hover:text-gray-700 transition">Ambil Link</button>
                     </div>
                 </div>
                 
@@ -179,7 +179,7 @@
                             <span class="text-sm font-black text-emerald-800 block">Cloud Media Ready</span>
                             <span class="text-xs text-emerald-600 font-medium">Gambar/Video akan otomatis dikirim dari Telegram.</span>
                         </div>
-                        <button onclick="resetFetch()" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-500 hover:bg-red-100 hover:text-red-500 transition flex items-center justify-center shrink-0" title="Batal Gunakan Media">
+                        <button type="button" onclick="resetFetch()" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-500 hover:bg-red-100 hover:text-red-500 transition flex items-center justify-center shrink-0" title="Batal Gunakan Media">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -220,7 +220,7 @@
             </div>
 
             <div class="flex gap-4">
-                <button onclick="startBroadcast()" id="btnBlast" class="flex-1 py-4 bg-gray-900 hover:bg-gray-800 text-white font-black rounded-[1.25rem] shadow-xl shadow-gray-400/30 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3 text-lg border border-gray-700 overflow-hidden relative group outline-none focus:ring-4 focus:ring-gray-200">
+                <button type="button" onclick="startBroadcast()" id="btnBlast" class="flex-1 py-4 bg-gray-900 hover:bg-gray-800 text-white font-black rounded-[1.25rem] shadow-xl shadow-gray-400/30 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3 text-lg border border-gray-700 overflow-hidden relative group outline-none focus:ring-4 focus:ring-gray-200">
                     <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <div class="relative flex items-center gap-3">
                         <i class="fa-solid fa-rocket animate-pulse"></i> 
@@ -228,7 +228,7 @@
                     </div>
                 </button>
                 
-                <button onclick="stopBroadcast()" id="btnStop" disabled class="w-20 py-4 bg-white border-2 border-red-100 text-red-400 font-bold rounded-[1.25rem] shadow-sm transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-600 hover:border-red-600 hover:text-white hover:shadow-lg hover:shadow-red-200 tooltip-trigger" title="Hentikan Paksa">
+                <button type="button" onclick="stopBroadcast()" id="btnStop" disabled class="w-20 py-4 bg-white border-2 border-red-100 text-red-400 font-bold rounded-[1.25rem] shadow-sm transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-600 hover:border-red-600 hover:text-white hover:shadow-lg hover:shadow-red-200 tooltip-trigger" title="Hentikan Paksa">
                     <i class="fa-solid fa-stop text-xl"></i>
                 </button>
             </div>
@@ -308,7 +308,7 @@
                             <i class="fa-solid fa-terminal text-gray-500"></i> SYSTEM LOG
                         </span>
                     </div>
-                    <button onclick="clearLog()" class="text-[10px] text-gray-500 hover:text-white bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded transition border border-gray-700 flex items-center gap-1">
+                    <button type="button" onclick="clearLog()" class="text-[10px] text-gray-500 hover:text-white bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded transition border border-gray-700 flex items-center gap-1">
                         <i class="fa-solid fa-broom"></i> Clear
                     </button>
                 </div>
@@ -347,7 +347,7 @@
                         </div>
                         <input type="text" id="apiSearchInput" placeholder="Cari Nama/Username..." class="w-full pl-10 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-white placeholder-gray-500">
                     </div>
-                    <button onclick="closeDatabaseModal()" class="w-10 h-10 rounded-xl bg-gray-800 text-gray-400 hover:bg-red-500 hover:text-white border border-gray-700 hover:border-red-500 transition flex items-center justify-center shrink-0">
+                    <button type="button" onclick="closeDatabaseModal()" class="w-10 h-10 rounded-xl bg-gray-800 text-gray-400 hover:bg-red-500 hover:text-white border border-gray-700 hover:border-red-500 transition flex items-center justify-center shrink-0">
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
                 </div>
@@ -393,8 +393,8 @@
             </div>
 
             <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 shrink-0">
-                <button onclick="closeDatabaseModal()" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm text-sm">Batal</button>
-                <button onclick="applySelection()" class="px-6 py-2.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition shadow-lg shadow-gray-300 text-sm flex items-center gap-2">
+                <button type="button" onclick="closeDatabaseModal()" class="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition shadow-sm text-sm">Batal</button>
+                <button type="button" onclick="applySelection()" class="px-6 py-2.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition shadow-lg shadow-gray-300 text-sm flex items-center gap-2">
                     <i class="fa-solid fa-check"></i> Gunakan Kontak Terpilih
                 </button>
             </div>
@@ -427,18 +427,18 @@
 </style>
 
 <script>
-    // --- SETUP ---
-    const messageInput = document.getElementById('messageInput');
-    const previewText = document.getElementById('previewText');
-    const previewImg = document.getElementById('previewImg');
-    const previewContainer = document.getElementById('previewImageContainer');
-    const cloudContainer = document.getElementById('mockupCloudMedia');
-    const logContent = document.getElementById('logContent');
-    const btnStop = document.getElementById('btnStop');
-    
+    // --- 0. SUPER SAFE SETUP (Mencegah SyntaxError di SPA/Turbo) ---
+    // Kita gunakan 'var' bukan 'const' atau 'let' agar memori aman meski direfresh secara asinkronus
+    var modalSelectionState = window.modalSelectionState || new Set();
+    var searchTimeout = window.searchTimeout || null;
+
     // --- 1. EDITOR & PREVIEW LOGIC ---
     function updatePreview() {
-        let val = messageInput.value;
+        var msgInput = document.getElementById('messageInput');
+        var prevText = document.getElementById('previewText');
+        if(!msgInput || !prevText) return;
+
+        var val = msgInput.value;
         if (!val) val = "Halo {name}, tulis pesanmu...";
         
         val = val.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
@@ -446,27 +446,28 @@
         val = val.replace(/\n/g, '<br>');
         val = val.replace(/{name}/g, '<span class="bg-yellow-200 text-yellow-800 px-1 rounded text-[9px] font-bold mx-0.5">Nama</span>');
         
-        previewText.innerHTML = val;
+        prevText.innerHTML = val;
     }
 
     function insertTag(tag) {
-        const start = messageInput.selectionStart;
-        const end = messageInput.selectionEnd;
-        const text = messageInput.value;
-        messageInput.value = text.substring(0, start) + tag + text.substring(end);
-        messageInput.focus();
+        var msgInput = document.getElementById('messageInput');
+        var start = msgInput.selectionStart;
+        var end = msgInput.selectionEnd;
+        var text = msgInput.value;
+        msgInput.value = text.substring(0, start) + tag + text.substring(end);
+        msgInput.focus();
         updatePreview();
     }
 
     function previewImage(event) {
-        const file = event.target.files[0];
+        var file = event.target.files[0];
         if(file) {
             document.getElementById('fileLabel').innerText = file.name;
-            const reader = new FileReader();
+            var reader = new FileReader();
             reader.onload = function(e) {
-                previewImg.src = e.target.result;
-                previewContainer.classList.remove('hidden');
-                cloudContainer.classList.add('hidden'); // Hide cloud
+                document.getElementById('previewImg').src = e.target.result;
+                document.getElementById('previewImageContainer').classList.remove('hidden');
+                document.getElementById('mockupCloudMedia').classList.add('hidden'); // Hide cloud
             }
             reader.readAsDataURL(file);
         }
@@ -474,15 +475,15 @@
 
     // --- 2. TEMPLATE & FETCH LOGIC (FIXED) ---
     function setMode(mode) {
-        const fetchSec = document.getElementById('fetchSection');
-        const btnM = document.getElementById('btnTabManual');
-        const btnF = document.getElementById('btnTabFetch');
+        var fetchSec = document.getElementById('fetchSection');
+        var btnM = document.getElementById('btnTabManual');
+        var btnF = document.getElementById('btnTabFetch');
         
         if(mode === 'fetch') {
             fetchSec.classList.remove('hidden');
             // Styling Tombol Aktif
             btnF.classList.add('bg-white', 'text-indigo-600', 'shadow-sm');
-            btnF.classList.remove('text-gray-500', 'hover:bg-white/50', 'hover:text-gray-700');
+            btnF.classList.remove('text-gray-500', 'hover:text-gray-700');
             // Styling Tombol Pasif
             btnM.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm');
             btnM.classList.add('text-gray-500', 'hover:text-gray-700');
@@ -498,30 +499,30 @@
     }
 
     async function fetchContent() {
-        const link = document.getElementById('teleLinkInput').value;
-        const btn = document.getElementById('btnFetch');
+        var link = document.getElementById('teleLinkInput').value;
+        var btn = document.getElementById('btnFetch');
         if(!link) return alert("Link kosong!");
         
         btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>'; 
         btn.disabled = true;
         try {
-            const res = await fetch('/api/fetch_message', {
+            var res = await fetch('/api/fetch_message', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({link: link})
             });
-            const data = await res.json();
+            var data = await res.json();
             if(data.status === 'success') {
-                messageInput.value = data.text;
+                document.getElementById('messageInput').value = data.text;
                 document.getElementById('sourceChatId').value = data.source_chat_id;
                 document.getElementById('sourceMessageId').value = data.source_message_id;
                 
                 if(data.has_media) {
                     document.getElementById('imageUploadSection').classList.add('hidden');
                     document.getElementById('fetchStatus').classList.remove('hidden');
-                    previewContainer.classList.add('hidden');
-                    cloudContainer.classList.remove('hidden');
-                    cloudContainer.classList.add('flex');
+                    document.getElementById('previewImageContainer').classList.add('hidden');
+                    document.getElementById('mockupCloudMedia').classList.remove('hidden');
+                    document.getElementById('mockupCloudMedia').classList.add('flex');
                 }
                 updatePreview();
                 showToast('Konten berhasil ditarik!', 'success');
@@ -531,20 +532,20 @@
     }
 
     function loadTemplate() {
-        const select = document.getElementById('templateSelect');
-        const opt = select.options[select.selectedIndex];
+        var select = document.getElementById('templateSelect');
+        var opt = select.options[select.selectedIndex];
         if(opt.value) {
-            messageInput.value = opt.getAttribute('data-msg');
-            const chat = opt.getAttribute('data-chat');
-            const msgid = opt.getAttribute('data-msgid');
+            document.getElementById('messageInput').value = opt.getAttribute('data-msg');
+            var chat = opt.getAttribute('data-chat');
+            var msgid = opt.getAttribute('data-msgid');
             
             if(chat && msgid && chat !== 'None') {
                 document.getElementById('sourceChatId').value = chat;
                 document.getElementById('sourceMessageId').value = msgid;
                 document.getElementById('imageUploadSection').classList.add('hidden');
                 document.getElementById('fetchStatus').classList.remove('hidden');
-                cloudContainer.classList.remove('hidden');
-                cloudContainer.classList.add('flex');
+                document.getElementById('mockupCloudMedia').classList.remove('hidden');
+                document.getElementById('mockupCloudMedia').classList.add('flex');
             } else {
                 resetFetch();
             }
@@ -557,47 +558,60 @@
         document.getElementById('sourceMessageId').value = "";
         document.getElementById('fetchStatus').classList.add('hidden');
         document.getElementById('imageUploadSection').classList.remove('hidden');
-        cloudContainer.classList.add('hidden');
-        cloudContainer.classList.remove('flex');
+        document.getElementById('mockupCloudMedia').classList.add('hidden');
+        document.getElementById('mockupCloudMedia').classList.remove('flex');
     }
 
     // --- 3. BROADCAST CONTROL ---
+    // [UPGRADE UX] Fitur auto open modal
     function toggleTargetMode() {
-        const mode = document.getElementById('targetType').value;
-        const box = document.getElementById('manualSelectionBox');
-        if(mode === 'manual') box.classList.remove('hidden');
-        else box.classList.add('hidden');
+        var mode = document.getElementById('targetType').value;
+        var box = document.getElementById('manualSelectionBox');
+        if(mode === 'manual') {
+            box.classList.remove('hidden');
+            // Cek apakah sudah ada user yang dipilih
+            var curIds = document.getElementById('selectedIdsInput').value;
+            if(!curIds || curIds.trim() === '') {
+                // Jika masih 0 kontak, otomatis buka modal
+                openDatabaseModal();
+            }
+        }
+        else {
+            box.classList.add('hidden');
+        }
     }
 
     function clearLog() {
-        logContent.innerHTML = '<div class="text-gray-500 italic">> Log cleared.</div>';
+        document.getElementById('logContent').innerHTML = '<div class="text-gray-500 italic">> Log cleared.</div>';
     }
 
     async function stopBroadcast() {
         if(!confirm("Yakin hentikan broadcast? Pesan yang sedang antre akan dibatalkan.")) return;
         try {
             await fetch('/api/broadcast/stop', {method: 'POST'});
-            logContent.innerHTML += '<div class="text-red-500 font-bold border-t border-gray-800 mt-2 pt-2">> STOP COMMAND RECEIVED. Stopping...</div>';
-            btnStop.disabled = true;
+            document.getElementById('logContent').innerHTML += '<div class="text-red-500 font-bold border-t border-gray-800 mt-2 pt-2">> STOP COMMAND RECEIVED. Stopping...</div>';
+            document.getElementById('btnStop').disabled = true;
         } catch(e) { showToast("Gagal stop broadcast", "error"); }
     }
 
     async function startBroadcast() {
-        const msg = messageInput.value;
+        var msg = document.getElementById('messageInput').value;
         if(!msg) return showToast("Pesan tidak boleh kosong!", "error");
 
-        const btn = document.getElementById('btnBlast');
+        var btn = document.getElementById('btnBlast');
+        var btnStop = document.getElementById('btnStop');
+        var logContent = document.getElementById('logContent');
+
         btn.disabled = true;
         btn.innerHTML = '<div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-100 transition-opacity duration-500"></div><div class="relative flex items-center gap-3"><i class="fa-solid fa-circle-notch fa-spin"></i><span>BLASTING...</span></div>';
         btnStop.disabled = false;
         
         logContent.innerHTML = '<div class="text-blue-400 font-bold">> Initializing Broadcast Engine v4.0...</div>';
 
-        const formData = new FormData();
+        var formData = new FormData();
         formData.append('message', msg);
         
-        // Cek Akun Pengirim
-        const sender = document.querySelector('input[name="sender_phone"]:checked');
+        var sender = document.querySelector('input[name="sender_phone"]:checked');
         if(!sender) {
             btn.disabled = false;
             btn.innerHTML = '<div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><div class="relative flex items-center gap-3"><i class="fa-solid fa-rocket animate-pulse"></i><span>EKSEKUSI BROADCAST</span></div>';
@@ -605,10 +619,9 @@
         }
         formData.append('sender_phone', sender.value);
         
-        // Target Logic
-        const targetType = document.getElementById('targetType').value;
+        var targetType = document.getElementById('targetType').value;
         if(targetType === 'manual') {
-            const selectedIds = document.getElementById('selectedIdsInput').value;
+            var selectedIds = document.getElementById('selectedIdsInput').value;
             if (!selectedIds) {
                 btn.disabled = false;
                 btn.innerHTML = '<div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><div class="relative flex items-center gap-3"><i class="fa-solid fa-rocket animate-pulse"></i><span>EKSEKUSI BROADCAST</span></div>';
@@ -620,37 +633,35 @@
             formData.append('target_option', 'all');
         }
 
-        // Template Info (Cloud Media)
         formData.append('template_id', document.getElementById('templateSelect').value);
 
-        // Manual Image
-        const img = document.getElementById('imageInput').files[0];
+        var img = document.getElementById('imageInput').files[0];
         if(img) formData.append('image', img);
 
         try {
-            const response = await fetch('/start_broadcast', {
+            var response = await fetch('/start_broadcast', {
                 method: 'POST',
                 body: formData
             });
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
+            var reader = response.body.getReader();
+            var decoder = new TextDecoder();
 
             while (true) {
-                const { value, done } = await reader.read();
+                var { value, done } = await reader.read();
                 if (done) break;
                 
-                const chunk = decoder.decode(value, {stream: true});
-                const lines = chunk.split('\n');
+                var chunk = decoder.decode(value, {stream: true});
+                var lines = chunk.split('\n');
                 
-                for (const line of lines) {
+                for (var line of lines) {
                     if (!line.trim()) continue;
                     try {
-                        const data = JSON.parse(line);
+                        var data = JSON.parse(line);
                         
                         if (data.type === 'progress') {
-                            const color = data.status === 'success' ? 'text-[#27C93F]' : 'text-[#FF5F56]';
-                            const icon = data.status === 'success' ? '✓' : '✗';
+                            var color = data.status === 'success' ? 'text-[#27C93F]' : 'text-[#FF5F56]';
+                            var icon = data.status === 'success' ? '✓' : '✗';
                             logContent.innerHTML += `<div class="${color} font-mono">> ${icon} ${data.log}</div>`;
                         } else if (data.type === 'start') {
                             logContent.innerHTML += `<div class="text-[#FFBD2E] font-bold">> Target Found: ${data.total}. Executing...</div>`;
@@ -664,7 +675,6 @@
                              logContent.innerHTML += `<div class="text-red-500 font-bold border-t border-gray-800 mt-2">> FATAL ERROR: ${data.msg}</div>`;
                         }
                         
-                        // Auto scroll log
                         logContent.scrollTop = logContent.scrollHeight;
                         
                     } catch (e) { console.log("Parse Error", line); }
@@ -679,26 +689,27 @@
     }
 
     // --- 4. MINI CRM LOGIC (MODAL) ---
-    let modalSelectionState = new Set();
-    let searchTimeout;
-
-    document.getElementById('apiSearchInput').addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => fetchCrmData(), 500); 
-    });
+    // Safe attaching event listener
+    var searchInputEl = document.getElementById('apiSearchInput');
+    if (searchInputEl) {
+        searchInputEl.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() { fetchCrmData(); }, 500); 
+        });
+    }
 
     async function fetchCrmData() {
-        const tbody = document.getElementById('apiTableBody');
-        const loading = document.getElementById('apiLoadingState');
-        const folder = document.getElementById('apiFolderSelect').value;
-        const search = document.getElementById('apiSearchInput').value;
+        var tbody = document.getElementById('apiTableBody');
+        var loading = document.getElementById('apiLoadingState');
+        var folder = document.getElementById('apiFolderSelect').value;
+        var search = document.getElementById('apiSearchInput').value;
 
         loading.classList.remove('hidden');
         tbody.innerHTML = '';
 
         try {
-            const res = await fetch(`/api/get_crm_users?source=${encodeURIComponent(folder)}&q=${encodeURIComponent(search)}`);
-            const data = await res.json();
+            var res = await fetch(`/api/get_crm_users?source=${encodeURIComponent(folder)}&q=${encodeURIComponent(search)}`);
+            var data = await res.json();
             
             if (data.status === 'success') {
                 renderApiTable(data.users);
@@ -713,7 +724,7 @@
     }
 
     function renderApiTable(users) {
-        const tbody = document.getElementById('apiTableBody');
+        var tbody = document.getElementById('apiTableBody');
         tbody.innerHTML = '';
 
         if (users.length === 0) {
@@ -727,15 +738,15 @@
             return;
         }
 
-        let html = '';
-        let allChecked = true;
+        var html = '';
+        var allChecked = true;
 
-        users.forEach(u => {
-            const isChecked = modalSelectionState.has(String(u.user_id));
+        users.forEach(function(u) {
+            var isChecked = modalSelectionState.has(String(u.user_id));
             if (!isChecked) allChecked = false;
             
-            const initial = u.first_name ? u.first_name.charAt(0).toUpperCase() : '?';
-            const usernameHtml = u.username 
+            var initial = u.first_name ? u.first_name.charAt(0).toUpperCase() : '?';
+            var usernameHtml = u.username 
                 ? `<span class="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded">@${u.username}</span>` 
                 : `<span class="text-gray-400 text-xs italic">No Username</span>`;
 
@@ -759,7 +770,7 @@
                     ${usernameHtml}
                 </td>
                 <td class="p-4 text-right">
-                    <button onclick="handleSingleSelect('${u.user_id}')" class="text-xs ${isChecked ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'} hover:bg-indigo-700 hover:text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm">
+                    <button type="button" onclick="handleSingleSelect('${u.user_id}')" class="text-xs ${isChecked ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'} hover:bg-indigo-700 hover:text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm">
                         ${isChecked ? 'Terpilih' : 'Pilih'}
                     </button>
                 </td>
@@ -772,16 +783,15 @@
     }
 
     function toggleApiSelectAll() {
-        const master = document.getElementById('apiSelectAll');
-        const checkboxes = document.querySelectorAll('.api-user-check');
+        var master = document.getElementById('apiSelectAll');
+        var checkboxes = document.querySelectorAll('.api-user-check');
         
-        checkboxes.forEach(cb => {
+        checkboxes.forEach(function(cb) {
             cb.checked = master.checked;
             if (master.checked) modalSelectionState.add(cb.value);
             else modalSelectionState.delete(cb.value);
         });
         updateModalCounter();
-        // Render ulang biar tombol "Pilih" berubah warna
         fetchCrmData();
     }
 
@@ -790,12 +800,11 @@
         else modalSelectionState.delete(cb.value);
         updateModalCounter();
         
-        const total = document.querySelectorAll('.api-user-check').length;
-        const checked = document.querySelectorAll('.api-user-check:checked').length;
+        var total = document.querySelectorAll('.api-user-check').length;
+        var checked = document.querySelectorAll('.api-user-check:checked').length;
         document.getElementById('apiSelectAll').checked = (total === checked && total > 0);
         
-        // Refresh baris itu saja (ubah warna tombol)
-        const btn = cb.closest('tr').querySelector('button');
+        var btn = cb.closest('tr').querySelector('button');
         if(cb.checked) {
             btn.className = "text-xs bg-indigo-600 text-white hover:bg-indigo-700 hover:text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm";
             btn.innerText = "Terpilih";
@@ -806,7 +815,7 @@
     }
 
     function handleSingleSelect(userId) {
-        const cb = document.querySelector(`.api-user-check[value="${userId}"]`);
+        var cb = document.querySelector(`.api-user-check[value="${userId}"]`);
         if(cb) {
             cb.checked = !cb.checked;
             handleApiCheckbox(cb);
@@ -822,7 +831,7 @@
             return showToast("Pilih minimal 1 kontak dulu!", "error");
         }
 
-        const idString = Array.from(modalSelectionState).join(',');
+        var idString = Array.from(modalSelectionState).join(',');
         document.getElementById('selectedIdsInput').value = idString;
         document.getElementById('selectedCountDisplay').innerText = modalSelectionState.size;
         
@@ -830,19 +839,18 @@
         showToast(`Berhasil menambahkan ${modalSelectionState.size} kontak!`, 'success');
     }
 
-    // [FIX UTAMA]: Logic Open Modal diperkuat biar gak error kalau string kosong
     function openDatabaseModal() {
-        const exist = document.getElementById('selectedIdsInput').value;
-        if(exist && exist.trim() !== "") {
-            modalSelectionState = new Set(exist.split(',').filter(x => x));
+        var exist = document.getElementById('selectedIdsInput').value;
+        if(exist && exist.trim() !== "" && exist !== "None") {
+            window.modalSelectionState = new Set(exist.split(',').filter(x => x));
         } else {
-            modalSelectionState.clear();
+            window.modalSelectionState.clear();
         }
         updateModalCounter();
         
-        const modal = document.getElementById('databaseModal');
-        const panel = document.getElementById('dbModalPanel');
-        const backdrop = document.getElementById('dbBackdrop');
+        var modal = document.getElementById('databaseModal');
+        var panel = document.getElementById('dbModalPanel');
+        var backdrop = document.getElementById('dbBackdrop');
         
         modal.classList.remove('hidden');
         setTimeout(() => { 
@@ -855,20 +863,19 @@
     }
 
     function closeDatabaseModal() {
-        const modal = document.getElementById('databaseModal');
-        const panel = document.getElementById('dbModalPanel');
-        const backdrop = document.getElementById('dbBackdrop');
+        var modal = document.getElementById('databaseModal');
+        var panel = document.getElementById('dbModalPanel');
+        var backdrop = document.getElementById('dbBackdrop');
         backdrop.classList.add('opacity-0'); 
         panel.classList.remove('opacity-100', 'scale-100'); 
         panel.classList.add('opacity-0', 'scale-95');
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
     
-    // Custom Toast Notification System
     function showToast(message, type = 'success') {
-        const container = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
-        let bgClass, iconClass, iconBg;
+        var container = document.getElementById('toastContainer');
+        var toast = document.createElement('div');
+        var bgClass, iconClass, iconBg;
         
         if (type === 'success') {
             bgClass = 'bg-gray-900 border-gray-700';
