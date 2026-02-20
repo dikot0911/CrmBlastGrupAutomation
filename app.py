@@ -1293,10 +1293,9 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """Halaman Pendaftaran dengan Validasi Anti-Spam & Enkripsi Hash"""
     # Jika user sudah login, tendang ke dashboard
     if 'user_id' in session:
-        return redirect(url_for('dashboard_home'))
+        return redirect(url_for('dashboard_overview'))
 
     if request.method == 'POST':
         raw_username = request.form.get('username')
@@ -1359,8 +1358,15 @@ def register():
                 return redirect(url_for('login'))
             else:
                 flash("Gagal mendaftar, terjadi gangguan pada server.", "danger")
+
+        except (SpamEmailError, WeakPasswordError, SecurityViolation) as e:
+            # Nangkap error dari security.py lalu nampilin ke layar
+            flash(str(e), "danger")
+        except Exception as e:
+            logger.error(f"Register Error: {e}")
+            flash("Terjadi kesalahan sistem. Coba lagi nanti.", "danger")
             
-        return render_template('auth/register.html')
+    return render_template('auth/register.html')
 
 @app.route('/verify/<token>')
 def verify_email(token):
