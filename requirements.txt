@@ -13,3 +13,5 @@ pillow
 python-telegram-bot==20.7
 httpcore==1.0.4
 h2==4.1.0
+itsdangerous==2.1.2
+cryptography==41.0.3
