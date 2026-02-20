@@ -1360,7 +1360,7 @@ def register():
             else:
                 flash("Gagal mendaftar, terjadi gangguan pada server.", "danger")
             
-    return render_template('auth/register.html')
+        return render_template('auth/register.html')
 
 @app.route('/verify/<token>')
 def verify_email(token):
