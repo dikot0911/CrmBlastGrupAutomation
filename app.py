@@ -2457,7 +2457,6 @@ def import_crm_api():
     async def _import():
         client = None
         try:
-            # 1. KONEKSI AMAN
             acc_res = supabase.table('telegram_accounts').select("session_string")\
                 .eq('user_id', user_id).eq('phone_number', source_phone).eq('is_active', True).execute()
             
@@ -2469,7 +2468,7 @@ def import_crm_api():
             await client.connect()
             
             if not await client.is_user_authorized():
-                return jsonify({"status": "error", "message": "Sesi Telethon kadaluarsa. Harap login ulang akun ini."})
+                return jsonify({"status": "error", "message": "Sesi Telethon kadaluarsa."})
                 
         except Exception as e:
             return jsonify({"status": "error", "message": f"Koneksi Telegram gagal: {str(e)}"})
@@ -2477,32 +2476,24 @@ def import_crm_api():
         try:
             final_source_label = source_phone 
             batch_payload = [] 
-            seen_user_ids = set() # Mencegah data dobel masuk ke array
+            seen_user_ids = set() 
             
-            # 2. MEGA SCANNING (Main Folder + Archived Folder)
-            # folder=None (Beranda Utama), folder=1 (Arsip)
             for folder_id in [None, 1]:
-                # Pake limit 100.000 buat maksa Telethon sedot sampe bawah
                 async for dialog in client.iter_dialogs(limit=100000, folder=folder_id):
-                    # Validasi: Harus User, Bukan Bot
                     if dialog.is_user and not getattr(dialog.entity, 'bot', False):
                         u = dialog.entity
                         
-                        # Amankan atribut pakai getattr
                         is_self = getattr(u, 'is_self', False)
                         is_deleted = getattr(u, 'deleted', False)
                         t_id = getattr(u, 'id', None)
                         
-                        # Skip kalau diri sendiri, akun dihapus, atau ga ada ID
                         if is_self or is_deleted or not t_id:
                             continue 
                             
-                        # Skip kalau ID ini udah ke-scan (misal dari folder lain)
                         if t_id in seen_user_ids:
                             continue
                         seen_user_ids.add(t_id)
                             
-                        # Gabungkan nama depan dan belakang
                         fname = getattr(u, 'first_name', '') or ''
                         lname = getattr(u, 'last_name', '') or ''
                         full_name = f"{fname} {lname}".strip()
@@ -2521,22 +2512,24 @@ def import_crm_api():
             total_scanned = len(batch_payload)
             saved_count = 0
             
-            # 3. HYBRID DATABASE INSERT (Anti Gagal)
+            # 3. HYBRID DATABASE INSERT (UPDATE: MENGGUNAKAN CONSTRAINT BARU)
             if total_scanned > 0:
                 chunk_size = 500
                 for i in range(0, total_scanned, chunk_size):
                     chunk = batch_payload[i:i + chunk_size]
                     try:
-                        # COBA MODE NGEBUT (Bulk Upsert)
-                        supabase.table('tele_users').upsert(chunk, on_conflict="owner_id,user_id").execute()
+                        # [FIX]: on_conflict sekarang melibatkan source_phone
+                        supabase.table('tele_users').upsert(chunk, on_conflict="owner_id,user_id,source_phone").execute()
                         saved_count += len(chunk)
                     except Exception as bulk_err:
                         logger.warning(f"Upsert Massal gagal, ganti ke Mode Single. Error: {bulk_err}")
                         
-                        # JIKA DITOLAK DB, GANTI GIGI KE MODE SATU-SATU
                         for row in chunk:
                             try:
-                                check = supabase.table('tele_users').select("id").eq('owner_id', user_id).eq('user_id', row['user_id']).execute()
+                                # [FIX]: Pencarian single data sekarang mengecek source_phone juga
+                                check = supabase.table('tele_users').select("id").eq('owner_id', user_id)\
+                                    .eq('user_id', row['user_id']).eq('source_phone', final_source_label).execute()
+                                
                                 if check.data:
                                     supabase.table('tele_users').update({
                                         "first_name": row["first_name"], 
@@ -2552,7 +2545,7 @@ def import_crm_api():
             
             return jsonify({
                 "status": "success", 
-                "message": f"Berhasil menyedot {saved_count} kontak (Termasuk dari folder Arsip) ke database!"
+                "message": f"Berhasil menyedot {saved_count} kontak ke folder {final_source_label}."
             })
             
         except Exception as e:
@@ -2560,7 +2553,6 @@ def import_crm_api():
             return jsonify({"status": "error", "message": f"Sistem terhenti saat scanning: {str(e)}"})
             
         finally:
-            # Wajib ditutup biar server gak memory leak!
             if client: 
                 await client.disconnect()
             
