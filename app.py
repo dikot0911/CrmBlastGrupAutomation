@@ -1704,9 +1704,18 @@ def dashboard_crm():
                 else:
                     query = query.eq('id', -1)
 
-            # Filter Pencarian
+            # --- [UPGRADE KASTA DEWA]: Filter Pencarian Super Cerdas ---
             if search_query:
-                query = query.ilike('username', f'%{search_query}%') 
+                # Cek apakah user ngetik angka (nyari ID) atau Teks (nyari Nama/Username)
+                if search_query.isdigit():
+                    # Jika Angka: Cari di kolom user_id (exact match) ATAU di first_name/username (siapa tau namanya ada angkanya)
+                    # Sintaks or_() di Supabase untuk pencarian multiple kolom
+                    search_filter = f"user_id.eq.{search_query},username.ilike.%{search_query}%,first_name.ilike.%{search_query}%"
+                    query = query.or_(search_filter)
+                else:
+                    # Jika Teks (Huruf): HANYA cari di username ATAU first_name (Hindari error kolom user_id)
+                    search_filter = f"username.ilike.%{search_query}%,first_name.ilike.%{search_query}%"
+                    query = query.or_(search_filter)
             
             # Eksekusi
             res = query.order('last_interaction', desc=True).range(start, end).execute()
@@ -1733,7 +1742,7 @@ def dashboard_crm():
                            per_page=per_page,
                            search_query=search_query,
                            active_page='crm',
-                           accounts=accounts,       # <--- PENTING BUAT FOLDER
+                           accounts=accounts,        # <--- PENTING BUAT FOLDER
                            current_source=current_source) # <--- PENTING BUAT NAVIGASI
 
 @app.route('/dashboard/connection')
