@@ -39,6 +39,7 @@ from utils.security import (
     TokenExpiredError, InvalidTokenError, SessionDefender
 )
 from utils.mailer import mailer
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # ==============================================================================
 # SECTION 1: SYSTEM CONFIGURATION & ENVIRONMENT SETUP
