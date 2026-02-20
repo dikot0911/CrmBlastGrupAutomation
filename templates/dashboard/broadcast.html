@@ -438,7 +438,7 @@
         searchTimeout = setTimeout(() => fetchCrmData(), 500); // Tunggu 0.5 detik baru tembak API
     });
 
-    // Fungsi Fetch API
+    // Fungsi Fetch API (Fix Bug Tanda Plus)
     async function fetchCrmData() {
         const tbody = document.getElementById('apiTableBody');
         const loading = document.getElementById('apiLoadingState');
@@ -449,8 +449,8 @@
         tbody.innerHTML = '';
 
         try {
-            // Nembak API yang nanti kita bikin di app.py
-            const res = await fetch(`/api/get_crm_users?source=${folder}&q=${encodeURIComponent(search)}`);
+            // [FIX]: folder sekarang di-encode biar tanda + (plus) gak berubah jadi spasi di backend
+            const res = await fetch(`/api/get_crm_users?source=${encodeURIComponent(folder)}&q=${encodeURIComponent(search)}`);
             const data = await res.json();
             
             if (data.status === 'success') {
@@ -618,3 +618,4 @@
     }
 </script>
 {% endblock %}
+
