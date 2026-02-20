@@ -2566,6 +2566,56 @@ def import_crm_api():
             
     return run_async(_import())
 
+@app.route('/delete_crm_user', methods=['POST'])
+@login_required
+def delete_crm_user():
+    """Hapus satu data kontak CRM dari database berdasarkan ID Database"""
+    try:
+        # Menangkap ID Database dari form HTML
+        db_id = request.form.get('user_id') 
+        owner_id = session['user_id']
+        
+        if db_id:
+            # Validasi owner_id agar user tidak bisa menghapus data milik orang lain (Security)
+            supabase.table('tele_users').delete().eq('id', db_id).eq('owner_id', owner_id).execute()
+            flash('✅ Kontak berhasil dihapus permanen dari database.', 'success')
+        else:
+            flash('⚠️ Data tidak ditemukan.', 'danger')
+            
+    except Exception as e:
+        logger.error(f"Error Delete Single CRM: {e}")
+        flash('❌ Terjadi kesalahan saat menghapus data.', 'danger')
+        
+    # request.referrer bikin halaman balik ke folder yang lagi dibuka, bukan ke halaman awal
+    return redirect(request.referrer or url_for('dashboard_crm'))
+
+
+@app.route('/delete_crm_user_massal', methods=['POST'])
+@login_required
+def delete_crm_user_massal():
+    """Hapus BANYAK data kontak CRM sekaligus berdasarkan daftar ID Telegram"""
+    try:
+        # Menangkap string ID yang dipisah koma (contoh: "12345,67890,54321")
+        telegram_ids_str = request.form.get('user_ids')
+        owner_id = session['user_id']
+        
+        if telegram_ids_str:
+            # Pecah string jadi format List Array
+            id_list = [x.strip() for x in telegram_ids_str.split(',') if x.strip()]
+            
+            if id_list:
+                # Eksekusi Delete Massal menggunakan in_()
+                supabase.table('tele_users').delete().eq('owner_id', owner_id).in_('user_id', id_list).execute()
+                flash(f'✅ {len(id_list)} kontak berhasil dihapus secara massal.', 'success')
+        else:
+            flash('⚠️ Tidak ada data yang dipilih untuk dihapus.', 'danger')
+            
+    except Exception as e:
+        logger.error(f"Error Delete Massal CRM: {e}")
+        flash('❌ Gagal mengeksekusi hapus massal.', 'danger')
+        
+    return redirect(request.referrer or url_for('dashboard_crm'))
+
 @app.route('/delete_target_template', methods=['POST'])
 @login_required
 def delete_target_template():
