@@ -2517,8 +2517,8 @@ def import_crm_api():
             # 3. DATABASE INSERT (Mode Hybrid: Cepat & Tahan Banting)
             if total_scanned > 0:
                 try:
-                    # PERCOBAAN 1: Tembak Massal (Cepat tapi rawan kalau settingan DB user kurang pas)
-                    supabase.table('tele_users').upsert(batch_payload).execute()
+                    # PERCOBAAN 1: Tembak Massal (Cepat & Tembus Tembok Constraint)
+                    supabase.table('tele_users').upsert(batch_payload, on_conflict="owner_id,user_id").execute()
                     saved_count = total_scanned
                 except Exception as bulk_err:
                     logger.warning(f"Upsert Massal ditolak DB, ganti ke Mode Single. Error: {bulk_err}")
