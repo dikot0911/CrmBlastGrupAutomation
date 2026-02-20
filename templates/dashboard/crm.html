@@ -2,7 +2,7 @@
 {% block title %}CRM Database{% endblock %}
 
 {% block content %}
-<div class="max-w-[95rem] mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-32 font-sans">
+<div class="max-w-[95rem] mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-32 font-sans relative">
     
     <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-6 relative z-10">
         <div class="flex-1">
@@ -12,7 +12,7 @@
                     Live Database
                 </span>
                 <span class="px-2.5 py-0.5 rounded-full bg-white border border-gray-200 text-gray-500 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                    v3.5 Enterprise
+                    v4.0 Enterprise
                 </span>
             </div>
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
@@ -44,11 +44,10 @@
         </div>
     </div>
 
-    <div class="mb-8 relative">
+    <div class="mb-8 relative z-10">
         <div class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none z-10"></div>
         
         <div class="flex items-center gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x relative pr-8">
-            
             <a href="{{ url_for('dashboard_crm', source='all') }}" 
                class="snap-start relative group flex items-center gap-3 px-5 py-3.5 rounded-2xl border transition-all duration-300 min-w-max cursor-pointer
                       {% if not current_source or current_source == 'all' %}
@@ -102,16 +101,13 @@
                 {% endif %}
             </a>
             {% endfor %}
-
         </div>
     </div>
 
-    <div class="bg-white rounded-[2rem] border border-gray-200 shadow-2xl shadow-gray-200/50 overflow-hidden flex flex-col min-h-[600px] relative">
-        
+    <div class="bg-white rounded-[2rem] border border-gray-200 shadow-2xl shadow-gray-200/50 overflow-hidden flex flex-col min-h-[600px] relative z-10">
         <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-indigo-50/60 via-purple-50/20 to-transparent rounded-bl-full pointer-events-none"></div>
 
         <div class="p-5 border-b border-gray-100 bg-white/90 backdrop-blur-xl sticky top-0 z-30 flex flex-col xl:flex-row justify-between items-center gap-4">
-            
             <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto relative z-10">
                 <form action="{{ url_for('dashboard_crm') }}" method="GET" class="relative group w-full sm:w-[400px]">
                     <input type="hidden" name="per_page" value="{{ per_page }}">
@@ -144,7 +140,35 @@
                 {% endif %}
             </div>
 
-            <div class="flex items-center gap-4 w-full xl:w-auto justify-between xl:justify-end relative z-10">
+            <div id="bulkActionContainer" class="hidden absolute inset-0 bg-white/95 backdrop-blur-xl z-50 flex items-center justify-between px-6 animate-fade-in border-b-2 border-indigo-500">
+                <div class="flex items-center gap-4">
+                    <div class="bg-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-lg shadow-indigo-200">
+                        <span id="countSelected">0</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-sm font-black text-gray-900">Data Terpilih</span>
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Siap Dieksekusi</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button onclick="blastSelected()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                        <i class="fa-solid fa-paper-plane"></i> Follow Up
+                    </button>
+                    <button onclick="copyAllIds()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
+                        <i class="fa-regular fa-copy"></i> Copy ID
+                    </button>
+                    <div class="w-px h-8 bg-gray-200 mx-1"></div>
+                    <button onclick="openDeleteMassalModal()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm">
+                        <i class="fa-solid fa-trash-can"></i> Hapus Data
+                    </button>
+                    <button onclick="document.getElementById('selectAll').click()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition shadow-sm ml-2">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 w-full xl:w-auto justify-between xl:justify-end relative z-10" id="normalToolbar">
                 <div class="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 shadow-sm hover:border-gray-300 transition">
                     <i class="fa-solid fa-list-ol text-gray-400 text-xs"></i>
                     <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider border-r border-gray-300 pr-2">Show</span>
@@ -174,10 +198,9 @@
             </div>
         </div>
 
-        <div class="flex-1 overflow-x-auto relative z-10 custom-scrollbar">
-            <table class="w-full text-left border-collapse whitespace-nowrap">
+        <div class="flex-1 overflow-x-auto relative z-10 custom-scrollbar pb-32"> <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="bg-gray-50/90 text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-200 backdrop-blur-md sticky top-0 z-20">
+                    <tr class="bg-gray-50/90 text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-200 backdrop-blur-md sticky top-0 z-20 shadow-sm">
                         <th class="p-5 font-extrabold w-16 text-center text-gray-400">#</th>
                         <th class="p-5 w-14 text-center">
                             <div class="flex items-center justify-center">
@@ -197,7 +220,7 @@
                 
                 <tbody class="divide-y divide-gray-100 bg-white">
                     {% for u in crm_users %}
-                    <tr class="hover:bg-indigo-50/30 transition duration-200 group">
+                    <tr class="hover:bg-indigo-50/30 transition duration-200 group {% if loop.index % 2 == 0 %}bg-gray-50/30{% endif %}">
                         <td class="p-5 text-center text-xs font-bold text-gray-400 font-mono group-hover:text-indigo-400">
                             {{ ((current_page - 1) * per_page) + loop.index }}
                         </td>
@@ -214,7 +237,7 @@
                                     <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 flex items-center justify-center text-sm font-black shadow-sm ring-2 ring-white group-hover:ring-indigo-200 transition-all transform group-hover:scale-105">
                                         {{ u.first_name[:1]|upper if u.first_name else '?' }}
                                     </div>
-                                    <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" title="Online/Scanned"></div>
+                                    <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" title="Online/Scanned"></div>
                                 </div>
                                 <div class="flex flex-col">
                                     <span class="font-bold text-gray-800 text-sm group-hover:text-indigo-700 transition">{{ u.first_name or 'Tanpa Nama' }}</span>
@@ -266,13 +289,32 @@
                         </td>
                         
                         <td class="p-5 text-center">
-                            <div class="flex items-center justify-center gap-2">
+                            <div class="flex items-center justify-center gap-2 relative">
                                 <a href="/dashboard/broadcast?ids={{ u.user_id }}" class="inline-flex items-center justify-center w-8 h-8 bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg shadow-sm transition tooltip-trigger" title="Kirim Pesan (Follow Up)">
                                     <i class="fa-regular fa-paper-plane text-xs"></i>
                                 </a>
-                                <button onclick="showToast('Fitur Detail Profil Segera Hadir!', 'info')" class="w-8 h-8 bg-white border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-700 rounded-lg shadow-sm transition flex items-center justify-center tooltip-trigger" title="Opsi Lainnya">
+                                
+                                <button onclick="toggleActionMenu('menu-{{ u.id }}')" class="w-8 h-8 bg-white border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-800 rounded-lg shadow-sm transition flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
                                     <i class="fa-solid fa-ellipsis-vertical text-xs"></i>
                                 </button>
+
+                                <div id="menu-{{ u.id }}" class="action-menu hidden absolute right-0 top-10 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden transform opacity-0 transition-all origin-top-right">
+                                    <div class="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Aksi Kontak</p>
+                                    </div>
+                                    <div class="p-1">
+                                        <button onclick="showToast('Profil {{ u.first_name }} akan ditampilkan (Segera Hadir)', 'info'); toggleActionMenu('menu-{{ u.id }}')" class="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition flex items-center gap-2">
+                                            <i class="fa-regular fa-user w-4 text-center"></i> Lihat Detail Profil
+                                        </button>
+                                        <button onclick="copyToClipboard('{{ u.user_id }}'); toggleActionMenu('menu-{{ u.id }}')" class="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition flex items-center gap-2">
+                                            <i class="fa-regular fa-copy w-4 text-center"></i> Salin ID System
+                                        </button>
+                                        <div class="h-px bg-gray-100 my-1"></div>
+                                        <button onclick="openDeleteSingleModal('{{ u.id }}', '{{ u.first_name }}')" class="w-full text-left px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition flex items-center gap-2">
+                                            <i class="fa-solid fa-trash-can w-4 text-center"></i> Hapus Kontak
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -282,7 +324,6 @@
                             <div class="flex flex-col items-center justify-center animate-enter">
                                 <div class="relative mb-8">
                                     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-indigo-50 rounded-full blur-xl"></div>
-                                    
                                     <div class="w-28 h-28 bg-white rounded-[2rem] flex items-center justify-center relative z-10 shadow-2xl shadow-indigo-100 border border-indigo-50 transform rotate-3">
                                         <i class="fa-solid fa-folder-open text-5xl text-transparent bg-clip-text bg-gradient-to-br from-indigo-400 to-purple-500"></i>
                                     </div>
@@ -293,7 +334,6 @@
                                         <i class="fa-solid fa-database text-xl text-blue-400"></i>
                                     </div>
                                 </div>
-                                
                                 <h3 class="text-2xl font-black text-gray-800 tracking-tight">Database Masih Kosong</h3>
                                 <p class="text-gray-500 text-sm mt-3 max-w-sm mx-auto leading-relaxed">
                                     {% if search_query %}
@@ -309,8 +349,7 @@
                                 </a>
                                 {% else %}
                                 <button onclick="openImportModal()" class="mt-8 px-8 py-3.5 bg-gray-900 text-white rounded-xl text-sm font-bold shadow-xl shadow-gray-400/30 hover:bg-gray-800 transition transform hover:-translate-y-1 flex items-center gap-2">
-                                    <i class="fa-solid fa-cloud-arrow-down animate-pulse"></i>
-                                    Mulai Isi Database
+                                    <i class="fa-solid fa-cloud-arrow-down animate-pulse"></i> Mulai Isi Database
                                 </button>
                                 {% endif %}
                             </div>
@@ -321,7 +360,7 @@
             </table>
         </div>
         
-        <div class="p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-500 relative z-20">
+        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-500 z-20">
             <div class="flex items-center gap-3">
                 <span class="relative flex h-2.5 w-2.5">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -336,46 +375,10 @@
     </div>
 </div>
 
-<div id="bulkActionContainer" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 hidden animate-fade-in-up">
-    <div class="bg-gray-900/95 backdrop-blur-xl text-white px-6 py-3.5 rounded-2xl shadow-2xl shadow-indigo-500/20 flex items-center gap-6 border border-gray-700/50 ring-1 ring-white/10">
-        <div class="flex items-center gap-3">
-            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shadow-inner border border-white/20">
-                <span id="countSelected">0</span>
-            </div>
-            <div class="flex flex-col">
-                <span class="text-xs font-bold text-gray-200">Terpilih</span>
-                <span class="text-[10px] text-gray-400">Siap dieksekusi</span>
-            </div>
-        </div>
-        
-        <div class="h-10 w-px bg-gray-700/50"></div>
-        
-        <div class="flex items-center gap-2">
-            <button onclick="blastSelected()" class="group flex items-center gap-2.5 px-4 py-2 rounded-xl text-sm font-bold bg-white/5 hover:bg-indigo-600 transition-all border border-white/5 hover:border-indigo-500">
-                <i class="fa-solid fa-paper-plane text-indigo-400 group-hover:text-white transition"></i>
-                <span>Follow Up (Blast)</span>
-            </button>
-            
-            <button onclick="copyAllIds()" class="group flex items-center gap-2.5 px-4 py-2 rounded-xl text-sm font-bold bg-white/5 hover:bg-emerald-600 transition-all border border-white/5 hover:border-emerald-500">
-                <i class="fa-regular fa-copy text-emerald-400 group-hover:text-white transition"></i>
-                <span>Copy ID</span>
-            </button>
-        </div>
-
-        <div class="h-10 w-px bg-gray-700/50 ml-2"></div>
-
-        <button onclick="document.getElementById('selectAll').click()" class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition" title="Batal Pilih Semua">
-            <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-    </div>
-</div>
-
 <div id="importModal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="fixed inset-0 bg-gray-900/70 backdrop-blur-md transition-opacity opacity-0" id="importBackdrop" onclick="closeImportModal()"></div>
-    
     <div class="fixed inset-0 z-10 flex items-center justify-center p-4 sm:p-6">
         <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300" id="modalPanel">
-            
             <div class="bg-gray-900 px-8 py-6 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
                 <div class="relative z-10 flex justify-between items-start">
@@ -417,7 +420,6 @@
                 <div class="relative ml-2 border-l-2 border-dashed border-gray-200 pl-6 pb-2">
                     <div class="absolute -left-[13px] top-0 w-6 h-6 bg-gray-800 text-white rounded-full flex items-center justify-center text-xs font-bold border-4 border-white shadow-sm">2</div>
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Pilih Metode Eksekusi</label>
-                    
                     <div class="grid grid-cols-1 gap-4">
                         <button onclick="runTelegramSync()" class="group flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-200 hover:border-indigo-500 hover:ring-4 hover:ring-indigo-50 transition text-left relative overflow-hidden shadow-sm hover:shadow-md">
                             <div class="bg-indigo-50 text-indigo-600 w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-xl group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition duration-300">
@@ -445,19 +447,15 @@
                                     <i class="fa-solid fa-chevron-down text-xs"></i>
                                 </div>
                             </button>
-                            
                             <div id="csvForm" class="hidden border-t border-gray-100 bg-gray-50/50 p-6">
-                                
                                 <div class="flex justify-between items-center mb-4">
                                     <span class="text-xs font-bold text-gray-600">Upload File Anda:</span>
                                     <button onclick="showToast('Format CSV sedang diunduh', 'success')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition">
                                         <i class="fa-solid fa-download"></i> Format Template
                                     </button>
                                 </div>
-
                                 <div class="relative border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:bg-gray-50 hover:border-emerald-400 transition-colors group cursor-pointer bg-white mb-4">
                                     <input type="file" id="csvFileInput" accept=".csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="updateFileName(this)">
-                                    
                                     <div id="uploadPlaceholder">
                                         <div class="w-12 h-12 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition">
                                             <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
@@ -465,7 +463,6 @@
                                         <p class="text-sm font-bold text-gray-700">Klik atau Drag file CSV ke sini</p>
                                         <p class="text-xs text-gray-400 mt-1">Maksimal 5MB (Hanya .csv)</p>
                                     </div>
-                                    
                                     <div id="uploadSuccess" class="hidden">
                                         <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
                                             <i class="fa-solid fa-file-check text-xl"></i>
@@ -474,12 +471,10 @@
                                         <p class="text-xs text-gray-500 mt-1">Siap diproses</p>
                                     </div>
                                 </div>
-
                                 <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-3 text-xs text-gray-600 leading-relaxed mb-5 shadow-sm">
                                     <i class="fa-solid fa-circle-info text-blue-500 mr-1"></i>
                                     Pastikan file memiliki header kolom <b>user_id</b> (Wajib). Tambahkan kolom <b>username</b> atau <b>first_name</b> jika ada.
                                 </div>
-                                
                                 <button onclick="uploadCsv()" id="btnUploadCsv" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-sm shadow-lg shadow-emerald-200 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
                                     <i class="fa-solid fa-rocket"></i> Proses Database
                                 </button>
@@ -500,24 +495,57 @@
                 <h4 class="text-2xl font-black text-gray-900 tracking-tight">Memproses Data</h4>
                 <p class="text-sm text-gray-500 mt-2 font-medium bg-gray-100 px-4 py-1.5 rounded-full" id="loadingText">Mohon tunggu, jangan tutup halaman...</p>
             </div>
+        </div>
+    </div>
+</div>
 
+<div id="deleteModal" class="fixed inset-0 z-[110] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-900/70 backdrop-blur-md transition-opacity opacity-0" id="deleteBackdrop" onclick="closeDeleteModal()"></div>
+    <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300" id="deletePanel">
+            <div class="p-8 text-center">
+                <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6 relative">
+                    <div class="absolute inset-0 bg-red-100 rounded-full animate-ping opacity-75"></div>
+                    <i class="fa-solid fa-triangle-exclamation text-4xl text-red-500 relative z-10"></i>
+                </div>
+                <h3 class="text-2xl font-black text-gray-900 mb-2">Hapus Data Permanen?</h3>
+                <p class="text-sm text-gray-500 leading-relaxed mb-8" id="deleteModalText">
+                    Anda yakin ingin menghapus data ini? Aksi ini tidak dapat dibatalkan.
+                </p>
+                <div class="flex gap-3 w-full">
+                    <button onclick="closeDeleteModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3.5 rounded-xl transition">Batal</button>
+                    <button id="btnConfirmDelete" onclick="executeDelete()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-200 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trash-can"></i> Ya, Hapus
+                    </button>
+                </div>
+            </div>
+            
+            <input type="hidden" id="deleteTargetType" value="">
+            <input type="hidden" id="deleteTargetId" value="">
         </div>
     </div>
 </div>
 
 <div id="toastContainer" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
 
+<form id="deleteForm" method="POST" action="{{ url_for('delete_crm_user') }}" class="hidden">
+    <input type="hidden" name="user_id" id="formDeleteId">
+</form>
+
+<form id="deleteMassalForm" method="POST" action="{{ url_for('delete_crm_user_massal') }}" class="hidden">
+    <input type="hidden" name="user_ids" id="formDeleteMassalIds">
+</form>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // --- 1. CUSTOM TOAST NOTIFICATION (ENTERPRISE UI) ---
+    // --- 1. TOAST SYSTEM ---
     function showToast(message, type = 'success') {
         const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');
-        
-        // Define colors and icons based on type
         let bgClass, iconClass, iconBg;
+        
         if (type === 'success') {
             bgClass = 'bg-gray-900 border-gray-700';
             iconBg = 'bg-emerald-500/20 text-emerald-400';
@@ -533,32 +561,20 @@
         }
 
         toast.className = `transform transition-all duration-500 ease-out translate-x-full opacity-0 pointer-events-auto flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${bgClass}`;
-        
         toast.innerHTML = `
-            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${iconBg}">
-                <i class="${iconClass}"></i>
-            </div>
+            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${iconBg}"><i class="${iconClass}"></i></div>
             <p class="text-sm font-bold text-white mr-4">${message}</p>
-            <button onclick="this.parentElement.remove()" class="ml-auto text-gray-400 hover:text-white transition">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
+            <button onclick="this.parentElement.remove()" class="ml-auto text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
         `;
-
         container.appendChild(toast);
-
-        // Animate In
-        setTimeout(() => {
-            toast.classList.remove('translate-x-full', 'opacity-0');
-        }, 10);
-
-        // Auto Remove after 4 seconds
+        setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
         setTimeout(() => {
             toast.classList.add('translate-x-full', 'opacity-0');
             setTimeout(() => toast.remove(), 500);
         }, 4000);
     }
 
-    // --- 2. CORE LOGIC (PAGINATION) ---
+    // --- 2. PAGINATION ---
     function changePerPage(val) {
         const url = new URL(window.location.href);
         url.searchParams.set('per_page', val);
@@ -566,7 +582,7 @@
         window.location.href = url.toString();
     }
 
-    // --- 3. BULK ACTION LOGIC ---
+    // --- 3. BULK ACTION & TABLE ---
     function toggleSelectAll() {
         const master = document.getElementById('selectAll');
         const checkboxes = document.querySelectorAll('.user-check');
@@ -578,9 +594,9 @@
         const selected = document.querySelectorAll('.user-check:checked');
         const count = selected.length;
         const container = document.getElementById('bulkActionContainer');
-        const label = document.getElementById('countSelected');
+        const normalToolbar = document.getElementById('normalToolbar');
         
-        label.innerText = count;
+        document.getElementById('countSelected').innerText = count;
         
         const total = document.querySelectorAll('.user-check').length;
         const master = document.getElementById('selectAll');
@@ -588,17 +604,16 @@
 
         if (count > 0) {
             container.classList.remove('hidden');
-            container.classList.add('flex');
+            normalToolbar.classList.add('opacity-0', 'pointer-events-none');
         } else {
             container.classList.add('hidden');
-            container.classList.remove('flex');
+            normalToolbar.classList.remove('opacity-0', 'pointer-events-none');
         }
     }
 
     function blastSelected() {
         const selected = document.querySelectorAll('.user-check:checked');
         if (selected.length === 0) return showToast("Pilih minimal satu user!", "error");
-        
         const ids = Array.from(selected).map(cb => cb.value).join(',');
         window.location.href = `/dashboard/broadcast?ids=${ids}`;
     }
@@ -606,24 +621,125 @@
     function copyAllIds() {
         const selected = document.querySelectorAll('.user-check:checked');
         if (selected.length === 0) return showToast("Tidak ada ID yang disalin.", "error");
-        
         const ids = Array.from(selected).map(cb => cb.value).join('\n');
         navigator.clipboard.writeText(ids).then(() => showToast(`Berhasil menyalin ${selected.length} ID!`, 'success'));
     }
 
-    // --- 4. UTILS ---
     function copyToClipboard(text) {
         navigator.clipboard.writeText(text).then(() => {
             showToast(`ID ${text} berhasil disalin!`, 'success');
         });
     }
 
-    // --- 5. IMPORT MODAL & UI ---
-    const modal = document.getElementById('importModal');
-    const panel = document.getElementById('modalPanel');
-    const backdrop = document.getElementById('importBackdrop');
+    // --- 4. DROPDOWN MENU LOGIC ---
+    function toggleActionMenu(menuId) {
+        // Tutup semua menu lain dulu
+        document.querySelectorAll('.action-menu').forEach(menu => {
+            if(menu.id !== menuId) {
+                menu.classList.add('hidden');
+                menu.classList.remove('opacity-100', 'scale-100');
+            }
+        });
 
+        const menu = document.getElementById(menuId);
+        if (menu.classList.contains('hidden')) {
+            menu.classList.remove('hidden');
+            // Sedikit delay untuk animasi CSS
+            setTimeout(() => {
+                menu.classList.remove('opacity-0', 'scale-95');
+                menu.classList.add('opacity-100', 'scale-100');
+            }, 10);
+        } else {
+            menu.classList.remove('opacity-100', 'scale-100');
+            menu.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => menu.classList.add('hidden'), 200);
+        }
+    }
+
+    // Tutup dropdown kalau klik di luar area
+    document.addEventListener('click', function(event) {
+        const isClickInside = event.target.closest('td');
+        if (!isClickInside) {
+            document.querySelectorAll('.action-menu').forEach(menu => {
+                menu.classList.remove('opacity-100', 'scale-100');
+                menu.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => menu.classList.add('hidden'), 200);
+            });
+        }
+    });
+
+    // --- 5. MODAL DELETE LOGIC ---
+    function openDeleteSingleModal(dbId, name) {
+        document.getElementById('deleteTargetType').value = 'single';
+        document.getElementById('deleteTargetId').value = dbId;
+        document.getElementById('deleteModalText').innerHTML = `Anda yakin ingin menghapus kontak <b class="text-gray-900">${name}</b> dari database?`;
+        showDeleteModal();
+    }
+
+    function openDeleteMassalModal() {
+        const selected = document.querySelectorAll('.user-check:checked');
+        if (selected.length === 0) return showToast("Pilih data yang ingin dihapus!", "error");
+        
+        const ids = Array.from(selected).map(cb => {
+            // Kita butuh ID database, jadi kita ambil ID dari row terdekat
+            // Trik: Karena value checkbox = user_id telegram, kita butuh ID db (id primary key).
+            // Nanti di backend akan kita delete berdasarkan "user_id" telegramnya.
+            return cb.value; 
+        }).join(',');
+
+        document.getElementById('deleteTargetType').value = 'massal';
+        document.getElementById('deleteTargetId').value = ids;
+        document.getElementById('deleteModalText').innerHTML = `Anda akan menghapus <b class="text-red-600">${selected.length} data pelanggan</b> secara massal. Lanjutkan?`;
+        showDeleteModal();
+    }
+
+    function showDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        const panel = document.getElementById('deletePanel');
+        const backdrop = document.getElementById('deleteBackdrop');
+        
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            backdrop.classList.remove('opacity-0');
+            panel.classList.remove('opacity-0', 'scale-95');
+            panel.classList.add('opacity-100', 'scale-100');
+        }, 10);
+    }
+
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        const panel = document.getElementById('deletePanel');
+        const backdrop = document.getElementById('deleteBackdrop');
+        
+        backdrop.classList.add('opacity-0');
+        panel.classList.remove('opacity-100', 'scale-100');
+        panel.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    function executeDelete() {
+        const type = document.getElementById('deleteTargetType').value;
+        const targetValue = document.getElementById('deleteTargetId').value;
+        const btn = document.getElementById('btnConfirmDelete');
+        
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menghapus...';
+        btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+        if (type === 'single') {
+            document.getElementById('formDeleteId').value = targetValue;
+            document.getElementById('deleteForm').submit();
+        } else if (type === 'massal') {
+            document.getElementById('formDeleteMassalIds').value = targetValue;
+            document.getElementById('deleteMassalForm').submit();
+        }
+    }
+
+    // --- 6. IMPORT MODAL LOGIC ---
+    // (Fungsi Upload sama seperti sebelumnya)
     function openImportModal() {
+        const modal = document.getElementById('importModal');
+        const panel = document.getElementById('modalPanel');
+        const backdrop = document.getElementById('importBackdrop');
         modal.classList.remove('hidden');
         setTimeout(() => {
             backdrop.classList.remove('opacity-0');
@@ -633,12 +749,14 @@
     }
 
     function closeImportModal() {
+        const modal = document.getElementById('importModal');
+        const panel = document.getElementById('modalPanel');
+        const backdrop = document.getElementById('importBackdrop');
         backdrop.classList.add('opacity-0');
         panel.classList.remove('opacity-100', 'scale-100');
         panel.classList.add('opacity-0', 'scale-95');
         setTimeout(() => {
             modal.classList.add('hidden');
-            // Reset state
             document.getElementById('csvForm').classList.add('hidden');
             document.getElementById('csvArrowIcon').style.transform = 'rotate(0deg)';
         }, 300);
@@ -647,7 +765,6 @@
     function toggleCsvForm() {
         const form = document.getElementById('csvForm');
         const icon = document.getElementById('csvArrowIcon');
-        
         if (form.classList.contains('hidden')) {
             form.classList.remove('hidden');
             icon.style.transform = 'rotate(180deg)';
@@ -659,17 +776,10 @@
     }
 
     function updateFileName(input) {
-        const placeholder = document.getElementById('uploadPlaceholder');
-        const successUi = document.getElementById('uploadSuccess');
-        const nameLabel = document.getElementById('selectedFileName');
-        
         if(input.files && input.files[0]) {
-            nameLabel.innerText = input.files[0].name;
-            placeholder.classList.add('hidden');
-            successUi.classList.remove('hidden');
-        } else {
-            placeholder.classList.remove('hidden');
-            successUi.classList.add('hidden');
+            document.getElementById('selectedFileName').innerText = input.files[0].name;
+            document.getElementById('uploadPlaceholder').classList.add('hidden');
+            document.getElementById('uploadSuccess').classList.remove('hidden');
         }
     }
 
@@ -682,13 +792,11 @@
         document.getElementById('loadingOverlay').classList.add('hidden');
     }
 
-    // --- 6. API CALLS ---
     function getSelectedAccount() {
         const select = document.getElementById('importTargetAccount');
         const val = select.value;
         if (!val) {
             showToast("Pilih Database (Folder Akun) terlebih dahulu!", "error");
-            select.focus();
             select.parentElement.classList.add('animate-shake');
             setTimeout(() => select.parentElement.classList.remove('animate-shake'), 500);
             return null;
@@ -699,9 +807,7 @@
     async function runTelegramSync() {
         const targetPhone = getSelectedAccount();
         if (!targetPhone) return;
-
         showLoading(`Sinkronisasi riwayat chat ${targetPhone}...`);
-        
         try {
             const res = await fetch('/import_crm_api', {
                 method: 'POST',
@@ -709,36 +815,6 @@
                 body: JSON.stringify({ source_phone: targetPhone }) 
             });
             const data = await res.json();
-            
-            if(data.status === 'success') {
-                showToast(data.message, 'success');
-                setTimeout(() => window.location.href = `{{ url_for('dashboard_crm') }}?source=${targetPhone}`, 1500);
-            } else {
-                showToast("Gagal: " + data.message, 'error');
-                hideLoading();
-            }
-        } catch(e) { 
-            showToast("Koneksi Terputus ke Server", 'error'); 
-            hideLoading(); 
-        }
-    }
-
-    async function uploadCsv() {
-        const targetPhone = getSelectedAccount();
-        if (!targetPhone) return;
-
-        const fileInput = document.getElementById('csvFileInput');
-        if(fileInput.files.length === 0) return showToast("Silakan upload file CSV!", "error");
-
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        formData.append('source_phone', targetPhone); 
-
-        showLoading("Mengunggah dan Memproses Database...");
-        try {
-            const res = await fetch('/import_crm_csv', {method: 'POST', body: formData});
-            const data = await res.json();
-            
             if(data.status === 'success') {
                 showToast(data.message, 'success');
                 setTimeout(() => window.location.href = `{{ url_for('dashboard_crm') }}?source=${targetPhone}`, 1500);
@@ -746,66 +822,48 @@
                 showToast(data.message, 'error');
                 hideLoading();
             }
-        } catch(e) { 
-            showToast("Gagal mengunggah file.", 'error'); 
-            hideLoading(); 
-        }
+        } catch(e) { showToast("Koneksi Terputus", 'error'); hideLoading(); }
+    }
+
+    async function uploadCsv() {
+        const targetPhone = getSelectedAccount();
+        if (!targetPhone) return;
+        const fileInput = document.getElementById('csvFileInput');
+        if(fileInput.files.length === 0) return showToast("Pilih file CSV!", "error");
+        
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('source_phone', targetPhone); 
+
+        showLoading("Memproses Database...");
+        try {
+            const res = await fetch('/import_crm_csv', {method: 'POST', body: formData});
+            const data = await res.json();
+            if(data.status === 'success') {
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.href = `{{ url_for('dashboard_crm') }}?source=${targetPhone}`, 1500);
+            } else {
+                showToast(data.message, 'error');
+                hideLoading();
+            }
+        } catch(e) { showToast("Gagal mengunggah file.", 'error'); hideLoading(); }
     }
 </script>
 
 <style>
-    /* Custom Scrollbar for Tabs */
-    .custom-scrollbar::-webkit-scrollbar {
-        height: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
-
-    /* Input Shake Animation */
-    .animate-shake {
-        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-    }
-    @keyframes shake {
-        10%, 90% { transform: translate3d(-1px, 0, 0); }
-        20%, 80% { transform: translate3d(2px, 0, 0); }
-        30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-        40%, 60% { transform: translate3d(4px, 0, 0); }
-    }
-
-    /* Tooltip System (CSS Only) */
-    .tooltip-trigger {
-        position: relative;
-    }
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+    @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+    .tooltip-trigger { position: relative; }
     .tooltip-trigger:hover::before {
-        content: attr(title);
-        position: absolute;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        margin-bottom: 8px;
-        background: #1f2937;
-        color: white;
-        font-size: 10px;
-        font-weight: bold;
-        padding: 4px 8px;
-        border-radius: 6px;
-        white-space: nowrap;
-        pointer-events: none;
-        z-index: 50;
-        opacity: 0;
-        animation: fadeInTooltip 0.2s forwards;
+        content: attr(title); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+        margin-bottom: 8px; background: #1f2937; color: white; font-size: 10px; font-weight: bold;
+        padding: 4px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; z-index: 50;
+        opacity: 0; animation: fadeInTooltip 0.2s forwards;
     }
-    @keyframes fadeInTooltip {
-        to { opacity: 1; transform: translateX(-50%) translateY(0); }
-    }
+    @keyframes fadeInTooltip { to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 </style>
 {% endblock %}
