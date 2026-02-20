@@ -1,127 +1,321 @@
 {% extends "auth/base.html" %}
-{% block title %}Daftar Akun{% endblock %}
+{% block title %}Daftar Akun BlastPro{% endblock %}
 
 {% block auth_content %}
 <div class="relative z-50">
     
     <div class="text-center mb-8">
-        <div class="inline-block p-3 bg-indigo-50 rounded-2xl mb-4 text-indigo-600 shadow-sm border border-indigo-100">
-            <i class="fa-solid fa-rocket text-2xl"></i>
+        <div class="inline-block p-3.5 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl mb-4 text-indigo-600 shadow-sm border border-indigo-100">
+            <i class="fa-solid fa-rocket text-3xl animate-bounce" style="animation-duration: 3s;"></i>
         </div>
-        <h2 class="text-3xl font-extrabold text-gray-900">Buat Akun Baru</h2>
-        <p class="text-gray-500 text-sm mt-2">Mulai automasi bisnis Anda dalam hitungan detik.</p>
+        <h2 class="text-3xl font-black text-gray-900 tracking-tight">Buat Akun Baru</h2>
+        <p class="text-gray-500 text-sm mt-2 font-medium">Mulai automasi bisnis Anda dalam hitungan detik.</p>
     </div>
 
-    <form method="POST" action="/register">
-        <div class="space-y-5">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="mb-6 space-y-3">
+            {% for category, message in messages %}
+                <div class="p-4 rounded-xl text-sm font-bold flex items-start gap-3 shadow-sm
+                    {% if category == 'success' %} bg-emerald-50 text-emerald-700 border border-emerald-200
+                    {% elif category == 'danger' %} bg-red-50 text-red-700 border border-red-200
+                    {% elif category == 'warning' %} bg-amber-50 text-amber-700 border border-amber-200
+                    {% else %} bg-blue-50 text-blue-700 border border-blue-200 {% endif %} animate-fade-in-up">
+                    <i class="fa-solid 
+                        {% if category == 'success' %} fa-circle-check
+                        {% elif category == 'danger' %} fa-circle-exclamation
+                        {% else %} fa-circle-info {% endif %} mt-0.5 text-lg"></i>
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/register" id="registerForm" onsubmit="return validateForm()">
+        <div class="space-y-6">
             
             <div>
-                <label class="block text-xs font-bold text-gray-700 uppercase mb-2 ml-1">Email Bisnis</label>
+                <label class="block text-xs font-black text-gray-700 uppercase tracking-widest mb-2 ml-1">Username</label>
                 <div class="relative group">
-                    <span class="absolute left-4 top-3.5 text-gray-400 group-hover:text-indigo-500 transition"><i class="fa-regular fa-envelope"></i></span>
-                    <input type="email" name="email" required placeholder="contoh: owner@bisnis.com" 
-                        class="form-input w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm font-medium text-gray-900 placeholder-gray-400 transition shadow-sm hover:border-gray-300">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition">
+                        <i class="fa-solid fa-at"></i>
+                    </div>
+                    <input type="text" name="username" id="regUsername" required placeholder="Hanya huruf & angka (min 4 char)" oninput="formatUsername(this)"
+                        class="form-input w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none text-sm font-bold text-gray-900 placeholder-gray-400 transition shadow-sm">
                 </div>
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-gray-700 uppercase mb-2 ml-1">Password</label>
+                <label class="block text-xs font-black text-gray-700 uppercase tracking-widest mb-2 ml-1 flex justify-between">
+                    <span>Email Aktif</span>
+                    <span id="emailWarning" class="text-red-500 text-[10px] hidden"><i class="fa-solid fa-triangle-exclamation"></i> Hindari Email Sekali Pakai</span>
+                </label>
                 <div class="relative group">
-                    <span class="absolute left-4 top-3.5 text-gray-400 group-hover:text-indigo-500 transition"><i class="fa-solid fa-lock"></i></span>
-                    <input type="password" name="password" id="regPass" required placeholder="Minimal 6 karakter" 
-                        class="form-input w-full pl-11 pr-11 py-3 bg-white border border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm font-medium text-gray-900 placeholder-gray-400 transition shadow-sm hover:border-gray-300">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition">
+                        <i class="fa-regular fa-envelope"></i>
+                    </div>
+                    <input type="email" name="email" id="regEmail" required placeholder="contoh: owner@bisnis.com" oninput="checkEmailDomain(this.value)"
+                        class="form-input w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none text-sm font-bold text-gray-900 placeholder-gray-400 transition shadow-sm">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-black text-gray-700 uppercase tracking-widest mb-2 ml-1 flex justify-between">
+                    <span>Password</span>
+                    <span id="passStatusText" class="text-gray-400 text-[10px] font-medium">Minimal 8 Karakter</span>
+                </label>
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <input type="password" name="password" id="regPass" required placeholder="Kombinasi Huruf & Angka" oninput="checkPasswordStrength(this.value)"
+                        class="form-input w-full pl-11 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none text-sm font-bold text-gray-900 placeholder-gray-400 transition shadow-sm">
                     
-                    <button type="button" onclick="togglePassword('regPass', 'regEye')" class="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer transition">
+                    <button type="button" onclick="togglePassword('regPass', 'regEye')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-indigo-600 focus:outline-none cursor-pointer transition">
                         <i id="regEye" class="fa-regular fa-eye"></i>
                     </button>
                 </div>
-                <div class="flex gap-1 mt-2 ml-1 h-1 w-full max-w-[100px]">
-                    <div class="flex-1 bg-gray-200 rounded-full"></div>
-                    <div class="flex-1 bg-gray-200 rounded-full"></div>
-                    <div class="flex-1 bg-gray-200 rounded-full"></div>
+                
+                <div class="flex gap-1.5 mt-3 h-1.5 w-full">
+                    <div id="bar1" class="flex-1 bg-gray-200 rounded-full transition-colors duration-300"></div>
+                    <div id="bar2" class="flex-1 bg-gray-200 rounded-full transition-colors duration-300"></div>
+                    <div id="bar3" class="flex-1 bg-gray-200 rounded-full transition-colors duration-300"></div>
+                    <div id="bar4" class="flex-1 bg-gray-200 rounded-full transition-colors duration-300"></div>
+                </div>
+                <div class="flex gap-4 mt-2 px-1">
+                    <span id="reqLength" class="text-[9px] text-gray-400 font-medium flex items-center gap-1"><i class="fa-solid fa-circle text-[4px]"></i> 8+ Char</span>
+                    <span id="reqUpper" class="text-[9px] text-gray-400 font-medium flex items-center gap-1"><i class="fa-solid fa-circle text-[4px]"></i> Huruf Besar</span>
+                    <span id="reqNum" class="text-[9px] text-gray-400 font-medium flex items-center gap-1"><i class="fa-solid fa-circle text-[4px]"></i> Angka</span>
                 </div>
             </div>
 
-            <div class="mb-5">
-    <label class="block text-slate-400 text-xs font-bold mb-2 uppercase tracking-wider">
-        Kode Referral / Affiliate
-    </label>
-    
-    <div class="relative group">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-            {% if ref %}
-                <i class="fa-solid fa-lock text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]"></i>
-            {% else %}
-                <i class="fa-solid fa-ticket text-slate-500 group-focus-within:text-indigo-400 transition-colors"></i>
-            {% endif %}
-        </div>
+            <div class="pt-2">
+                <label class="block text-xs font-black text-gray-700 uppercase tracking-widest mb-2 ml-1">
+                    Kode Referral <span class="text-gray-400 font-normal lowercase">(Opsional)</span>
+                </label>
+                
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
+                        {% if ref %}
+                            <i class="fa-solid fa-lock text-emerald-500"></i>
+                        {% else %}
+                            <i class="fa-solid fa-ticket text-gray-400 group-focus-within:text-indigo-600 transition"></i>
+                        {% endif %}
+                    </div>
 
-        <input 
-            type="text" 
-            name="referral_code" 
-            id="referral_code"
-            value="{{ ref if ref else '' }}"
-            placeholder="Punya kode teman? Masukan disini"
-            class="w-full pl-10 pr-4 py-3 rounded-xl border outline-none transition-all duration-300 font-mono text-sm shadow-sm
-            {% if ref %}
-                /* STYLE TERKUNCI (LINK) */
-                bg-emerald-900/20 border-emerald-500/30 text-emerald-300 
-                cursor-not-allowed font-bold tracking-wide
-                focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50
-            {% else %}
-                /* STYLE MANUAL (EDITABLE) */
-                bg-slate-800/50 border-slate-700 text-white 
-                focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 
-                focus:bg-slate-800
-                placeholder:text-slate-600
-            {% endif %}"
-            
-            {# Logic Kunci: Tambahkan readonly jika ref ada #}
-            {% if ref %} readonly title="Kode otomatis terpasang dari link referral" {% endif %}
-        >
+                    <input type="text" name="referral_code" id="referral_code" value="{{ ref if ref else '' }}" placeholder="Punya kode dari teman?"
+                        class="w-full pl-11 pr-24 py-3.5 rounded-xl border outline-none transition-all duration-300 font-mono text-sm shadow-sm
+                        {% if ref %}
+                            bg-emerald-50 border-emerald-200 text-emerald-700 font-bold tracking-widest cursor-not-allowed
+                        {% else %}
+                            bg-gray-50 border-gray-200 text-gray-900 font-bold focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 placeholder-gray-400
+                        {% endif %}"
+                        {% if ref %} readonly title="Kode otomatis terpasang" {% endif %}>
 
-        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            {% if ref %}
-                <span class="flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded border border-emerald-500/20 font-bold animate-pulse">
-                    <i class="fa-solid fa-check"></i> APPLIED
-                </span>
-            {% else %}
-                <span class="text-[10px] text-slate-600 italic">Optional</span>
-            {% endif %}
-        </div>
-    </div>
+                    <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+                        {% if ref %}
+                            <span class="flex items-center gap-1 bg-emerald-100 text-emerald-600 text-[10px] px-2 py-1 rounded-lg border border-emerald-200 font-bold">
+                                <i class="fa-solid fa-check"></i> APPLIED
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
 
-    {% if ref %}
-        <p class="mt-2 text-[10px] text-emerald-400 flex items-center gap-1.5 animate-fade-in-up">
-            <i class="fa-solid fa-shield-halved"></i>
-            Kode referral Sesuai!
-        </p>
-    {% else %}
-        <p class="mt-2 text-[10px] text-slate-500">
-            Biarkan kosong jika mendaftar tanpa undangan.
-        </p>
-    {% endif %}
-</div>
-
-            <button type="submit" class="w-full py-4 bg-gray-900 hover:bg-black text-white font-bold rounded-xl shadow-xl shadow-gray-200 transition transform hover:-translate-y-1 active:scale-95 relative z-50 cursor-pointer flex items-center justify-center gap-2 group">
-                Buat Akun Sekarang
-                <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+            <button type="submit" id="btnSubmit" class="w-full py-4 bg-gray-900 hover:bg-black text-white font-black tracking-wide uppercase rounded-[1.25rem] shadow-xl shadow-gray-400/30 transition transform hover:-translate-y-1 active:scale-95 relative z-50 cursor-pointer flex items-center justify-center gap-3 group mt-4 outline-none focus:ring-4 focus:ring-gray-200">
+                <i class="fa-solid fa-user-plus text-lg"></i>
+                <span>Buat Akun Sekarang</span>
             </button>
         </div>
     </form>
 
-    <div class="mt-8 text-center">
-        <p class="text-sm text-gray-600">
+    <div class="mt-8 text-center border-t border-gray-100 pt-6">
+        <p class="text-sm text-gray-600 font-medium">
             Sudah punya akun? 
-            <a href="/login" class="font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition cursor-pointer">Masuk Disini</a>
+            <a href="/login" class="font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition">Masuk Disini</a>
         </p>
         
-        <div class="mt-6 flex items-center justify-center gap-4 opacity-50 grayscale hover:grayscale-0 transition duration-500">
-            <span class="text-xs text-gray-400 flex items-center gap-1"><i class="fa-solid fa-shield-halved"></i> Data Encrypted</span>
-            <span class="text-gray-300">|</span>
-            <span class="text-xs text-gray-400 flex items-center gap-1"><i class="fa-solid fa-server"></i> Secure Server</span>
+        <div class="mt-8 flex items-center justify-center gap-6 opacity-60 grayscale hover:grayscale-0 transition duration-500">
+            <div class="flex items-center gap-1.5 text-[11px] font-bold text-gray-500">
+                <i class="fa-solid fa-shield-halved text-indigo-500 text-lg"></i>
+                <div class="flex flex-col text-left leading-tight">
+                    <span>256-bit</span>
+                    <span>Encrypted</span>
+                </div>
+            </div>
+            <div class="w-px h-6 bg-gray-300"></div>
+            <div class="flex items-center gap-1.5 text-[11px] font-bold text-gray-500">
+                <i class="fa-solid fa-server text-emerald-500 text-lg"></i>
+                <div class="flex flex-col text-left leading-tight">
+                    <span>Secure</span>
+                    <span>Database</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
+<script>
+    // 1. Toggle Password Visibility
+    function togglePassword(inputId, iconId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove("fa-eye");
+            icon.classList.add("fa-eye-slash");
+            icon.classList.add("text-indigo-600");
+        } else {
+            input.type = "password";
+            icon.classList.remove("fa-eye-slash");
+            icon.classList.add("fa-eye");
+            icon.classList.remove("text-indigo-600");
+        }
+    }
+
+    // 2. Format Username (Mencegah Spasi & Karakter Aneh)
+    function formatUsername(input) {
+        input.value = input.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+    }
+
+    // 3. Deteksi Domain Email Sampah (Sama dengan backend AntiSpamGuard)
+    const disposableDomains = [
+        '10minutemail.com', 'temp-mail.org', 'yopmail.com', 'guerrillamail.com', 
+        'mailinator.com', 'throwawaymail.com', 'maildrop.cc', 'trashmail.com',
+        'tempmail.com', 'spam4.me', 'getnada.com', 'inboxkitten.com'
+    ];
+
+    function checkEmailDomain(email) {
+        const warningEl = document.getElementById('emailWarning');
+        const btn = document.getElementById('btnSubmit');
+        
+        if(email.includes('@')) {
+            const domain = email.split('@')[1].toLowerCase();
+            if(disposableDomains.includes(domain)) {
+                warningEl.classList.remove('hidden');
+                warningEl.innerHTML = '<i class="fa-solid fa-ban"></i> Domain Email Dilarang!';
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                return false;
+            }
+        }
+        warningEl.classList.add('hidden');
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        return true;
+    }
+
+    // 4. Password Strength Meter Kasta Dewa
+    let isPasswordValid = false;
+
+    function checkPasswordStrength(password) {
+        const bar1 = document.getElementById('bar1');
+        const bar2 = document.getElementById('bar2');
+        const bar3 = document.getElementById('bar3');
+        const bar4 = document.getElementById('bar4');
+        const statusText = document.getElementById('passStatusText');
+        
+        // Indikator Bawah
+        const reqLen = document.getElementById('reqLength');
+        const reqUp = document.getElementById('reqUpper');
+        const reqNum = document.getElementById('reqNum');
+
+        let strength = 0;
+
+        // Reset class
+        const defaultColor = 'bg-gray-200';
+        [bar1, bar2, bar3, bar4].forEach(b => b.className = `flex-1 rounded-full transition-colors duration-300 ${defaultColor}`);
+        [reqLen, reqUp, reqNum].forEach(el => el.classList.remove('text-emerald-500', 'font-bold'));
+        [reqLen, reqUp, reqNum].forEach(el => el.querySelector('i').classList.replace('fa-check', 'fa-circle'));
+
+        if (password.length === 0) {
+            statusText.innerText = "Minimal 8 Karakter";
+            statusText.className = "text-gray-400 text-[10px] font-medium";
+            isPasswordValid = false;
+            return;
+        }
+
+        // Cek Panjang
+        if (password.length >= 8) {
+            strength += 1;
+            reqLen.classList.add('text-emerald-500', 'font-bold');
+            reqLen.querySelector('i').classList.replace('fa-circle', 'fa-check');
+        }
+
+        // Cek Huruf Besar & Kecil
+        if (password.match(/[A-Z]/) && password.match(/[a-z]/)) {
+            strength += 1;
+            reqUp.classList.add('text-emerald-500', 'font-bold');
+            reqUp.querySelector('i').classList.replace('fa-circle', 'fa-check');
+        }
+
+        // Cek Angka
+        if (password.match(/\d/)) {
+            strength += 1;
+            reqNum.classList.add('text-emerald-500', 'font-bold');
+            reqNum.querySelector('i').classList.replace('fa-circle', 'fa-check');
+        }
+
+        // Cek Karakter Spesial (Bonus Keren)
+        if (password.match(/[^a-zA-Z\d]/)) {
+            strength += 1;
+        }
+
+        // Visualisasi Bar
+        if (strength === 1) {
+            bar1.classList.replace(defaultColor, 'bg-red-500');
+            statusText.innerText = "Sangat Lemah";
+            statusText.className = "text-red-500 text-[10px] font-bold";
+            isPasswordValid = false;
+        } else if (strength === 2) {
+            bar1.classList.replace(defaultColor, 'bg-amber-400');
+            bar2.classList.replace(defaultColor, 'bg-amber-400');
+            statusText.innerText = "Sedang";
+            statusText.className = "text-amber-500 text-[10px] font-bold";
+            isPasswordValid = false;
+        } else if (strength === 3) {
+            bar1.classList.replace(defaultColor, 'bg-emerald-400');
+            bar2.classList.replace(defaultColor, 'bg-emerald-400');
+            bar3.classList.replace(defaultColor, 'bg-emerald-400');
+            statusText.innerText = "Kuat";
+            statusText.className = "text-emerald-500 text-[10px] font-bold";
+            isPasswordValid = true;
+        } else if (strength >= 4) {
+            bar1.classList.replace(defaultColor, 'bg-indigo-500');
+            bar2.classList.replace(defaultColor, 'bg-indigo-500');
+            bar3.classList.replace(defaultColor, 'bg-indigo-500');
+            bar4.classList.replace(defaultColor, 'bg-indigo-500');
+            statusText.innerText = "Sangat Kuat 🔥";
+            statusText.className = "text-indigo-600 text-[10px] font-black";
+            isPasswordValid = true;
+        }
+    }
+
+    // 5. Validasi Final Saat Submit
+    function validateForm() {
+        const username = document.getElementById('regUsername').value;
+        const email = document.getElementById('regEmail').value;
+        const btn = document.getElementById('btnSubmit');
+
+        if (username.length < 4) {
+            alert("Username minimal 4 karakter!");
+            return false;
+        }
+
+        if (!checkEmailDomain(email)) {
+            return false;
+        }
+
+        if (!isPasswordValid) {
+            alert("Password Anda terlalu lemah. Harus memenuhi ketiga syarat di bawah kolom password.");
+            return false;
+        }
+
+        // Animasi Loading
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-lg"></i><span>Membuat Akun...</span>';
+        btn.classList.add('opacity-80', 'cursor-wait');
+        return true;
+    }
+</script>
+{% endblock %}
