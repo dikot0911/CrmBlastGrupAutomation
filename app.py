@@ -2457,7 +2457,7 @@ def import_crm_api():
     async def _import():
         client = None
         try:
-            # 1. KONEKSI AMAN (Bypass Satpam)
+            # 1. KONEKSI AMAN
             acc_res = supabase.table('telegram_accounts').select("session_string")\
                 .eq('user_id', user_id).eq('phone_number', source_phone).eq('is_active', True).execute()
             
@@ -2477,77 +2477,82 @@ def import_crm_api():
         try:
             final_source_label = source_phone 
             batch_payload = [] 
+            seen_user_ids = set() # Mencegah data dobel masuk ke array
             
-            # 2. SCANNING FILTER KETAT (Anti Akun Hantu)
-            async for dialog in client.iter_dialogs(limit=1500):
-                # Validasi: Harus User, Bukan Bot, Bukan Akun Diri Sendiri
-                if dialog.is_user:
-                    u = dialog.entity
-                    
-                    # Amankan atribut pakai getattr (mencegah error kalau data kosong)
-                    is_bot = getattr(u, 'bot', False)
-                    is_self = getattr(u, 'is_self', False)
-                    is_deleted = getattr(u, 'deleted', False)
-                    
-                    if is_bot or is_self or is_deleted:
-                        continue # Lewati
+            # 2. MEGA SCANNING (Main Folder + Archived Folder)
+            # folder=None (Beranda Utama), folder=1 (Arsip)
+            for folder_id in [None, 1]:
+                # Pake limit 100.000 buat maksa Telethon sedot sampe bawah
+                async for dialog in client.iter_dialogs(limit=100000, folder=folder_id):
+                    # Validasi: Harus User, Bukan Bot
+                    if dialog.is_user and not getattr(dialog.entity, 'bot', False):
+                        u = dialog.entity
                         
-                    # Gabungkan nama depan dan belakang
-                    fname = getattr(u, 'first_name', '') or ''
-                    lname = getattr(u, 'last_name', '') or ''
-                    full_name = f"{fname} {lname}".strip()
-                    if not full_name: full_name = "Tanpa Nama"
+                        # Amankan atribut pakai getattr
+                        is_self = getattr(u, 'is_self', False)
+                        is_deleted = getattr(u, 'deleted', False)
+                        t_id = getattr(u, 'id', None)
+                        
+                        # Skip kalau diri sendiri, akun dihapus, atau ga ada ID
+                        if is_self or is_deleted or not t_id:
+                            continue 
+                            
+                        # Skip kalau ID ini udah ke-scan (misal dari folder lain)
+                        if t_id in seen_user_ids:
+                            continue
+                        seen_user_ids.add(t_id)
+                            
+                        # Gabungkan nama depan dan belakang
+                        fname = getattr(u, 'first_name', '') or ''
+                        lname = getattr(u, 'last_name', '') or ''
+                        full_name = f"{fname} {lname}".strip()
+                        if not full_name: full_name = "Tanpa Nama"
 
-                    t_id = getattr(u, 'id', None)
-                    if not t_id: continue
-
-                    batch_payload.append({
-                        "owner_id": user_id, 
-                        "user_id": t_id, 
-                        "username": getattr(u, 'username', None),
-                        "first_name": full_name, 
-                        "source_phone": final_source_label,
-                        "last_interaction": datetime.utcnow().isoformat(), 
-                        "created_at": datetime.utcnow().isoformat()
-                    })
+                        batch_payload.append({
+                            "owner_id": user_id, 
+                            "user_id": t_id, 
+                            "username": getattr(u, 'username', None),
+                            "first_name": full_name, 
+                            "source_phone": final_source_label,
+                            "last_interaction": datetime.utcnow().isoformat(), 
+                            "created_at": datetime.utcnow().isoformat()
+                        })
 
             total_scanned = len(batch_payload)
             saved_count = 0
             
-            # 3. DATABASE INSERT (Mode Hybrid: Cepat & Tahan Banting)
+            # 3. HYBRID DATABASE INSERT (Anti Gagal)
             if total_scanned > 0:
-                try:
-                    # PERCOBAAN 1: Tembak Massal (Cepat & Tembus Tembok Constraint)
-                    supabase.table('tele_users').upsert(batch_payload, on_conflict="owner_id,user_id").execute()
-                    saved_count = total_scanned
-                except Exception as bulk_err:
-                    logger.warning(f"Upsert Massal ditolak DB, ganti ke Mode Single. Error: {bulk_err}")
-                    
-                    # PERCOBAAN 2 (FALLBACK): Masukin Satu per Satu (Anti Gagal)
-                    for row in batch_payload:
-                        try:
-                            # Cek apakah user udah ada di DB
-                            check = supabase.table('tele_users').select("id").eq('owner_id', user_id).eq('user_id', row['user_id']).execute()
-                            
-                            if check.data:
-                                # Kalau udah ada, update namanya aja sama tanggal terakhir
-                                supabase.table('tele_users').update({
-                                    "first_name": row["first_name"], 
-                                    "username": row["username"],
-                                    "last_interaction": row["last_interaction"]
-                                }).eq('id', check.data[0]['id']).execute()
-                            else:
-                                # Kalau belum ada, masukkan baru
-                                supabase.table('tele_users').insert(row).execute()
-                                
-                            saved_count += 1
-                        except Exception as single_err:
-                            logger.error(f"Gagal simpan 1 kontak: {single_err}")
-                            continue # Lanjut ke kontak berikutnya
+                chunk_size = 500
+                for i in range(0, total_scanned, chunk_size):
+                    chunk = batch_payload[i:i + chunk_size]
+                    try:
+                        # COBA MODE NGEBUT (Bulk Upsert)
+                        supabase.table('tele_users').upsert(chunk, on_conflict="owner_id,user_id").execute()
+                        saved_count += len(chunk)
+                    except Exception as bulk_err:
+                        logger.warning(f"Upsert Massal gagal, ganti ke Mode Single. Error: {bulk_err}")
+                        
+                        # JIKA DITOLAK DB, GANTI GIGI KE MODE SATU-SATU
+                        for row in chunk:
+                            try:
+                                check = supabase.table('tele_users').select("id").eq('owner_id', user_id).eq('user_id', row['user_id']).execute()
+                                if check.data:
+                                    supabase.table('tele_users').update({
+                                        "first_name": row["first_name"], 
+                                        "username": row["username"],
+                                        "last_interaction": row["last_interaction"]
+                                    }).eq('id', check.data[0]['id']).execute()
+                                else:
+                                    supabase.table('tele_users').insert(row).execute()
+                                saved_count += 1
+                            except Exception as single_err:
+                                logger.error(f"Gagal simpan 1 kontak ID {row['user_id']}: {single_err}")
+                                continue
             
             return jsonify({
                 "status": "success", 
-                "message": f"Berhasil menarik {saved_count} kontak masuk ke folder {final_source_label}."
+                "message": f"Berhasil menyedot {saved_count} kontak (Termasuk dari folder Arsip) ke database!"
             })
             
         except Exception as e:
