@@ -1,55 +1,156 @@
 {% extends "auth/base.html" %}
-{% block title %}Masuk{% endblock %}
+{% block title %}Masuk ke BlastPro{% endblock %}
 
 {% block auth_content %}
-<!-- Wrapper dengan z-index tinggi biar bisa diklik -->
 <div class="relative z-50">
-    <div class="text-center mb-10">
-        <h2 class="text-3xl font-bold text-gray-900 mb-2">Selamat Datang Kembali!</h2>
-        <p class="text-gray-500 text-sm">Masuk untuk mengelola bot dan kampanye Anda.</p>
+    
+    <div class="text-center mb-8">
+        <div class="inline-block p-3.5 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl mb-4 text-indigo-600 shadow-sm border border-indigo-100">
+            <i class="fa-solid fa-fingerprint text-3xl animate-pulse" style="animation-duration: 3s;"></i>
+        </div>
+        <h2 class="text-3xl font-black text-gray-900 tracking-tight">Selamat Datang</h2>
+        <p class="text-gray-500 text-sm mt-2 font-medium">Masuk untuk melanjutkan kontrol automasi Anda.</p>
     </div>
 
-    <!-- Form Login -->
-    <form method="POST" action="/login">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="mb-6 space-y-3">
+            {% for category, message in messages %}
+                <div class="p-4 rounded-xl text-sm font-bold flex items-start gap-3 shadow-sm
+                    {% if category == 'success' %} bg-emerald-50 text-emerald-700 border border-emerald-200
+                    {% elif category == 'danger' %} bg-red-50 text-red-700 border border-red-200
+                    {% elif category == 'warning' %} bg-amber-50 text-amber-700 border border-amber-200
+                    {% else %} bg-blue-50 text-blue-700 border border-blue-200 {% endif %} animate-fade-in-up">
+                    <i class="fa-solid 
+                        {% if category == 'success' %} fa-circle-check
+                        {% elif category == 'danger' %} fa-circle-exclamation
+                        {% else %} fa-circle-info {% endif %} mt-0.5 text-lg"></i>
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/login" id="loginForm" onsubmit="return handleLoginSubmit()">
         <div class="space-y-5">
-            <!-- Email Input -->
+            
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Email Bisnis</label>
-                <div class="relative">
-                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fa-regular fa-envelope"></i></span>
-                    <input type="email" name="email" required placeholder="nama@toko.com" 
-                        class="form-input w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-medium text-gray-700 placeholder-gray-400">
+                <label class="block text-xs font-black text-gray-700 uppercase tracking-widest mb-2 ml-1">Email Bisnis</label>
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition">
+                        <i class="fa-regular fa-envelope"></i>
+                    </div>
+                    <input type="email" name="email" id="loginEmail" required placeholder="owner@bisnis.com" 
+                        class="form-input w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none text-sm font-bold text-gray-900 placeholder-gray-400 transition shadow-sm">
                 </div>
             </div>
 
-            <!-- Password Input -->
             <div>
-                <div class="flex justify-between items-center mb-2">
-                    <label class="block text-sm font-semibold text-gray-700">Password</label>
+                <div class="flex justify-between items-end mb-2 ml-1 pr-1">
+                    <label class="block text-xs font-black text-gray-700 uppercase tracking-widest">Password</label>
+                    <a href="#" onclick="showToast('Fitur Reset Password segera hadir!', 'info')" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition">Lupa Password?</a>
                 </div>
-                <div class="relative">
-                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fa-solid fa-lock"></i></span>
-                    <input type="password" name="password" id="password" required placeholder="••••••••" 
-                        class="form-input w-full pl-11 pr-11 py-3 bg-white border border-gray-200 rounded-xl focus:border-indigo-500 outline-none text-sm font-medium text-gray-700 placeholder-gray-400">
-                    <!-- Tombol intip password (z-index tinggi) -->
-                    <button type="button" onclick="togglePassword('password', 'eyeIcon')" class="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 focus:outline-none z-50 cursor-pointer">
-                        <i id="eyeIcon" class="fa-regular fa-eye"></i>
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <input type="password" name="password" id="loginPass" required placeholder="••••••••" 
+                        class="form-input w-full pl-11 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none text-sm font-bold text-gray-900 placeholder-gray-400 transition shadow-sm">
+                    
+                    <button type="button" onclick="togglePassword('loginPass', 'loginEye')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-indigo-600 focus:outline-none cursor-pointer transition">
+                        <i id="loginEye" class="fa-regular fa-eye"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Submit Button (z-index tinggi) -->
-            <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 relative z-50 cursor-pointer">
-                Masuk ke Dashboard
+            <button type="submit" id="btnLoginSubmit" class="w-full py-4 bg-gray-900 hover:bg-black text-white font-black tracking-wide uppercase rounded-[1.25rem] shadow-xl shadow-gray-400/30 transition transform hover:-translate-y-1 active:scale-95 relative z-50 cursor-pointer flex items-center justify-center gap-3 group mt-2 outline-none focus:ring-4 focus:ring-gray-200">
+                <i class="fa-solid fa-arrow-right-to-bracket text-lg group-hover:translate-x-1 transition"></i>
+                <span>Masuk Dashboard</span>
             </button>
+            
         </div>
     </form>
 
-    <!-- Register Link -->
-    <div class="mt-8 text-center text-sm text-gray-600 relative z-50">
-        Belum punya akun? 
-        <!-- Link ini lari ke /register -->
-        <a href="/register" class="font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition cursor-pointer">Daftar Gratis Sekarang</a>
+    <div class="mt-8 text-center border-t border-gray-100 pt-6">
+        <p class="text-sm text-gray-600 font-medium">
+            Belum punya akun? 
+            <a href="/register" class="font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition">Daftar Gratis Sekarang</a>
+        </p>
+
+        <div class="mt-8 flex items-center justify-center gap-6 opacity-60 grayscale hover:grayscale-0 transition duration-500">
+            <div class="flex items-center gap-1.5 text-[11px] font-bold text-gray-500">
+                <i class="fa-solid fa-shield-halved text-indigo-500 text-lg"></i>
+                <div class="flex flex-col text-left leading-tight">
+                    <span>256-bit</span>
+                    <span>Encrypted</span>
+                </div>
+            </div>
+            <div class="w-px h-6 bg-gray-300"></div>
+            <div class="flex items-center gap-1.5 text-[11px] font-bold text-gray-500">
+                <i class="fa-solid fa-server text-emerald-500 text-lg"></i>
+                <div class="flex flex-col text-left leading-tight">
+                    <span>Secure</span>
+                    <span>Login</span>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<div id="toastContainer" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+<script>
+    // Toggle Intip Password
+    function togglePassword(inputId, iconId) {
+        var input = document.getElementById(inputId);
+        var icon = document.getElementById(iconId);
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove("fa-eye");
+            icon.classList.add("fa-eye-slash");
+            icon.classList.add("text-indigo-600");
+        } else {
+            input.type = "password";
+            icon.classList.remove("fa-eye-slash");
+            icon.classList.add("fa-eye");
+            icon.classList.remove("text-indigo-600");
+        }
+    }
+
+    // UX Animasi Loading Saat Diklik
+    function handleLoginSubmit() {
+        var btn = document.getElementById('btnLoginSubmit');
+        // Ubah text jadi loading biar user gak spam klik
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-lg"></i><span>Memverifikasi...</span>';
+        btn.classList.add('opacity-80', 'cursor-wait');
+        return true;
+    }
+
+    // Custom Toast untuk link "Lupa Password"
+    function showToast(message, type = 'info') {
+        var container = document.getElementById('toastContainer');
+        var toast = document.createElement('div');
+        var bgClass, iconClass, iconBg;
+        
+        if (type === 'info') {
+            bgClass = 'bg-gray-900 border-gray-700';
+            iconBg = 'bg-blue-500/20 text-blue-400';
+            iconClass = 'fa-solid fa-circle-info';
+        }
+
+        toast.className = `transform transition-all duration-500 ease-out translate-x-full opacity-0 pointer-events-auto flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${bgClass}`;
+        toast.innerHTML = `
+            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${iconBg}"><i class="${iconClass}"></i></div>
+            <p class="text-sm font-bold text-white mr-4">${message}</p>
+            <button onclick="this.parentElement.remove()" class="ml-auto text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
+        setTimeout(() => {
+            toast.classList.add('translate-x-full', 'opacity-0');
+            setTimeout(() => toast.remove(), 500);
+        }, 3000);
+    }
+</script>
 {% endblock %}
