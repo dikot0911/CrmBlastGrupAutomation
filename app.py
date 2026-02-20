@@ -2744,8 +2744,8 @@ def process_spintax(text):
 @login_required
 def start_broadcast():
     """
-    Broadcast Engine v4.0 (Enterprise Ultimate).
-    Fitur: Anti-Duplicate, Smart Catch Error, Anti-Timeout Gunicorn (Heartbeat).
+    Broadcast Engine v4.5 (Enterprise Ultimate).
+    Fitur: Smart Resolving (Anti "Gagal Mengenali ID"), Anti-Duplicate, Heartbeat.
     """
     user_id = session['user_id']
     broadcast_states[user_id] = 'running'
@@ -2793,8 +2793,7 @@ def start_broadcast():
     if not targets_raw:
         return jsonify({"error": "Target audiens kosong."})
 
-    # --- [UPGRADE 1]: PENYARING DUPLIKAT ---
-    # Membersihkan kontak dobel jika user tersimpan di > 1 folder
+    # PENYARING DUPLIKAT
     unique_targets = {}
     for t in targets_raw:
         unique_targets[t['user_id']] = t
@@ -2838,12 +2837,10 @@ def start_broadcast():
                 
                 for idx, user in enumerate(targets):
                     
-                    # 1. CEK SIGNAL STOP
                     if broadcast_states.get(user_id) == 'stopped':
                         yield json.dumps({"type": "error", "msg": "⛔ Broadcast Dihentikan Paksa."}) + "\n"
                         break
 
-                    # 2. SAFETY BREAK (Istirahat Panjang)
                     if idx > 0 and idx % 40 == 0:
                         rest_time = random.randint(120, 240)
                         yield json.dumps({
@@ -2852,15 +2849,16 @@ def start_broadcast():
                             "success": success_count, "failed": fail_count
                         }) + "\n"
                         
-                        # --- [UPGRADE 2]: ANTI-TIMEOUT HEARTBEAT ---
-                        # Tidur dicicil per 1 detik sambil ngirim spasi kosong.
-                        # Ini menipu Gunicorn biar nyangka script lagi sibuk ngirim data, jadi ga akan di-kill!
+                        # Anti-Timeout Heartbeat
                         for _ in range(rest_time):
                             if broadcast_states.get(user_id) == 'stopped': break
                             await asyncio.sleep(1)
                             yield " \n" 
 
                     u_name = user.get('first_name') or "Kak"
+                    t_id = int(user['user_id'])
+                    t_username = user.get('username')
+                    
                     personalized_msg = final_message_template.replace("{name}", u_name)
                     personalized_msg = process_spintax(personalized_msg) 
 
@@ -2869,10 +2867,26 @@ def start_broadcast():
                     error_msg = None
                     ui_log = ""
                     ui_status = "failed"
+                    entity = None
                     
                     try:
-                        entity = await client.get_input_entity(int(user['user_id']))
+                        # --- [UPGRADE KASTA DEWA]: SMART RESOLVING ---
+                        # Cobain cara normal dulu (pake ID Angka)
+                        try:
+                            entity = await client.get_input_entity(t_id)
+                        except ValueError:
+                            # Kalau ditolak karena "Gak Kenal", kita paksa pake Username (kalau ada)
+                            if t_username:
+                                try:
+                                    entity = await client.get_input_entity(t_username)
+                                except Exception as inner_e:
+                                    raise Exception(f"Username tidak valid atau akun dikunci: {inner_e}")
+                            else:
+                                raise Exception("Bukan mutual contact dan tidak punya Username.")
                         
+                        if not entity:
+                            raise Exception("Entity tidak ditemukan.")
+
                         # Simulasi Ngetik
                         async with client.action(entity, 'typing'):
                             await asyncio.sleep(random.uniform(1.5, 4.5))
@@ -2894,17 +2908,16 @@ def start_broadcast():
                         fail_count += 1
                         error_msg = str(e)
                         
-                        # --- [UPGRADE 3]: SMART CATCH ERROR ---
-                        if "Could not find the input entity" in error_msg or "Cannot find any entity" in error_msg:
-                            ui_log = f"Gagal: Pengirim tidak mengenali ID {u_name}."
-                            error_msg = "Belum pernah interaksi / ID tidak valid."
+                        # Terjemahkan pesan error bahasa dewa jadi bahasa manusia
+                        if "Could not find the input entity" in error_msg or "Cannot find any entity" in error_msg or "Bukan mutual contact" in error_msg:
+                            ui_log = f"Gagal: Butuh chat manual/Username untuk {u_name[:10]}"
+                            error_msg = "Telegram memblokir pengiriman ke ID baru tanpa username."
                         elif "FloodWait" in error_msg:
                             import re
                             wait_sec = int(re.search(r'\d+', error_msg).group()) if re.search(r'\d+', error_msg) else 60
-                            ui_log = f"Gagal: Terkena FloodWait."
-                            yield json.dumps({"type": "progress", "log": f"⏳ Telegram minta istirahat {wait_sec}s...", "status": "warning"}) + "\n"
+                            ui_log = f"Gagal: Terkena Limit Telegram (FloodWait)."
+                            yield json.dumps({"type": "progress", "log": f"⏳ Telegram limit, istirahat {wait_sec}s...", "status": "warning"}) + "\n"
                             
-                            # Pakai heartbeat lagi saat kena FloodWait
                             for _ in range(wait_sec):
                                 if broadcast_states.get(user_id) == 'stopped': break
                                 await asyncio.sleep(1)
@@ -2917,7 +2930,7 @@ def start_broadcast():
                         supabase.table('blast_logs').insert({
                             "user_id": user_id,
                             "group_name": f"{u_name} (User)",
-                            "group_id": user['user_id'],
+                            "group_id": str(t_id),
                             "status": log_status,
                             "error_message": error_msg,
                             "created_at": datetime.utcnow().isoformat()
@@ -2939,7 +2952,7 @@ def start_broadcast():
                     for _ in range(int(delay)):
                         if broadcast_states.get(user_id) == 'stopped': break
                         await asyncio.sleep(1)
-                        yield " \n" # Spasi ini disembunyikan otomatis oleh JS di frontend
+                        yield " \n" 
 
             except Exception as e:
                 yield json.dumps({"type": "error", "msg": f"System Error: {str(e)}"}) + "\n"
@@ -2947,7 +2960,8 @@ def start_broadcast():
             finally:
                 if client: await client.disconnect()
                 if manual_image_path and os.path.exists(manual_image_path):
-                    os.remove(manual_image_path)
+                    try: os.remove(manual_image_path)
+                    except: pass
                 
                 # Laporan ke Bot
                 if success_count > 0 or fail_count > 0:
@@ -2958,7 +2972,7 @@ def start_broadcast():
                         f"❌ **Gagal:** {fail_count}\n"
                         f"📊 **Total:** {success_count + fail_count}\n"
                         f"─────────────────\n"
-                        f"_Klik tombol di bawah untuk melihat detail._"
+                        f"_Cek Log di Dashboard untuk detail error._"
                     )
                     threading.Thread(
                         target=send_telegram_alert, 
@@ -2977,11 +2991,9 @@ def start_broadcast():
                 except StopAsyncIteration:
                     break
         except GeneratorExit:
-            # Mengamankan koneksi kalau user tiba-tiba nutup tab browser di tengah blast
             logger.warning(f"Client disconnected during broadcast (User: {user_id}).")
             broadcast_states[user_id] = 'stopped'
         finally:
-            # Tutup memory loop secara elegan
             loop.run_until_complete(runner.aclose())
             loop.close()
 
