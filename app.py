@@ -2439,19 +2439,53 @@ def save_bulk_targets():
         logger.error(f"Error saving targets: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
+# ==============================================================================
+# SECTION: API UNTUK MINI CRM (BROADCAST MODAL)
+# ==============================================================================
+
 @app.route('/api/get_crm_users', methods=['GET'])
-@login_required
-def api_get_crm_users():
+def get_crm_users_api():
+    """
+    API untuk menyuplai data ke Modal 'Pilih Manual' di halaman Broadcast.
+    Mendukung filter folder dan smart search.
+    """
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'Sesi Anda telah berakhir, silakan login ulang.'}), 401
+        
     user_id = session['user_id']
     source = request.args.get('source', 'all')
+    search_query = request.args.get('q', '').strip()
     
-    query = supabase.table('tele_users').select("user_id, first_name, username").eq('owner_id', user_id)
-    
-    if source != 'all' and source != 'auto':
-        query = query.eq('source_phone', source)
+    try:
+        # Base query: Ambil data user_id, username, dan nama aja biar payload enteng & loading cepet
+        query = supabase.table('tele_users').select("user_id, username, first_name").eq('owner_id', user_id)
         
-    res = query.limit(1000).execute()
-    return jsonify(res.data)
+        # 1. Filter Folder
+        if source != 'all':
+            query = query.eq('source_phone', source)
+            
+        # 2. Smart Search (Persis kayak CRM Utama)
+        if search_query:
+            if search_query.isdigit():
+                # Kalau ketik angka, cari di user_id ATAU nama/username
+                search_filter = f"user_id.eq.{search_query},username.ilike.%{search_query}%,first_name.ilike.%{search_query}%"
+                query = query.or_(search_filter)
+            else:
+                # Kalau ketik huruf, cuma cari di nama/username (anti-error)
+                search_filter = f"username.ilike.%{search_query}%,first_name.ilike.%{search_query}%"
+                query = query.or_(search_filter)
+        
+        # Eksekusi dengan limit 5000 data agar browser pengguna tidak nge-hang
+        res = query.order('last_interaction', desc=True).limit(5000).execute()
+        
+        return jsonify({
+            'status': 'success',
+            'users': res.data if res.data else []
+        })
+        
+    except Exception as e:
+        logger.error(f"API Get CRM Users Error: {e}")
+        return jsonify({'status': 'error', 'message': 'Gagal mengambil data dari database.'}), 500
 
 @app.route('/import_crm_api', methods=['POST'])
 @login_required
