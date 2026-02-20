@@ -1727,6 +1727,7 @@ def dashboard_crm():
                            user=user, 
                            crm_users=crm_users, 
                            user_count=total_users,
+                           total_users=total_users,
                            current_page=page,
                            total_pages=total_pages,
                            per_page=per_page,
@@ -3752,14 +3753,20 @@ def import_crm_csv():
 @app.route('/export_crm_csv')
 @login_required
 def export_crm_csv():
-    """Download Database Pelanggan jadi file CSV"""
+    """Download Database Pelanggan jadi file CSV (Support Filter Folder)"""
     user_id = session['user_id']
+    # Tangkap parameter folder dari URL
+    source = request.args.get('source', 'all')
     
     try:
-        # Ambil data user dari DB
-        res = supabase.table('tele_users').select("user_id, username, first_name, last_interaction")\
-            .eq('owner_id', user_id).execute()
+        # Base Query
+        query = supabase.table('tele_users').select("user_id, username, first_name, last_interaction, source_phone").eq('owner_id', user_id)
         
+        # Kalau gak pilih "Semua Database", filter berdasarkan foldernya
+        if source and source != 'all':
+            query = query.eq('source_phone', source)
+            
+        res = query.execute()
         data = res.data if res.data else []
         
         # Bikin CSV di memori
@@ -3767,7 +3774,7 @@ def export_crm_csv():
         cw = csv.writer(si)
         
         # Header CSV
-        cw.writerow(['user_id', 'username', 'first_name', 'last_interaction'])
+        cw.writerow(['user_id', 'username', 'first_name', 'last_interaction', 'source_phone'])
         
         # Isi Data
         for row in data:
@@ -3775,22 +3782,25 @@ def export_crm_csv():
                 row.get('user_id'),
                 row.get('username') or '',
                 row.get('first_name') or '',
-                row.get('last_interaction')
+                row.get('last_interaction') or '',
+                row.get('source_phone') or 'Unknown'
             ])
             
         output = si.getvalue()
         
+        # Nama file dinamis ngikutin folder
+        filename_suffix = "semua_database" if source == 'all' else source.replace('+', '')
+        
         return Response(
             output,
             mimetype="text/csv",
-            headers={"Content-disposition": f"attachment; filename=database_pelanggan_{datetime.now().strftime('%Y%m%d')}.csv"}
+            headers={"Content-disposition": f"attachment; filename=crm_leads_{filename_suffix}_{datetime.now().strftime('%Y%m%d')}.csv"}
         )
         
     except Exception as e:
         flash(f"Gagal export: {e}", "danger")
         return redirect(url_for('dashboard_crm'))
-
-
+        
 # ==============================================================================
 # SECTION 15: INITIALIZATION ROUTINE
 # ==============================================================================
