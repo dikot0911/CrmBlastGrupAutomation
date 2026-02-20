@@ -2455,7 +2455,9 @@ def import_crm_api():
         return jsonify({"status": "error", "message": "Target akun belum dipilih."})
     
     async def _import():
+        client = None
         try:
+            # 1. KONEKSI AMAN (Bypass Satpam)
             acc_res = supabase.table('telegram_accounts').select("session_string")\
                 .eq('user_id', user_id).eq('phone_number', source_phone).eq('is_active', True).execute()
             
@@ -2463,47 +2465,101 @@ def import_crm_api():
                 return jsonify({"status": "error", "message": "Akun tidak aktif/ditemukan."})
                 
             session_str = acc_res.data[0]['session_string']
-            client = TelegramClient(StringSession(session_str), API_ID, API_HASH)
+            client = TelegramClient(StringSession(session_str), API_ID, API_HASH, sequential_updates=True)
             await client.connect()
+            
+            if not await client.is_user_authorized():
+                return jsonify({"status": "error", "message": "Sesi Telethon kadaluarsa. Harap login ulang akun ini."})
+                
         except Exception as e:
-            return jsonify({"status": "error", "message": f"Koneksi gagal: {e}"})
+            return jsonify({"status": "error", "message": f"Koneksi Telegram gagal: {str(e)}"})
         
-        count = 0
         try:
             final_source_label = source_phone 
-            async for dialog in client.iter_dialogs(limit=1000):
-                if dialog.is_user and not dialog.entity.bot:
+            batch_payload = [] 
+            
+            # 2. SCANNING FILTER KETAT (Anti Akun Hantu)
+            async for dialog in client.iter_dialogs(limit=1500):
+                # Validasi: Harus User, Bukan Bot, Bukan Akun Diri Sendiri
+                if dialog.is_user:
                     u = dialog.entity
-                    if u.self: continue
-                    data_payload = {
-                        "owner_id": user_id, "user_id": u.id, "username": u.username,
-                        "first_name": u.first_name, "source_phone": final_source_label,
-                        "last_interaction": datetime.utcnow().isoformat(), "created_at": datetime.utcnow().isoformat()
-                    }
-                    try:
-                        supabase.table('tele_users').upsert(data_payload, on_conflict="owner_id, user_id").execute()
-                        count += 1
-                    except: pass
-            await client.disconnect()
-            return jsonify({"status": "success", "message": f"Berhasil sinkronisasi {count} kontak ke folder {final_source_label}."})
+                    
+                    # Amankan atribut pakai getattr (mencegah error kalau data kosong)
+                    is_bot = getattr(u, 'bot', False)
+                    is_self = getattr(u, 'is_self', False)
+                    is_deleted = getattr(u, 'deleted', False)
+                    
+                    if is_bot or is_self or is_deleted:
+                        continue # Lewati
+                        
+                    # Gabungkan nama depan dan belakang
+                    fname = getattr(u, 'first_name', '') or ''
+                    lname = getattr(u, 'last_name', '') or ''
+                    full_name = f"{fname} {lname}".strip()
+                    if not full_name: full_name = "Tanpa Nama"
+
+                    t_id = getattr(u, 'id', None)
+                    if not t_id: continue
+
+                    batch_payload.append({
+                        "owner_id": user_id, 
+                        "user_id": t_id, 
+                        "username": getattr(u, 'username', None),
+                        "first_name": full_name, 
+                        "source_phone": final_source_label,
+                        "last_interaction": datetime.utcnow().isoformat(), 
+                        "created_at": datetime.utcnow().isoformat()
+                    })
+
+            total_scanned = len(batch_payload)
+            saved_count = 0
+            
+            # 3. DATABASE INSERT (Mode Hybrid: Cepat & Tahan Banting)
+            if total_scanned > 0:
+                try:
+                    # PERCOBAAN 1: Tembak Massal (Cepat tapi rawan kalau settingan DB user kurang pas)
+                    supabase.table('tele_users').upsert(batch_payload).execute()
+                    saved_count = total_scanned
+                except Exception as bulk_err:
+                    logger.warning(f"Upsert Massal ditolak DB, ganti ke Mode Single. Error: {bulk_err}")
+                    
+                    # PERCOBAAN 2 (FALLBACK): Masukin Satu per Satu (Anti Gagal)
+                    for row in batch_payload:
+                        try:
+                            # Cek apakah user udah ada di DB
+                            check = supabase.table('tele_users').select("id").eq('owner_id', user_id).eq('user_id', row['user_id']).execute()
+                            
+                            if check.data:
+                                # Kalau udah ada, update namanya aja sama tanggal terakhir
+                                supabase.table('tele_users').update({
+                                    "first_name": row["first_name"], 
+                                    "username": row["username"],
+                                    "last_interaction": row["last_interaction"]
+                                }).eq('id', check.data[0]['id']).execute()
+                            else:
+                                # Kalau belum ada, masukkan baru
+                                supabase.table('tele_users').insert(row).execute()
+                                
+                            saved_count += 1
+                        except Exception as single_err:
+                            logger.error(f"Gagal simpan 1 kontak: {single_err}")
+                            continue # Lanjut ke kontak berikutnya
+            
+            return jsonify({
+                "status": "success", 
+                "message": f"Berhasil menarik {saved_count} kontak masuk ke folder {final_source_label}."
+            })
+            
         except Exception as e:
-            return jsonify({"status": "error", "message": str(e)})
+            logger.error(f"Sync API Fatal Error: {e}")
+            return jsonify({"status": "error", "message": f"Sistem terhenti saat scanning: {str(e)}"})
+            
+        finally:
+            # Wajib ditutup biar server gak memory leak!
+            if client: 
+                await client.disconnect()
             
     return run_async(_import())
-    
-def parse_telegram_link(link):
-    try:
-        clean_link = link.replace("https://t.me/", "").replace("t.me/", "").strip()
-        parts = clean_link.split('/')
-        if len(parts) < 2: return None, None
-        try: msg_id = int(parts[-1])
-        except: return None, None
-        if parts[0] == 'c': chat_id = int(f"-100{parts[1]}")
-        else: chat_id = parts[0]
-        return chat_id, msg_id
-    except Exception as e:
-        logger.error(f"Link Parse Error: {e}")
-        return None, None
 
 @app.route('/delete_target_template', methods=['POST'])
 @login_required
