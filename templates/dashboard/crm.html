@@ -12,7 +12,7 @@
                     Live Database
                 </span>
                 <span class="px-2.5 py-0.5 rounded-full bg-white border border-gray-200 text-gray-500 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                    v4.0 Enterprise
+                    v4.5 Enterprise (Smart Cache)
                 </span>
             </div>
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
@@ -46,7 +46,6 @@
 
     <div class="mb-8 relative z-10">
         <div class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none z-10"></div>
-        
         <div class="flex items-center gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x relative pr-8">
             <a href="{{ url_for('dashboard_crm', source='all') }}" 
                class="snap-start relative group flex items-center gap-3 px-5 py-3.5 rounded-2xl border transition-all duration-300 min-w-max cursor-pointer
@@ -54,7 +53,7 @@
                         bg-gray-900 border-gray-900 text-white shadow-xl shadow-gray-300/50 scale-[1.02] ring-2 ring-gray-900 ring-offset-2 ring-offset-gray-50
                       {% else %}
                         bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900
-                      {% endif %}">
+                      {% endif %}" onclick="clearSessionSelection()">
                 <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-colors
                             {% if not current_source or current_source == 'all' %} bg-white/20 text-white shadow-inner {% else %} bg-gray-100 text-gray-400 group-hover:bg-white group-hover:text-gray-900 shadow-inner {% endif %}">
                     <i class="fa-solid fa-layer-group"></i>
@@ -75,8 +74,7 @@
                         bg-white border-indigo-500 ring-4 ring-indigo-50/50 shadow-xl shadow-indigo-100 scale-[1.02] z-10
                       {% else %}
                         bg-white border-gray-200 text-gray-500 hover:border-indigo-200 hover:shadow-lg hover:bg-indigo-50/10
-                      {% endif %}">
-                
+                      {% endif %}" onclick="clearSessionSelection()">
                 <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg relative transition-colors shadow-inner
                             {% if current_source == acc.phone_number %} bg-indigo-50 text-indigo-600 {% else %} bg-blue-50 text-blue-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 {% endif %}">
                     <i class="fa-brands fa-telegram"></i>
@@ -87,13 +85,11 @@
                     </span>
                     {% endif %}
                 </div>
-
                 <div class="flex flex-col flex-1 min-w-0">
                     <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 truncate">Database Akun</span>
                     <span class="font-bold text-sm text-gray-900 truncate" title="{{ acc.first_name }}">{{ acc.first_name or 'Akun' }}</span>
                     <span class="text-[10px] font-mono text-gray-400 truncate bg-gray-50 px-1 py-0.5 rounded mt-0.5 w-fit">{{ acc.phone_number }}</span>
                 </div>
-
                 {% if current_source == acc.phone_number %}
                 <div class="absolute top-3 right-3 text-indigo-600 drop-shadow-sm animate-fade-in">
                     <i class="fa-solid fa-circle-check text-lg"></i>
@@ -107,17 +103,18 @@
     <div class="bg-white rounded-[2rem] border border-gray-200 shadow-2xl shadow-gray-200/50 overflow-hidden flex flex-col min-h-[600px] relative z-10">
         <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-indigo-50/60 via-purple-50/20 to-transparent rounded-bl-full pointer-events-none"></div>
 
-        <div class="p-5 border-b border-gray-100 bg-white/90 backdrop-blur-xl sticky top-0 z-30 flex flex-col xl:flex-row justify-between items-center gap-4">
-            <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto relative z-10">
-                <form action="{{ url_for('dashboard_crm') }}" method="GET" class="relative group w-full sm:w-[400px]">
+        <div class="p-5 border-b border-gray-100 bg-white/90 backdrop-blur-xl sticky top-0 z-30 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto relative z-10 flex-1">
+                <form action="{{ url_for('dashboard_crm') }}" method="GET" class="relative group w-full sm:w-[450px]">
                     <input type="hidden" name="per_page" value="{{ per_page }}">
                     <input type="hidden" name="source" value="{{ current_source }}">
                     
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <i class="fa-solid fa-search text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
                     </div>
-                    <input type="text" name="q" value="{{ search_query }}" placeholder="Cari berdasarkan Username, Nama, atau ID..." 
-                           class="block w-full pl-11 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 focus:bg-white transition-all placeholder-gray-400 shadow-sm outline-none">
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="Cari berdasarkan Username, Nama, atau ID System..." 
+                           class="block w-full pl-11 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 focus:bg-white transition-all placeholder-gray-400 shadow-sm outline-none">
                     
                     {% if search_query %}
                     <a href="{{ url_for('dashboard_crm', source=current_source) }}" class="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer text-gray-400 hover:text-red-500 transition tooltip-trigger" title="Hapus Pencarian">
@@ -133,85 +130,57 @@
                 </form>
                 
                 {% if search_query %}
-                <div class="hidden sm:flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl">
+                <div class="hidden sm:flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl h-[46px]">
                     <span class="text-xs font-bold text-indigo-700">Filter Aktif:</span>
                     <span class="text-xs font-mono bg-white px-2 py-1 rounded-md border border-indigo-200 text-indigo-600">{{ search_query }}</span>
                 </div>
                 {% endif %}
             </div>
 
-            <div id="bulkActionContainer" class="hidden absolute inset-0 bg-white/95 backdrop-blur-xl z-50 flex items-center justify-between px-6 animate-fade-in border-b-2 border-indigo-500">
+            <div id="bulkActionContainer" class="hidden absolute inset-0 bg-gray-900/95 backdrop-blur-xl z-50 flex items-center justify-between px-6 animate-fade-in border-b-4 border-indigo-500">
                 <div class="flex items-center gap-4">
-                    <div class="bg-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-lg shadow-indigo-200">
+                    <div class="bg-indigo-500 w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-inner border border-white/20">
                         <span id="countSelected">0</span>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-sm font-black text-gray-900">Data Terpilih</span>
-                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Siap Dieksekusi</span>
+                        <span class="text-sm font-black text-white tracking-wide">Data Tersimpan di Keranjang</span>
+                        <span class="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Lintas Halaman Aktif</span>
                     </div>
                 </div>
                 
                 <div class="flex items-center gap-3">
-                    <button onclick="blastSelected()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                    <button onclick="blastSelected()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
                         <i class="fa-solid fa-paper-plane"></i> Follow Up
                     </button>
                     <button onclick="copyAllIds()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
                         <i class="fa-regular fa-copy"></i> Copy ID
                     </button>
-                    <div class="w-px h-8 bg-gray-200 mx-1"></div>
-                    <button onclick="openDeleteMassalModal()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm">
-                        <i class="fa-solid fa-trash-can"></i> Hapus Data
+                    <div class="w-px h-8 bg-gray-600 mx-1"></div>
+                    <button onclick="openDeleteMassalModal()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-red-500/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 hover:border-transparent transition-all shadow-sm">
+                        <i class="fa-solid fa-trash-can"></i> Hapus
                     </button>
-                    <button onclick="document.getElementById('selectAll').click()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition shadow-sm ml-2">
+                    <button onclick="clearSessionSelectionUI()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-800 text-gray-400 hover:bg-red-500 hover:text-white transition shadow-sm ml-2 tooltip-trigger" title="Kosongkan Pilihan">
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
                 </div>
             </div>
-
-            <div class="flex items-center gap-4 w-full xl:w-auto justify-between xl:justify-end relative z-10" id="normalToolbar">
-                <div class="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-xl border border-gray-200 shadow-sm hover:border-gray-300 transition">
-                    <i class="fa-solid fa-list-ol text-gray-400 text-xs"></i>
-                    <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider border-r border-gray-300 pr-2">Show</span>
-                    <select onchange="changePerPage(this.value)" class="bg-transparent border-none text-gray-800 text-xs font-bold p-0 pl-1 cursor-pointer focus:ring-0 outline-none">
-                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10 Baris</option>
-                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25 Baris</option>
-                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50 Baris</option>
-                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100 Baris</option>
-                    </select>
-                </div>
-
-                <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-xl border border-gray-200 shadow-sm">
-                    <a href="{{ url_for('dashboard_crm', page=current_page-1, per_page=per_page, q=search_query, source=current_source) }}" 
-                       class="w-9 h-9 flex items-center justify-center rounded-lg border border-transparent hover:bg-white hover:border-gray-200 hover:text-indigo-600 hover:shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed {% if current_page <= 1 %}pointer-events-none opacity-40{% else %}text-gray-600{% endif %}">
-                        <i class="fa-solid fa-chevron-left text-xs"></i>
-                    </a>
-                    
-                    <div class="h-9 px-4 flex items-center justify-center bg-white rounded-lg text-xs font-bold text-gray-700 border border-gray-200 shadow-sm min-w-[100px]">
-                        Page <span class="text-indigo-600 mx-1">{{ current_page }}</span> of {{ total_pages }}
-                    </div>
-
-                    <a href="{{ url_for('dashboard_crm', page=current_page+1, per_page=per_page, q=search_query, source=current_source) }}" 
-                       class="w-9 h-9 flex items-center justify-center rounded-lg border border-transparent hover:bg-white hover:border-gray-200 hover:text-indigo-600 hover:shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed {% if current_page >= total_pages %}pointer-events-none opacity-40{% else %}text-gray-600{% endif %}">
-                        <i class="fa-solid fa-chevron-right text-xs"></i>
-                    </a>
-                </div>
-            </div>
         </div>
 
-        <div class="flex-1 overflow-x-auto relative z-10 custom-scrollbar pb-32"> <table class="w-full text-left border-collapse whitespace-nowrap">
+        <div class="flex-1 overflow-x-auto relative z-10 custom-scrollbar pb-32 min-h-[400px]"> 
+            <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
                     <tr class="bg-gray-50/90 text-gray-500 text-[10px] uppercase tracking-wider border-b border-gray-200 backdrop-blur-md sticky top-0 z-20 shadow-sm">
                         <th class="p-5 font-extrabold w-16 text-center text-gray-400">#</th>
                         <th class="p-5 w-14 text-center">
                             <div class="flex items-center justify-center">
-                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition shadow-sm hover:border-indigo-400">
+                                <input type="checkbox" id="selectAllPage" onchange="toggleSelectCurrentPage()" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition shadow-sm hover:border-indigo-400" title="Pilih semua di halaman ini">
                             </div>
                         </th>
                         <th class="p-5 font-extrabold">Profil Pelanggan</th>
                         <th class="p-5 font-extrabold">Username & Kontak</th>
                         <th class="p-5 font-extrabold text-center">Status Lead</th>
                         {% if not current_source or current_source == 'all' %}
-                        <th class="p-5 font-extrabold">Sumber Database</th>
+                        <th class="p-5 font-extrabold text-center">Sumber Database</th>
                         {% endif %}
                         <th class="p-5 font-extrabold text-center">ID System</th>
                         <th class="p-5 font-extrabold text-center">Tindakan</th>
@@ -227,7 +196,8 @@
                         
                         <td class="p-5 text-center">
                             <div class="flex items-center justify-center">
-                                <input type="checkbox" class="user-check w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition shadow-sm" value="{{ u.user_id }}" onchange="updateSelection()">
+                                <input type="checkbox" class="user-check-item w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition shadow-sm" 
+                                       value="{{ u.user_id }}" data-dbid="{{ u.id }}" onchange="handleSingleCheckboxChange(this)">
                             </div>
                         </td>
                         
@@ -237,7 +207,7 @@
                                     <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 flex items-center justify-center text-sm font-black shadow-sm ring-2 ring-white group-hover:ring-indigo-200 transition-all transform group-hover:scale-105">
                                         {{ u.first_name[:1]|upper if u.first_name else '?' }}
                                     </div>
-                                    <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full" title="Online/Scanned"></div>
+                                    <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
                                 </div>
                                 <div class="flex flex-col">
                                     <span class="font-bold text-gray-800 text-sm group-hover:text-indigo-700 transition">{{ u.first_name or 'Tanpa Nama' }}</span>
@@ -251,7 +221,6 @@
                             <a href="https://t.me/{{ u.username }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50/80 text-blue-600 hover:bg-blue-500 hover:text-white transition text-xs font-bold border border-blue-100 group/link shadow-sm w-fit">
                                 <i class="fa-brands fa-telegram text-[14px]"></i> 
                                 <span class="truncate max-w-[140px]">@{{ u.username }}</span>
-                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-0 group-hover/link:opacity-100 transition-all translate-x-1"></i>
                             </a>
                             {% else %}
                             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-400 border border-gray-100 text-xs italic font-medium w-fit">
@@ -273,7 +242,7 @@
                         </td>
 
                         {% if not current_source or current_source == 'all' %}
-                        <td class="p-5">
+                        <td class="p-5 text-center">
                             <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 border border-gray-200 text-[10px] font-bold shadow-sm w-fit">
                                 <i class="fa-solid fa-database text-indigo-400"></i>
                                 <span class="font-mono">{{ u.source_phone if u.source_phone else 'Legacy Data' }}</span>
@@ -284,7 +253,7 @@
                         <td class="p-5 text-center">
                             <button onclick="copyToClipboard('{{ u.user_id }}')" class="group/id inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 transition cursor-pointer w-fit mx-auto" title="Click to Copy">
                                 <span class="font-mono text-xs text-gray-600 font-bold group-hover/id:text-indigo-700">{{ u.user_id }}</span>
-                                <i class="fa-regular fa-copy text-[11px] text-gray-400 group-hover/id:text-indigo-500 transition transform group-hover/id:scale-110"></i>
+                                <i class="fa-regular fa-copy text-[11px] text-gray-400 group-hover/id:text-indigo-500 transition"></i>
                             </button>
                         </td>
                         
@@ -298,13 +267,13 @@
                                     <i class="fa-solid fa-ellipsis-vertical text-xs"></i>
                                 </button>
 
-                                <div id="menu-{{ u.id }}" class="action-menu hidden absolute right-0 top-10 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden transform opacity-0 transition-all origin-top-right">
-                                    <div class="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                                <div id="menu-{{ u.id }}" class="action-menu hidden absolute right-8 top-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-[60] overflow-hidden transform opacity-0 transition-all origin-top-right">
+                                    <div class="px-4 py-2 bg-gray-50 border-b border-gray-100 text-left">
                                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Aksi Kontak</p>
                                     </div>
                                     <div class="p-1">
                                         <button onclick="showToast('Profil {{ u.first_name }} akan ditampilkan (Segera Hadir)', 'info'); toggleActionMenu('menu-{{ u.id }}')" class="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition flex items-center gap-2">
-                                            <i class="fa-regular fa-user w-4 text-center"></i> Lihat Detail Profil
+                                            <i class="fa-regular fa-user w-4 text-center"></i> Lihat Profil
                                         </button>
                                         <button onclick="copyToClipboard('{{ u.user_id }}'); toggleActionMenu('menu-{{ u.id }}')" class="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg transition flex items-center gap-2">
                                             <i class="fa-regular fa-copy w-4 text-center"></i> Salin ID System
@@ -330,28 +299,15 @@
                                     <div class="absolute -top-4 -right-4 w-14 h-14 bg-purple-50 border border-purple-100 rounded-2xl flex items-center justify-center animate-bounce shadow-lg" style="animation-delay: 0.2s">
                                         <i class="fa-solid fa-search text-lg text-purple-400"></i>
                                     </div>
-                                    <div class="absolute -bottom-2 -left-6 w-16 h-16 bg-blue-50 border border-blue-100 rounded-full flex items-center justify-center animate-bounce shadow-lg">
-                                        <i class="fa-solid fa-database text-xl text-blue-400"></i>
-                                    </div>
                                 </div>
                                 <h3 class="text-2xl font-black text-gray-800 tracking-tight">Database Masih Kosong</h3>
                                 <p class="text-gray-500 text-sm mt-3 max-w-sm mx-auto leading-relaxed">
                                     {% if search_query %}
-                                    Sistem tidak menemukan data untuk kata kunci "<span class="text-gray-900 font-bold bg-yellow-100 border border-yellow-200 px-1.5 py-0.5 rounded">{{ search_query }}</span>".
+                                    Sistem tidak menemukan data untuk kata kunci pencarian tersebut.
                                     {% else %}
-                                    Folder ini belum memiliki daftar pelanggan. Mulai kumpulkan leads dengan Sinkronisasi otomatis atau Import CSV.
+                                    Folder ini belum memiliki daftar pelanggan. Silakan Sinkronisasi Telegram atau Import CSV.
                                     {% endif %}
                                 </p>
-                                
-                                {% if search_query %}
-                                <a href="{{ url_for('dashboard_crm', source=current_source) }}" class="mt-8 px-6 py-3 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-bold shadow-sm hover:shadow-md hover:text-red-500 hover:border-red-200 transition flex items-center gap-2">
-                                    <i class="fa-solid fa-rotate-left"></i> Reset Filter Pencarian
-                                </a>
-                                {% else %}
-                                <button onclick="openImportModal()" class="mt-8 px-8 py-3.5 bg-gray-900 text-white rounded-xl text-sm font-bold shadow-xl shadow-gray-400/30 hover:bg-gray-800 transition transform hover:-translate-y-1 flex items-center gap-2">
-                                    <i class="fa-solid fa-cloud-arrow-down animate-pulse"></i> Mulai Isi Database
-                                </button>
-                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -360,25 +316,58 @@
             </table>
         </div>
         
-        <div class="absolute bottom-0 left-0 right-0 p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-500 z-20">
-            <div class="flex items-center gap-3">
-                <span class="relative flex h-2.5 w-2.5">
+        <div class="bg-gray-50 border-t border-gray-200 p-4 sm:p-5 flex flex-col xl:flex-row justify-between items-center gap-5 rounded-b-[2rem] relative z-20">
+            
+            <div class="flex items-center gap-3 w-full xl:w-auto justify-center xl:justify-start">
+                <span class="relative flex h-3 w-3">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
-                <span>Sumber Koneksi: <b class="text-gray-800 bg-white px-2 py-1 rounded border border-gray-200 shadow-sm ml-1">{{ current_source if current_source and current_source != 'all' else 'Global View' }}</b></span>
+                <span class="text-xs text-gray-500 font-medium">Sumber Koneksi: <b class="text-gray-800 bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm ml-1 font-mono">{{ current_source if current_source and current_source != 'all' else 'Global View' }}</b></span>
             </div>
-            <div class="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm font-medium">
-                Menampilkan <b class="text-indigo-600">{{ crm_users|length }}</b> baris dari total <b class="text-gray-800">{{ total_users }}</b> data pelanggan
+
+            {% if total_pages > 0 %}
+            <div class="flex flex-col sm:flex-row items-center gap-4 w-full xl:w-auto justify-center order-first xl:order-none mb-4 xl:mb-0">
+                <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
+                    <i class="fa-solid fa-list-ol text-gray-400 text-xs"></i>
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider border-r border-gray-200 pr-2">Show</span>
+                    <select onchange="changePerPage(this.value)" class="bg-transparent border-none text-gray-700 text-xs font-bold p-0 pl-1 cursor-pointer focus:ring-0 outline-none w-20">
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10 Baris</option>
+                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25 Baris</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50 Baris</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100 Baris</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-gray-200 shadow-sm">
+                    <a href="{{ url_for('dashboard_crm', page=current_page-1, per_page=per_page, q=search_query, source=current_source) }}" 
+                       class="w-10 h-10 flex items-center justify-center rounded-lg border border-transparent hover:bg-gray-50 hover:text-indigo-600 transition disabled:opacity-50 {% if current_page <= 1 %}pointer-events-none opacity-40{% else %}text-gray-600 font-bold{% endif %}">
+                        <i class="fa-solid fa-chevron-left text-xs mr-1"></i> Prev
+                    </a>
+                    
+                    <div class="h-10 px-5 flex items-center justify-center bg-indigo-50/50 rounded-lg text-xs font-bold text-gray-700 border border-indigo-100 min-w-[120px]">
+                        Page <span class="text-indigo-600 mx-1.5 text-sm">{{ current_page }}</span> of {{ total_pages }}
+                    </div>
+
+                    <a href="{{ url_for('dashboard_crm', page=current_page+1, per_page=per_page, q=search_query, source=current_source) }}" 
+                       class="w-10 h-10 flex items-center justify-center rounded-lg border border-transparent hover:bg-gray-50 hover:text-indigo-600 transition disabled:opacity-50 {% if current_page >= total_pages %}pointer-events-none opacity-40{% else %}text-gray-600 font-bold{% endif %}">
+                        Next <i class="fa-solid fa-chevron-right text-xs ml-1"></i>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="bg-white px-4 py-2.5 rounded-xl border border-gray-200 shadow-sm text-xs text-gray-500 font-medium w-full xl:w-auto text-center xl:text-right">
+                Menampilkan <b class="text-indigo-600 text-sm mx-1">{{ crm_users|length }}</b> baris dari total <b class="text-gray-900 text-sm mx-1">{{ total_users }}</b> data
             </div>
         </div>
     </div>
 </div>
 
-<div id="importModal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="fixed inset-0 bg-gray-900/70 backdrop-blur-md transition-opacity opacity-0" id="importBackdrop" onclick="closeImportModal()"></div>
+<div id="importModal" class="fixed inset-0 z-[999] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity opacity-0" id="importBackdrop" onclick="closeImportModal()"></div>
     <div class="fixed inset-0 z-10 flex items-center justify-center p-4 sm:p-6">
-        <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300" id="modalPanel">
+        <div class="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300" id="modalPanel">
             <div class="bg-gray-900 px-8 py-6 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
                 <div class="relative z-10 flex justify-between items-start">
@@ -483,24 +472,12 @@
                     </div>
                 </div>
             </div>
-            
-            <div id="loadingOverlay" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-[2.5rem]">
-                <div class="relative w-24 h-24 mb-6">
-                    <div class="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
-                    <div class="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                    <div class="absolute inset-0 flex items-center justify-center text-indigo-600">
-                        <i class="fa-solid fa-robot text-3xl animate-pulse"></i>
-                    </div>
-                </div>
-                <h4 class="text-2xl font-black text-gray-900 tracking-tight">Memproses Data</h4>
-                <p class="text-sm text-gray-500 mt-2 font-medium bg-gray-100 px-4 py-1.5 rounded-full" id="loadingText">Mohon tunggu, jangan tutup halaman...</p>
-            </div>
         </div>
     </div>
 </div>
 
-<div id="deleteModal" class="fixed inset-0 z-[110] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="fixed inset-0 bg-gray-900/70 backdrop-blur-md transition-opacity opacity-0" id="deleteBackdrop" onclick="closeDeleteModal()"></div>
+<div id="deleteModal" class="fixed inset-0 z-[999] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity opacity-0" id="deleteBackdrop" onclick="closeDeleteModal()"></div>
     <div class="fixed inset-0 z-10 flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-300" id="deletePanel">
             <div class="p-8 text-center">
@@ -519,11 +496,22 @@
                     </button>
                 </div>
             </div>
-            
             <input type="hidden" id="deleteTargetType" value="">
             <input type="hidden" id="deleteTargetId" value="">
         </div>
     </div>
+</div>
+
+<div id="loadingOverlay" class="hidden fixed inset-0 bg-white/90 backdrop-blur-sm z-[1000] flex flex-col items-center justify-center">
+    <div class="relative w-24 h-24 mb-6">
+        <div class="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+        <div class="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <div class="absolute inset-0 flex items-center justify-center text-indigo-600">
+            <i class="fa-solid fa-robot text-3xl animate-pulse"></i>
+        </div>
+    </div>
+    <h4 class="text-2xl font-black text-gray-900 tracking-tight">Memproses Data</h4>
+    <p class="text-sm text-gray-500 mt-2 font-medium bg-gray-100 px-4 py-1.5 rounded-full" id="loadingText">Mohon tunggu, jangan tutup halaman...</p>
 </div>
 
 <div id="toastContainer" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
@@ -540,183 +528,160 @@
 
 {% block scripts %}
 <script>
-    // --- 1. TOAST SYSTEM ---
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
-        let bgClass, iconClass, iconBg;
-        
-        if (type === 'success') {
-            bgClass = 'bg-gray-900 border-gray-700';
-            iconBg = 'bg-emerald-500/20 text-emerald-400';
-            iconClass = 'fa-solid fa-circle-check';
-        } else if (type === 'error') {
-            bgClass = 'bg-red-900 border-red-800';
-            iconBg = 'bg-red-500/20 text-red-300';
-            iconClass = 'fa-solid fa-circle-exclamation';
-        } else {
-            bgClass = 'bg-gray-900 border-gray-700';
-            iconBg = 'bg-blue-500/20 text-blue-400';
-            iconClass = 'fa-solid fa-circle-info';
+    // ==========================================
+    // STATE MANAGEMENT LINTAS HALAMAN (SMART CACHE)
+    // ==========================================
+    
+    // Bikin kunci memori unik per folder biar gak tabrakan
+    const storageKey = 'crm_selected_ids_' + '{{ current_source or "all" }}';
+    
+    // Objek Pengatur Memori
+    const SelectionManager = {
+        get: function() {
+            try {
+                return JSON.parse(sessionStorage.getItem(storageKey)) || [];
+            } catch (e) { return []; }
+        },
+        add: function(idArray, dbIdArray) {
+            let current = this.get();
+            idArray.forEach((id, index) => {
+                // Simpan object {tel_id, db_id} biar bisa dihapus/diblast dengan tepat
+                if(!current.some(item => item.tel_id === id)) {
+                    current.push({ tel_id: id, db_id: dbIdArray[index] });
+                }
+            });
+            sessionStorage.setItem(storageKey, JSON.stringify(current));
+        },
+        remove: function(idArray) {
+            let current = this.get();
+            current = current.filter(item => !idArray.includes(item.tel_id));
+            sessionStorage.setItem(storageKey, JSON.stringify(current));
+        },
+        clear: function() {
+            sessionStorage.removeItem(storageKey);
         }
+    };
 
-        toast.className = `transform transition-all duration-500 ease-out translate-x-full opacity-0 pointer-events-auto flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${bgClass}`;
-        toast.innerHTML = `
-            <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${iconBg}"><i class="${iconClass}"></i></div>
-            <p class="text-sm font-bold text-white mr-4">${message}</p>
-            <button onclick="this.parentElement.remove()" class="ml-auto text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
-        `;
-        container.appendChild(toast);
-        setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
-        setTimeout(() => {
-            toast.classList.add('translate-x-full', 'opacity-0');
-            setTimeout(() => toast.remove(), 500);
-        }, 4000);
+    // Saat halaman dimuat, centang checkbox yang ada di memori
+    document.addEventListener("DOMContentLoaded", () => {
+        syncUIWithMemory();
+    });
+
+    function syncUIWithMemory() {
+        const memory = SelectionManager.get();
+        const checkboxes = document.querySelectorAll('.user-check-item');
+        let allCheckedOnPage = checkboxes.length > 0;
+
+        checkboxes.forEach(cb => {
+            const isSelected = memory.some(item => item.tel_id === cb.value);
+            cb.checked = isSelected;
+            if (!isSelected) allCheckedOnPage = false;
+        });
+
+        const masterCheck = document.getElementById('selectAllPage');
+        if (masterCheck) masterCheck.checked = allCheckedOnPage;
+
+        renderBulkActionBar();
     }
 
-    // --- 2. PAGINATION ---
-    function changePerPage(val) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('per_page', val);
-        url.searchParams.set('page', 1);
-        window.location.href = url.toString();
+    // Centang Semua di Halaman Ini
+    function toggleSelectCurrentPage() {
+        const master = document.getElementById('selectAllPage');
+        const checkboxes = document.querySelectorAll('.user-check-item');
+        
+        let idsToChange = [];
+        let dbIdsToChange = [];
+
+        checkboxes.forEach(cb => {
+            cb.checked = master.checked;
+            idsToChange.push(cb.value);
+            dbIdsToChange.push(cb.getAttribute('data-dbid'));
+        });
+
+        if (master.checked) {
+            SelectionManager.add(idsToChange, dbIdsToChange);
+        } else {
+            SelectionManager.remove(idsToChange);
+        }
+        
+        renderBulkActionBar();
     }
 
-    // --- 3. BULK ACTION & TABLE ---
-    function toggleSelectAll() {
-        const master = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.user-check');
-        checkboxes.forEach(cb => cb.checked = master.checked);
-        updateSelection();
+    // Centang Satuan
+    function handleSingleCheckboxChange(checkbox) {
+        if (checkbox.checked) {
+            SelectionManager.add([checkbox.value], [checkbox.getAttribute('data-dbid')]);
+        } else {
+            SelectionManager.remove([checkbox.value]);
+        }
+        syncUIWithMemory(); // Refresh status "Select All" dan UI
     }
 
-    function updateSelection() {
-        const selected = document.querySelectorAll('.user-check:checked');
-        const count = selected.length;
+    // Hapus Memori Total
+    function clearSessionSelectionUI() {
+        SelectionManager.clear();
+        syncUIWithMemory();
+    }
+
+    // Pindah Folder (Reset Memori)
+    function clearSessionSelection() {
+        // Hapus memori yang sekarang sebelum pindah folder
+        sessionStorage.removeItem(storageKey);
+    }
+
+    // Tampilkan / Sembunyikan Bar Hitam
+    function renderBulkActionBar() {
+        const memory = SelectionManager.get();
+        const count = memory.length;
         const container = document.getElementById('bulkActionContainer');
-        const normalToolbar = document.getElementById('normalToolbar');
+        const countLabel = document.getElementById('countSelected');
         
-        document.getElementById('countSelected').innerText = count;
-        
-        const total = document.querySelectorAll('.user-check').length;
-        const master = document.getElementById('selectAll');
-        if(total > 0) master.checked = (count === total);
+        countLabel.innerText = count;
 
         if (count > 0) {
             container.classList.remove('hidden');
-            normalToolbar.classList.add('opacity-0', 'pointer-events-none');
         } else {
             container.classList.add('hidden');
-            normalToolbar.classList.remove('opacity-0', 'pointer-events-none');
         }
     }
 
+
+    // ==========================================
+    // ACTIONS (BLAST, COPY, DELETE)
+    // ==========================================
+
     function blastSelected() {
-        const selected = document.querySelectorAll('.user-check:checked');
-        if (selected.length === 0) return showToast("Pilih minimal satu user!", "error");
-        const ids = Array.from(selected).map(cb => cb.value).join(',');
+        const memory = SelectionManager.get();
+        if (memory.length === 0) return showToast("Pilih minimal satu user!", "error");
+        
+        // Buat blast butuhnya tel_id
+        const ids = memory.map(item => item.tel_id).join(',');
         window.location.href = `/dashboard/broadcast?ids=${ids}`;
     }
     
     function copyAllIds() {
-        const selected = document.querySelectorAll('.user-check:checked');
-        if (selected.length === 0) return showToast("Tidak ada ID yang disalin.", "error");
-        const ids = Array.from(selected).map(cb => cb.value).join('\n');
-        navigator.clipboard.writeText(ids).then(() => showToast(`Berhasil menyalin ${selected.length} ID!`, 'success'));
-    }
-
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast(`ID ${text} berhasil disalin!`, 'success');
-        });
-    }
-
-    // --- 4. DROPDOWN MENU LOGIC ---
-    function toggleActionMenu(menuId) {
-        // Tutup semua menu lain dulu
-        document.querySelectorAll('.action-menu').forEach(menu => {
-            if(menu.id !== menuId) {
-                menu.classList.add('hidden');
-                menu.classList.remove('opacity-100', 'scale-100');
-            }
-        });
-
-        const menu = document.getElementById(menuId);
-        if (menu.classList.contains('hidden')) {
-            menu.classList.remove('hidden');
-            // Sedikit delay untuk animasi CSS
-            setTimeout(() => {
-                menu.classList.remove('opacity-0', 'scale-95');
-                menu.classList.add('opacity-100', 'scale-100');
-            }, 10);
-        } else {
-            menu.classList.remove('opacity-100', 'scale-100');
-            menu.classList.add('opacity-0', 'scale-95');
-            setTimeout(() => menu.classList.add('hidden'), 200);
-        }
-    }
-
-    // Tutup dropdown kalau klik di luar area
-    document.addEventListener('click', function(event) {
-        const isClickInside = event.target.closest('td');
-        if (!isClickInside) {
-            document.querySelectorAll('.action-menu').forEach(menu => {
-                menu.classList.remove('opacity-100', 'scale-100');
-                menu.classList.add('opacity-0', 'scale-95');
-                setTimeout(() => menu.classList.add('hidden'), 200);
-            });
-        }
-    });
-
-    // --- 5. MODAL DELETE LOGIC ---
-    function openDeleteSingleModal(dbId, name) {
-        document.getElementById('deleteTargetType').value = 'single';
-        document.getElementById('deleteTargetId').value = dbId;
-        document.getElementById('deleteModalText').innerHTML = `Anda yakin ingin menghapus kontak <b class="text-gray-900">${name}</b> dari database?`;
-        showDeleteModal();
-    }
-
-    function openDeleteMassalModal() {
-        const selected = document.querySelectorAll('.user-check:checked');
-        if (selected.length === 0) return showToast("Pilih data yang ingin dihapus!", "error");
+        const memory = SelectionManager.get();
+        if (memory.length === 0) return showToast("Tidak ada ID yang disalin.", "error");
         
-        const ids = Array.from(selected).map(cb => {
-            // Kita butuh ID database, jadi kita ambil ID dari row terdekat
-            // Trik: Karena value checkbox = user_id telegram, kita butuh ID db (id primary key).
-            // Nanti di backend akan kita delete berdasarkan "user_id" telegramnya.
-            return cb.value; 
-        }).join(',');
+        const ids = memory.map(item => item.tel_id).join('\n');
+        navigator.clipboard.writeText(ids).then(() => showToast(`Berhasil menyalin ${memory.length} ID lintas halaman!`, 'success'));
+    }
+
+    // Modal Hapus Massal
+    function openDeleteMassalModal() {
+        const memory = SelectionManager.get();
+        if (memory.length === 0) return showToast("Pilih data yang ingin dihapus!", "error");
+        
+        // Buat delete massal backend kita pake tel_id (Sesuai app.py in_('user_id', ...))
+        const ids = memory.map(item => item.tel_id).join(',');
 
         document.getElementById('deleteTargetType').value = 'massal';
         document.getElementById('deleteTargetId').value = ids;
-        document.getElementById('deleteModalText').innerHTML = `Anda akan menghapus <b class="text-red-600">${selected.length} data pelanggan</b> secara massal. Lanjutkan?`;
+        document.getElementById('deleteModalText').innerHTML = `Anda akan menghapus permanen <b class="text-red-600">${memory.length} data pelanggan</b> (Bahkan yang ada di halaman lain). Lanjutkan?`;
         showDeleteModal();
     }
 
-    function showDeleteModal() {
-        const modal = document.getElementById('deleteModal');
-        const panel = document.getElementById('deletePanel');
-        const backdrop = document.getElementById('deleteBackdrop');
-        
-        modal.classList.remove('hidden');
-        setTimeout(() => {
-            backdrop.classList.remove('opacity-0');
-            panel.classList.remove('opacity-0', 'scale-95');
-            panel.classList.add('opacity-100', 'scale-100');
-        }, 10);
-    }
-
-    function closeDeleteModal() {
-        const modal = document.getElementById('deleteModal');
-        const panel = document.getElementById('deletePanel');
-        const backdrop = document.getElementById('deleteBackdrop');
-        
-        backdrop.classList.add('opacity-0');
-        panel.classList.remove('opacity-100', 'scale-100');
-        panel.classList.add('opacity-0', 'scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-    }
-
+    // Eksekusi Hapus (Plus reset memori biar ga nyangkut)
     function executeDelete() {
         const type = document.getElementById('deleteTargetType').value;
         const targetValue = document.getElementById('deleteTargetId').value;
@@ -724,6 +689,9 @@
         
         btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Menghapus...';
         btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+        // Bersihin keranjang biar abis kehapus ga muncul lagi di bar
+        SelectionManager.clear();
 
         if (type === 'single') {
             document.getElementById('formDeleteId').value = targetValue;
@@ -734,74 +702,132 @@
         }
     }
 
-    // --- 6. IMPORT MODAL LOGIC ---
-    // (Fungsi Upload sama seperti sebelumnya)
+
+    // ==========================================
+    // UI UTILS LAINNYA
+    // ==========================================
+
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        let bgClass, iconClass, iconBg;
+        if (type === 'success') { bgClass = 'bg-gray-900 border-gray-700'; iconBg = 'bg-emerald-500/20 text-emerald-400'; iconClass = 'fa-solid fa-circle-check'; } 
+        else if (type === 'error') { bgClass = 'bg-red-900 border-red-800'; iconBg = 'bg-red-500/20 text-red-300'; iconClass = 'fa-solid fa-circle-exclamation'; } 
+        else { bgClass = 'bg-gray-900 border-gray-700'; iconBg = 'bg-blue-500/20 text-blue-400'; iconClass = 'fa-solid fa-circle-info'; }
+
+        toast.className = `transform transition-all duration-500 ease-out translate-x-full opacity-0 pointer-events-auto flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${bgClass}`;
+        toast.innerHTML = `<div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${iconBg}"><i class="${iconClass}"></i></div><p class="text-sm font-bold text-white mr-4">${message}</p><button onclick="this.parentElement.remove()" class="ml-auto text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>`;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
+        setTimeout(() => { toast.classList.add('translate-x-full', 'opacity-0'); setTimeout(() => toast.remove(), 500); }, 4000);
+    }
+
+    function changePerPage(val) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('per_page', val);
+        url.searchParams.set('page', 1);
+        window.location.href = url.toString();
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => showToast(`ID ${text} berhasil disalin!`, 'success'));
+    }
+
+    function toggleActionMenu(menuId) {
+        document.querySelectorAll('.action-menu').forEach(menu => {
+            if(menu.id !== menuId) { menu.classList.add('hidden'); menu.classList.remove('opacity-100', 'scale-100'); }
+        });
+        const menu = document.getElementById(menuId);
+        if (menu.classList.contains('hidden')) {
+            menu.classList.remove('hidden');
+            setTimeout(() => { menu.classList.remove('opacity-0', 'scale-95'); menu.classList.add('opacity-100', 'scale-100'); }, 10);
+        } else {
+            menu.classList.remove('opacity-100', 'scale-100'); menu.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => menu.classList.add('hidden'), 200);
+        }
+    }
+
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('td')) {
+            document.querySelectorAll('.action-menu').forEach(menu => {
+                menu.classList.remove('opacity-100', 'scale-100'); menu.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => menu.classList.add('hidden'), 200);
+            });
+        }
+    });
+
+    // ==========================================
+    // MODAL CONTROL (IMPORT & DELETE)
+    // ==========================================
+
+    function openDeleteSingleModal(dbId, name) {
+        document.getElementById('deleteTargetType').value = 'single';
+        document.getElementById('deleteTargetId').value = dbId;
+        document.getElementById('deleteModalText').innerHTML = `Anda yakin ingin menghapus kontak <b class="text-gray-900">${name}</b> dari database?`;
+        showDeleteModal();
+    }
+
+    function showDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        const panel = document.getElementById('deletePanel');
+        const backdrop = document.getElementById('deleteBackdrop');
+        modal.classList.remove('hidden');
+        setTimeout(() => { backdrop.classList.remove('opacity-0'); panel.classList.remove('opacity-0', 'scale-95'); panel.classList.add('opacity-100', 'scale-100'); }, 10);
+    }
+
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        const panel = document.getElementById('deletePanel');
+        const backdrop = document.getElementById('deleteBackdrop');
+        backdrop.classList.add('opacity-0'); panel.classList.remove('opacity-100', 'scale-100'); panel.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
     function openImportModal() {
         const modal = document.getElementById('importModal');
         const panel = document.getElementById('modalPanel');
         const backdrop = document.getElementById('importBackdrop');
         modal.classList.remove('hidden');
-        setTimeout(() => {
-            backdrop.classList.remove('opacity-0');
-            panel.classList.remove('opacity-0', 'scale-95');
-            panel.classList.add('opacity-100', 'scale-100');
-        }, 10);
+        setTimeout(() => { backdrop.classList.remove('opacity-0'); panel.classList.remove('opacity-0', 'scale-95'); panel.classList.add('opacity-100', 'scale-100'); }, 10);
     }
 
     function closeImportModal() {
         const modal = document.getElementById('importModal');
         const panel = document.getElementById('modalPanel');
         const backdrop = document.getElementById('importBackdrop');
-        backdrop.classList.add('opacity-0');
-        panel.classList.remove('opacity-100', 'scale-100');
-        panel.classList.add('opacity-0', 'scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            document.getElementById('csvForm').classList.add('hidden');
-            document.getElementById('csvArrowIcon').style.transform = 'rotate(0deg)';
-        }, 300);
+        backdrop.classList.add('opacity-0'); panel.classList.remove('opacity-100', 'scale-100'); panel.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => { modal.classList.add('hidden'); document.getElementById('csvForm').classList.add('hidden'); document.getElementById('csvArrowIcon').style.transform = 'rotate(0deg)'; }, 300);
     }
 
     function toggleCsvForm() {
         const form = document.getElementById('csvForm');
         const icon = document.getElementById('csvArrowIcon');
         if (form.classList.contains('hidden')) {
-            form.classList.remove('hidden');
-            icon.style.transform = 'rotate(180deg)';
-            form.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+            form.classList.remove('hidden'); icon.style.transform = 'rotate(180deg)'; form.scrollIntoView({behavior: 'smooth', block: 'nearest'});
         } else {
-            form.classList.add('hidden');
-            icon.style.transform = 'rotate(0deg)';
+            form.classList.add('hidden'); icon.style.transform = 'rotate(0deg)';
         }
     }
 
     function updateFileName(input) {
         if(input.files && input.files[0]) {
             document.getElementById('selectedFileName').innerText = input.files[0].name;
-            document.getElementById('uploadPlaceholder').classList.add('hidden');
-            document.getElementById('uploadSuccess').classList.remove('hidden');
+            document.getElementById('uploadPlaceholder').classList.add('hidden'); document.getElementById('uploadSuccess').classList.remove('hidden');
         }
     }
 
-    function showLoading(text) {
-        document.getElementById('loadingText').innerText = text;
-        document.getElementById('loadingOverlay').classList.remove('hidden');
-    }
-
-    function hideLoading() {
-        document.getElementById('loadingOverlay').classList.add('hidden');
-    }
-
+    function showLoading(text) { document.getElementById('loadingText').innerText = text; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+    function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+    
     function getSelectedAccount() {
         const select = document.getElementById('importTargetAccount');
-        const val = select.value;
-        if (!val) {
+        if (!select.value) {
             showToast("Pilih Database (Folder Akun) terlebih dahulu!", "error");
             select.parentElement.classList.add('animate-shake');
             setTimeout(() => select.parentElement.classList.remove('animate-shake'), 500);
             return null;
         }
-        return val;
+        return select.value;
     }
 
     async function runTelegramSync() {
@@ -809,19 +835,10 @@
         if (!targetPhone) return;
         showLoading(`Sinkronisasi riwayat chat ${targetPhone}...`);
         try {
-            const res = await fetch('/import_crm_api', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ source_phone: targetPhone }) 
-            });
+            const res = await fetch('/import_crm_api', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ source_phone: targetPhone }) });
             const data = await res.json();
-            if(data.status === 'success') {
-                showToast(data.message, 'success');
-                setTimeout(() => window.location.href = `{{ url_for('dashboard_crm') }}?source=${targetPhone}`, 1500);
-            } else {
-                showToast(data.message, 'error');
-                hideLoading();
-            }
+            if(data.status === 'success') { showToast(data.message, 'success'); setTimeout(() => window.location.href = `{{ url_for('dashboard_crm') }}?source=${targetPhone}`, 1500); } 
+            else { showToast(data.message, 'error'); hideLoading(); }
         } catch(e) { showToast("Koneksi Terputus", 'error'); hideLoading(); }
     }
 
@@ -830,22 +847,13 @@
         if (!targetPhone) return;
         const fileInput = document.getElementById('csvFileInput');
         if(fileInput.files.length === 0) return showToast("Pilih file CSV!", "error");
-        
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-        formData.append('source_phone', targetPhone); 
-
+        const formData = new FormData(); formData.append('file', fileInput.files[0]); formData.append('source_phone', targetPhone); 
         showLoading("Memproses Database...");
         try {
             const res = await fetch('/import_crm_csv', {method: 'POST', body: formData});
             const data = await res.json();
-            if(data.status === 'success') {
-                showToast(data.message, 'success');
-                setTimeout(() => window.location.href = `{{ url_for('dashboard_crm') }}?source=${targetPhone}`, 1500);
-            } else {
-                showToast(data.message, 'error');
-                hideLoading();
-            }
+            if(data.status === 'success') { showToast(data.message, 'success'); setTimeout(() => window.location.href = `{{ url_for('dashboard_crm') }}?source=${targetPhone}`, 1500); } 
+            else { showToast(data.message, 'error'); hideLoading(); }
         } catch(e) { showToast("Gagal mengunggah file.", 'error'); hideLoading(); }
     }
 </script>
@@ -858,12 +866,7 @@
     .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
     @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
     .tooltip-trigger { position: relative; }
-    .tooltip-trigger:hover::before {
-        content: attr(title); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-        margin-bottom: 8px; background: #1f2937; color: white; font-size: 10px; font-weight: bold;
-        padding: 4px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; z-index: 50;
-        opacity: 0; animation: fadeInTooltip 0.2s forwards;
-    }
+    .tooltip-trigger:hover::before { content: attr(title); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 8px; background: #1f2937; color: white; font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; z-index: 50; opacity: 0; animation: fadeInTooltip 0.2s forwards; }
     @keyframes fadeInTooltip { to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 </style>
 {% endblock %}
