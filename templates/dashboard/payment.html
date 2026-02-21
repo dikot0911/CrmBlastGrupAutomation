@@ -162,7 +162,7 @@
             data.forEach(item => {
                 const isBest = item.bestValue;
                 
-                // Mencegah array kosong bikin error UI
+                // Render List Fitur
                 const safeFeatures = Array.isArray(item.features) ? item.features : [];
                 const featuresHtml = safeFeatures.map(f => `
                     <li class="flex items-start gap-3 py-1">
@@ -171,7 +171,7 @@
                     </li>
                 `).join('');
 
-                // Render Kartu Kasta Dewa
+                // Render Kartu (KASTA DEWA - POSISI HARGA DIBALIK)
                 const cardHtml = `
                     <div class="relative flex flex-col bg-white rounded-[2.5rem] p-8 md:p-10 ${isBest ? 'border-2 border-indigo-500 shadow-2xl shadow-indigo-500/20 scale-105 z-10' : 'border border-gray-200 shadow-lg shadow-gray-100/50 hover:border-indigo-300'} transition-all duration-300 group">
                         
@@ -182,16 +182,21 @@
                         ` : ''}
                         
                         <div class="mb-8 text-center">
-                            <h3 class="text-xl font-black ${isBest ? 'text-indigo-600' : 'text-gray-800'} mb-4">${item.title}</h3>
+                            <h3 class="text-xl font-black ${isBest ? 'text-indigo-600' : 'text-gray-800'} mb-2">${item.title}</h3>
                             
-                            <div class="min-h-[80px] flex flex-col items-center justify-center">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 inline-block px-3 py-1 rounded-md mb-4">
+                                <i class="fa-regular fa-clock"></i> Aktif ${item.duration}
+                            </p>
+                            
+                            <div class="min-h-[90px] flex flex-col items-center justify-center">
+                                <span class="text-5xl font-black text-gray-900 tracking-tighter">${item.price}</span>
+                                
                                 ${item.coret ? `
-                                    <div class="flex items-center gap-2 mb-1">
+                                    <div class="flex items-center gap-2 mt-2.5">
                                         <span class="text-xs text-gray-400 line-through font-mono font-bold">${item.coret}</span>
-                                        ${item.hemat ? `<span class="text-[9px] font-black text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full">${item.hemat}</span>` : ''}
+                                        ${item.hemat ? `<span class="text-[9px] font-black text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full shadow-sm">${item.hemat}</span>` : ''}
                                     </div>
-                                ` : '<div class="h-5"></div>'} <span class="text-5xl font-black text-gray-900 tracking-tighter">${item.price}</span>
-                            </div>
+                                ` : '<div class="h-7 mt-2.5"></div>'} </div>
                         </div>
 
                         <div class="flex-1 mb-8">
