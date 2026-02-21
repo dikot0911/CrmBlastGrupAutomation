@@ -1233,15 +1233,16 @@ def admin_required(f):
 
 @app.route('/')
 def index():
-    # Ambil data pricing struktur JSON tapi dikonversi balik ke Dict Python
-    # Supaya bisa di-looping pakai Jinja2 di HTML
     pricing_data = {}
     if supabase:
         try:
-            raw_json = FinanceManager.get_plans_json() # Reuse fungsi yang udah ada
-            pricing_data = json.loads(raw_json)
-        except: pass
-        
+            # PANGGIL FUNGSI YANG BENER: get_plans_structure()
+            pricing_data = FinanceManager.get_plans_structure() 
+        except Exception as e:
+            # Biar ketahuan kalo ada error
+            logger.error(f"Gagal load pricing di Landing Page: {e}")
+            
+    # Kirim datanya ke HTML
     return render_template('landing/index.html', pricing=pricing_data)
 
 @app.route('/login', methods=['GET', 'POST'])
