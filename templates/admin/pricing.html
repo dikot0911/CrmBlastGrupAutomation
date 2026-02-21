@@ -4,46 +4,67 @@
 {% block content %}
 <div class="mb-8 flex justify-between items-center">
     <div>
-        <h1 class="text-2xl font-bold text-white">💰 Pricing Strategy</h1>
-        <p class="text-slate-400 text-sm">Atur harga paket yang tampil di Landing Page & Payment.</p>
+        <h1 class="text-2xl font-bold text-white">💰 Pricing & Discount Manager</h1>
+        <p class="text-slate-400 text-sm">Sistem akan otomatis menghitung persentase diskon (Harga Normal - Harga Promo).</p>
     </div>
 </div>
 
 <div class="grid grid-cols-1 gap-6">
     {% for plan in plans %}
-    <div class="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
-        <div class="p-4 bg-slate-900/50 border-b border-slate-700 flex justify-between items-center">
+    <div class="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden shadow-xl">
+        <div class="p-4 bg-slate-900/80 border-b border-slate-700 flex justify-between items-center">
             <h3 class="font-bold text-lg text-white flex items-center gap-2">
-                <span class="w-2 h-6 bg-indigo-500 rounded-full"></span>
+                <span class="w-2 h-6 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1]"></span>
                 {{ plan.display_name }} <span class="text-xs text-slate-500 font-mono">({{ plan.code_name }})</span>
             </h3>
         </div>
         
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-slate-300">
-                <thead class="bg-slate-900/30 text-slate-500 uppercase text-xs">
+                <thead class="bg-slate-900/30 text-slate-400 uppercase text-[10px] tracking-wider font-bold">
                     <tr>
-                        <th class="px-6 py-3">Durasi</th>
-                        <th class="px-6 py-3">Harga Database (Raw)</th>
-                        <th class="px-6 py-3">Tampilan User (Text)</th>
-                        <th class="px-6 py-3 text-right">Aksi</th>
+                        <th class="px-6 py-4">Durasi Paket</th>
+                        <th class="px-6 py-4">Harga Normal (Coret)</th>
+                        <th class="px-6 py-4">Harga Jual (Promo)</th>
+                        <th class="px-6 py-4">Teks Display</th>
+                        <th class="px-6 py-4 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-700/50">
                     {% for var in plan.pricing_variants %}
                     <form action="/super-admin/pricing" method="POST">
                         <input type="hidden" name="id" value="{{ var.id }}">
-                        <tr class="hover:bg-slate-700/20 transition">
-                            <td class="px-6 py-3 font-bold text-white">{{ var.duration_days }} Hari</td>
-                            <td class="px-6 py-3">
-                                <input type="number" name="price_raw" value="{{ var.price_raw }}" class="w-32 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs focus:border-indigo-500 focus:outline-none text-white font-mono">
+                        <tr class="hover:bg-slate-700/30 transition group">
+                            <td class="px-6 py-4 font-black text-white text-base">
+                                {{ var.duration_days }} <span class="text-xs text-slate-500 font-normal">Hari</span>
                             </td>
-                            <td class="px-6 py-3">
-                                <input type="text" name="price_display" value="{{ var.price_display }}" class="w-24 bg-slate-900 border border-slate-600 rounded px-2 py-1 text-xs font-bold text-indigo-400 focus:border-indigo-500 focus:outline-none">
+                            
+                            <td class="px-6 py-4">
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2.5 text-xs text-slate-500">Rp</span>
+                                    <input type="number" name="price_strike" value="{{ var.price_strike|replace('Rp', '')|replace('.', '')|replace(' ', '') if var.price_strike else '0' }}" 
+                                        class="w-32 bg-black/40 border border-slate-600 rounded-lg pl-8 pr-3 py-2 text-xs focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none text-red-300 font-mono transition line-through decoration-red-500/50">
+                                </div>
+                                <p class="text-[9px] text-slate-500 mt-1">Kosongkan jika tidak ada diskon</p>
                             </td>
-                            <td class="px-6 py-3 text-right">
-                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-1.5 rounded transition shadow-lg shadow-indigo-500/20">
-                                    Update
+
+                            <td class="px-6 py-4">
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2.5 text-xs text-emerald-500/50">Rp</span>
+                                    <input type="number" name="price_raw" value="{{ var.price_raw }}" 
+                                        class="w-32 bg-black/40 border border-slate-600 rounded-lg pl-8 pr-3 py-2 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-emerald-400 font-mono font-bold transition shadow-inner">
+                                </div>
+                                <p class="text-[9px] text-emerald-500/50 mt-1">Harga yang dibayar user</p>
+                            </td>
+
+                            <td class="px-6 py-4">
+                                <input type="text" name="price_display" value="{{ var.price_display }}" 
+                                    class="w-24 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs font-bold text-indigo-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition text-center uppercase tracking-wide">
+                            </td>
+
+                            <td class="px-6 py-4 text-right">
+                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-lg transition shadow-[0_0_15px_rgba(79,70,229,0.3)] hover:shadow-[0_0_20px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5 active:scale-95">
+                                    <i class="fa-solid fa-floppy-disk mr-1"></i> Update
                                 </button>
                             </td>
                         </tr>
