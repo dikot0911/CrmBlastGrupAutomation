@@ -1961,8 +1961,20 @@ def send_code():
     
     if not phone: return jsonify({'status': 'error', 'message': 'Nomor HP wajib diisi.'})
 
-    # [UPGRADE] CEK LIMIT AKUN (MAX 3)
+    # --- [UPGRADE KASTA DEWA: LIMIT SESUAI PAKET] ---
     try:
+        # Ambil data user (Ini otomatis ngecek expired date juga lho!)
+        user_data = get_user_data(user_id)
+        plan_tier = user_data.plan_tier.upper() if user_data else 'STARTER'
+        
+        # Tentukan Limit Kasta
+        max_accounts = 1 # Default Starter
+        if 'AGENCY' in plan_tier:
+            max_accounts = 10
+        elif 'PRO' in plan_tier:
+            max_accounts = 3
+
+        # Hitung jumlah akun saat ini di database
         res = supabase.table('telegram_accounts').select("id", count='exact', head=True).eq('user_id', user_id).execute()
         current_count = res.count if res.count else 0
         
@@ -1970,17 +1982,17 @@ def send_code():
         check_exist = supabase.table('telegram_accounts').select("id").eq('user_id', user_id).eq('phone_number', phone).execute()
         is_existing_number = True if check_exist.data else False
         
-        # Logic Limit: Kalau nomor baru DAN jumlah udah 3 -> TOLAK
-        if not is_existing_number and current_count >= 3:
+        # Logic Limit: Kalau nomor baru DAN jumlah udah mentok -> TOLAK MENTAH-MENTAH
+        if not is_existing_number and current_count >= max_accounts:
             return jsonify({
                 'status': 'limit_reached', 
-                'message': 'Batas Maksimal 3 Akun Tercapai! Hubungi Admin untuk upgrade.'
+                'message': f'⛔ Batas Maksimal {max_accounts} Akun Tercapai (Paket {plan_tier})! Silakan Upgrade Paket.'
             })
             
     except Exception as e:
         logger.error(f"Limit Check Error: {e}")
 
-    # Rate Limiting (Sama kayak sebelumnya)
+    # --- [FITUR LAMA AMAN]: Rate Limiting ---
     current_time = time.time()
     if user_id in login_states:
         last_req = login_states[user_id].get('last_otp_req', 0)
@@ -1996,10 +2008,7 @@ def send_code():
                 req = await client.send_code_request(phone)
                 temp_session_str = client.session.save()
                 
-                # [UPGRADE] Simpan Data (Upsert berdasarkan User + Phone)
-                # Kita pake trik: Coba delete dulu row "pending" lama kalau ada, lalu insert baru
-                # Atau gunakan UPSERT dengan constraint (user_id, phone_number)
-                
+                # Simpan Data (Upsert berdasarkan User + Phone)
                 data = {
                     'user_id': user_id,
                     'phone_number': phone,
@@ -2217,13 +2226,32 @@ def qr_worker(user_id, session_uuid):
 def get_qr_code():
     user_id = session['user_id']
     
-    # Limit Check
+    # --- [UPGRADE KASTA DEWA: LIMIT SESUAI PAKET] ---
     try:
-        res = supabase.table('telegram_accounts').select("id", count='exact', head=True).eq('user_id', user_id).execute()
-        if (res.count or 0) >= 3:
-            return jsonify({'status': 'limit_reached', 'message': 'Limit 3 Akun Tercapai!'})
-    except: pass
+        # Ambil data user (Otomatis ngecek expired date juga)
+        user_data = get_user_data(user_id)
+        plan_tier = user_data.plan_tier.upper() if user_data else 'STARTER'
+        
+        # Tentukan Limit Kasta
+        max_accounts = 1 # Default Starter
+        if 'AGENCY' in plan_tier:
+            max_accounts = 10
+        elif 'PRO' in plan_tier:
+            max_accounts = 3
 
+        # Hitung jumlah akun saat ini di database
+        res = supabase.table('telegram_accounts').select("id", count='exact', head=True).eq('user_id', user_id).execute()
+        
+        # Logic Limit: Kalau jumlah udah mentok -> TOLAK MENTAH-MENTAH
+        if (res.count or 0) >= max_accounts:
+            return jsonify({
+                'status': 'limit_reached', 
+                'message': f'⛔ Batas Maksimal {max_accounts} Akun Tercapai (Paket {plan_tier})! Silakan Upgrade Paket.'
+            })
+    except Exception as e: 
+        logger.error(f"Limit Check QR Error: {e}")
+
+    # --- [FITUR LAMA AMAN]: Generate QR Code & Thread Worker ---
     session_uuid = str(uuid.uuid4())
     qr_states[session_uuid] = {'status': 'initializing', 'qr_url': None}
     
@@ -2232,7 +2260,7 @@ def get_qr_code():
     t.daemon = True
     t.start()
     
-    # Tunggu sebentar
+    # Tunggu sebentar (Max 5 detik)
     import time
     for _ in range(50):
         if qr_states[session_uuid].get('qr_url'): break
