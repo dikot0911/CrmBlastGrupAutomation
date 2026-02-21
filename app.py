@@ -1245,53 +1245,86 @@ def index():
     # Kirim datanya ke HTML
     return render_template('landing/index.html', pricing=pricing_data)
 
+# --- [FIX BUG LOGIN & FITUR RESET PASS] ---
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """Halaman Login dengan Validasi Hash dan Email Verification"""
     if 'user_id' in session:
-        return redirect(url_for('dashboard_home'))
+        return redirect(url_for('dashboard_overview')) # Pastikan rute ini bener!
 
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password')
         
-        if not email or not password:
-            flash("Email dan Password wajib diisi!", "danger")
-            return redirect(url_for('login'))
-
         try:
-            # Ambil data user dari DB
             res = supabase.table('users').select('*').eq('email', email).execute()
-            
             if res.data:
                 user = res.data[0]
-                stored_password = user.get('password') # Ini sekarang isinya Hash pbkdf2...
-                
-                # 1. Verify Hash Password
-                if PasswordVault.verify_password(stored_password, password):
-                    
-                    # 2. Cek Gerbang Verifikasi Email
-                    # (Kalau database lama is_verified-nya kosong/None, kita anggap aja False)
+                if PasswordVault.verify_password(user.get('password'), password):
                     if not user.get('is_verified', False):
-                        flash("Akun Anda belum diverifikasi! Silakan cek email Anda.", "warning")
+                        flash("Akun belum diverifikasi! Cek email Anda.", "warning")
                         return redirect(url_for('login'))
                         
-                    # Login Sukses!
                     session['user_id'] = user['id']
                     session['username'] = user['username']
-                    
                     flash(f"Selamat datang kembali, {user['username']}!", "success")
-                    return redirect(url_for('dashboard_home'))
+                    
+                    # 🔥 FIX: Arahkan ke dashboard_overview (Bukan dashboard_home)
+                    return redirect(url_for('dashboard_overview'))
                 else:
-                    flash("Password salah. Silakan coba lagi.", "danger")
+                    flash("Password salah.", "danger")
             else:
-                flash("Email tidak terdaftar di sistem kami.", "danger")
-                
+                flash("Email tidak terdaftar.", "danger")
         except Exception as e:
             logger.error(f"Login Error: {e}")
-            flash("Terjadi kesalahan saat memproses login.", "danger")
+            flash("Terjadi kesalahan sistem.", "danger")
             
     return render_template('auth/login.html')
+
+# --- FITUR BARU: FORGOT PASSWORD ---
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        res = supabase.table('users').select('id, username').eq('email', email).execute()
+        
+        if res.data:
+            user = res.data[0]
+            # Bikin token reset (berlaku 1 jam)
+            token = token_manager.generate_verification_token(email)
+            reset_url = url_for('reset_password', token=token, _external=True)
+            
+            # Kirim Email Reset (Kita update mailer.py nanti)
+            mailer.send_reset_password_email(email, user['username'], reset_url)
+            
+        # Kita kasih flash tetep sukses biar hacker gak tau email mana yg terdaftar
+        flash("Jika email terdaftar, instruksi reset password telah dikirim ke email Anda.", "info")
+        return redirect(url_for('login'))
+        
+    return render_template('auth/forgot_password.html')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    try:
+        email = token_manager.verify_token(token, expiration_seconds=3600)
+    except Exception:
+        flash("Link reset password tidak valid atau sudah hangus.", "danger")
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        new_pass = request.form.get('password')
+        try:
+            PasswordVault.validate_complexity(new_pass)
+            hashed_pass = PasswordVault.hash_password(new_pass)
+            
+            supabase.table('users').update({'password': hashed_pass}).eq('email', email).execute()
+            flash("✅ Password berhasil diubah! Silakan login.", "success")
+            return redirect(url_for('login'))
+        except Exception as e:
+            flash(str(e), "danger")
+            
+    return render_template('auth/reset_password.html', token=token)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
