@@ -23,6 +23,7 @@ import httpx
 import pytz
 import qrcode
 import base64
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_from_directory, Response, stream_with_context
 
@@ -39,7 +40,6 @@ from utils.security import (
     TokenExpiredError, InvalidTokenError, SessionDefender
 )
 from utils.mailer import mailer
-from werkzeug.security import generate_password_hash, check_password_hash
 
 # ==============================================================================
 # SECTION 1: SYSTEM CONFIGURATION & ENVIRONMENT SETUP
@@ -1294,10 +1294,12 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    """Halaman Pendaftaran dengan Validasi Anti-Spam & Enkripsi Hash"""
+    # Jika user sudah login, tendang ke dashboard
     if 'user_id' in session:
         return redirect(url_for('dashboard_overview'))
 
-    # [FIX]: Siapkan variabel kosong buat nampung data lama
+    # Variabel penampung buat Sticky Form (biar teks gak hilang pas error)
     saved_username = ""
     saved_email = ""
 
@@ -1310,6 +1312,7 @@ def register():
             flash("Semua kolom wajib diisi!", "danger")
             return render_template('auth/register.html', username=saved_username, email=saved_email)
 
+        # 1. Sanitasi Input (Anti XSS)
         username = InputSanitizer.sanitize_username(saved_username)
         email = saved_email.strip().lower()
 
@@ -1336,13 +1339,14 @@ def register():
             # 4. Pertahanan Lapis Ketiga: HASHING PASSWORD!
             hashed_password = PasswordVault.hash_password(raw_password)
             
-            # 5. Simpan ke Database
+            # 5. Simpan ke Database (Aman dari NameError datetime)
+            import datetime as dt_module # Backup import murni khusus baris ini biar gak error
             new_user_data = {
                 "username": username,
                 "email": email,
                 "password": hashed_password, 
                 "is_verified": False,        
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": dt_module.datetime.utcnow().isoformat()
             }
             res = supabase.table('users').insert(new_user_data).execute()
             
@@ -1360,17 +1364,19 @@ def register():
                 flash("Pendaftaran berhasil! Cek kotak masuk atau folder Spam email Anda untuk verifikasi.", "success")
                 return redirect(url_for('login'))
             else:
-                flash("Gagal mendaftar, terjadi gangguan pada server.", "danger")
+                flash("Gagal mendaftar, terjadi gangguan pada database server.", "danger")
 
         except (SpamEmailError, WeakPasswordError, SecurityViolation) as e:
+            # Nangkap error dari security.py lalu nampilin ke layar
             flash(str(e), "danger")
-            # [FIX]: JANGAN REDIRECT! Render ulang biar variabel saved-nya kebawa
             return render_template('auth/register.html', username=saved_username, email=saved_email)
+            
         except Exception as e:
             logger.error(f"Register Error: {e}")
             flash("Terjadi kesalahan sistem. Coba lagi nanti.", "danger")
             return render_template('auth/register.html', username=saved_username, email=saved_email)
             
+    # Fallback return buat request GET
     return render_template('auth/register.html', username=saved_username, email=saved_email)
 
 @app.route('/verify/<token>')
