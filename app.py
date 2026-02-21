@@ -3778,23 +3778,41 @@ def ban_user(user_id):
 def super_admin_pricing():
     try:
         if request.method == 'POST':
-            var_id = request.form.get('id')
-            price_raw = request.form.get('price_raw')       # Harga Jual (Promo)
-            price_strike = request.form.get('price_strike') # Harga Normal (Coret)
-            price_disp = request.form.get('price_display')  # Teks Besar (ex: 99rb)
+            action = request.form.get('action')
             
-            # Pastikan hanya angka yang masuk ke database
-            import re
-            clean_raw = re.sub(r'[^\d]', '', str(price_raw)) if price_raw else '0'
-            clean_strike = re.sub(r'[^\d]', '', str(price_strike)) if price_strike else '0'
-            
-            supabase.table('pricing_variants').update({
-                'price_raw': int(clean_raw),
-                'price_strike': str(clean_strike), # Simpan sbg string angka murni
-                'price_display': price_disp
-            }).eq('id', var_id).execute()
-            
-            flash('Harga & Diskon berhasil diupdate!', 'success')
+            # --- LOGIC 1: UPDATE FITUR PAKET ---
+            if action == 'update_plan':
+                plan_id = request.form.get('plan_id')
+                features_str = request.form.get('features')
+                
+                # Ubah teks "Fitur 1, Fitur 2" jadi format Array Database (List Python)
+                features_list = [f.strip() for f in features_str.split(',') if f.strip()]
+                
+                supabase.table('pricing_plans').update({
+                    'features': features_list
+                }).eq('id', plan_id).execute()
+                
+                flash('Fitur paket berhasil diupdate!', 'success')
+
+            # --- LOGIC 2: UPDATE HARGA & DISKON (YANG TADI) ---
+            elif action == 'update_variant':
+                var_id = request.form.get('id')
+                price_raw = request.form.get('price_raw')       
+                price_strike = request.form.get('price_strike') 
+                price_disp = request.form.get('price_display')  
+                
+                import re
+                clean_raw = re.sub(r'[^\d]', '', str(price_raw)) if price_raw else '0'
+                clean_strike = re.sub(r'[^\d]', '', str(price_strike)) if price_strike else '0'
+                
+                supabase.table('pricing_variants').update({
+                    'price_raw': int(clean_raw),
+                    'price_strike': str(clean_strike),
+                    'price_display': price_disp
+                }).eq('id', var_id).execute()
+                
+                flash('Harga & Diskon berhasil diupdate!', 'success')
+                
             return redirect(url_for('super_admin_pricing'))
 
         # Fetch Data
