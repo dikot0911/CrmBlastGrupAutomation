@@ -17,13 +17,13 @@
             
             <div class="text-center max-w-3xl mx-auto mb-20" data-aos="fade-down">
                 <span class="text-indigo-600 font-extrabold text-xs uppercase tracking-[0.2em] bg-white px-4 py-2 rounded-full border border-indigo-100 shadow-sm">
-                    Pricing Plans
+                    Pilih Senjatamu ⚔️
                 </span>
                 <h2 class="text-4xl md:text-5xl font-black text-gray-900 mt-6 leading-tight tracking-tight">
-                    Investasi Kecil, <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Profit Melimpah</span>
+                    Modal Receh, <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Untung Luber Berlipat!</span>
                 </h2>
-                <p class="text-gray-500 mt-5 text-lg">
-                    Pilih paket sesuai level bisnismu. Semua paket sudah termasuk fitur anti-banned dan server prioritas.
+                <p class="text-gray-500 mt-5 text-lg font-medium leading-relaxed">
+                    Gak usah pusing mikirin teknis. Biar robot kita yang kerja 24 jam nyari pelanggan buat lo. Pilih paket sesuai target cuan lu bulan ini!
                 </p>
             </div>
 
@@ -38,21 +38,21 @@
                             
                             <div class="flex-1 w-full text-center md:text-left">
                                 <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gray-100 text-gray-600 mb-6 text-2xl">
-                                    <i class="fa-regular fa-paper-plane"></i>
+                                    <i class="fa-solid fa-seedling"></i>
                                 </div>
-                                <h3 class="text-3xl font-black text-gray-900 mb-2">Starter Pack</h3>
-                                <p class="text-gray-500 mb-6">Satu akun untuk pemula yang mau test pasar.</p>
+                                <h3 class="text-3xl font-black text-gray-900 mb-2">Paket Ngetes Ombak</h3>
+                                <p class="text-gray-500 mb-6">Cocok banget buat lo yang baru mau ngerasain narik pelanggan otomatis tanpa ribet.</p>
 
                                 <div class="space-y-3 mb-8 text-left max-w-xs mx-auto md:mx-0">
                                     {% for f in basic_plan[0].features[:3] %}
-                                    <div class="flex items-center gap-3 text-gray-700 font-medium">
+                                    <div class="flex items-center gap-3 text-gray-700 font-medium text-sm">
                                         <i class="fa-solid fa-check-circle text-indigo-500"></i> {{ f }}
                                     </div>
                                     {% endfor %}
                                 </div>
 
                                 <a href="/register?ref=STARTER" class="w-full md:w-auto inline-block px-8 py-3.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition shadow-lg shadow-gray-200 text-center">
-                                    Mulai Sekarang
+                                    Bungkus Sekarang
                                 </a>
                             </div>
 
@@ -66,7 +66,7 @@
                                             {% if variant.coret %}
                                                 <span class="text-[10px] text-gray-400 line-through decoration-red-400">{{ variant.coret }}</span>
                                             {% else %}
-                                                <span class="text-[10px] text-gray-400">Durasi {{ variant.duration }}</span>
+                                                <span class="text-[10px] text-gray-400">Aktif {{ variant.duration }}</span>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -87,7 +87,7 @@
                     {% if optimal_plan %}
                     <div class="group relative bg-gray-900 rounded-[2.5rem] p-1 border-2 border-indigo-500 shadow-2xl scale-[1.02] z-20" data-aos="zoom-in">
                         <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold px-8 py-1.5 rounded-full shadow-lg text-sm tracking-wide uppercase shadow-orange-500/30 animate-pulse">
-                            🔥 Paling Laris
+                            🔥 Paling Diburu Boss!
                         </div>
 
                         <div class="bg-gray-900 rounded-[2.3rem] p-8 md:p-12">
@@ -97,19 +97,19 @@
                                     <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 text-white mb-6 text-2xl shadow-lg shadow-indigo-500/50">
                                         <i class="fa-solid fa-rocket"></i>
                                     </div>
-                                    <h3 class="text-3xl font-black text-white mb-2">UMKM Pro</h3>
-                                    <p class="text-gray-400 mb-6">Power 3x lipat. Wajib buat yang mau serius cuan.</p>
+                                    <h3 class="text-3xl font-black text-white mb-2">UMKM Siap Panen</h3>
+                                    <p class="text-gray-400 mb-6">Ibarat pake motor kopling, larinya kenceng! Wajib buat lo yang mau orderan masuk tiap hari tanpa henti.</p>
 
                                     <div class="space-y-3 mb-8 text-left max-w-xs mx-auto md:mx-0">
                                         {% for f in optimal_plan[0].features[:3] %}
-                                        <div class="flex items-center gap-3 text-gray-300 font-medium">
+                                        <div class="flex items-center gap-3 text-gray-300 font-medium text-sm">
                                             <i class="fa-solid fa-check-circle text-green-400"></i> {{ f }}
                                         </div>
                                         {% endfor %}
                                     </div>
 
                                     <a href="/register?ref=PRO" class="w-full md:w-auto inline-block px-8 py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 transition shadow-lg shadow-indigo-600/40 hover:-translate-y-1 text-center">
-                                        Ambil Promo Ini 🚀
+                                        Sikat Promo Ini 🚀
                                     </a>
                                 </div>
 
@@ -117,12 +117,12 @@
                                     {% for variant in optimal_plan %}
                                     <label class="cursor-pointer relative flex items-center justify-between p-5 {{ 'border-2 border-yellow-500/50 bg-gradient-to-r from-gray-800 to-gray-800 hover:to-gray-700' if variant.bestValue else 'border border-gray-700 bg-gray-800/50 hover:bg-gray-800' }} rounded-2xl transition group-hover:shadow-lg" onclick="window.location.href='/register?ref=PRO&plan={{ variant.id }}'">
                                         {% if variant.bestValue %}
-                                            <div class="absolute top-0 right-0 bg-yellow-500 text-yellow-900 text-[10px] font-bold px-3 py-1 rounded-bl-xl">SUPER VALUE</div>
+                                            <div class="absolute top-0 right-0 bg-yellow-500 text-yellow-900 text-[10px] font-bold px-3 py-1 rounded-bl-xl">SUPER HEMAT</div>
                                         {% endif %}
                                         <div class="flex items-center gap-4">
                                             <div class="w-5 h-5 rounded-full border-2 {{ 'border-yellow-500 bg-white' if variant.bestValue else 'border-gray-500' }}"></div>
                                             <div>
-                                                <span class="block font-bold {{ 'text-white' if variant.bestValue else 'text-gray-200' }}">{{ variant.title }}</span>
+                                                <span class="block font-bold {{ 'text-white' if variant.bestValue else 'text-gray-200' }} text-lg">{{ variant.title }}</span>
                                                 <span class="text-[10px] text-gray-500 line-through">{{ variant.coret }}</span>
                                             </div>
                                         </div>
@@ -148,19 +148,19 @@
                                 <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-yellow-100 text-yellow-700 mb-6 text-2xl">
                                     <i class="fa-solid fa-crown"></i>
                                 </div>
-                                <h3 class="text-3xl font-black text-gray-900 mb-2">Agency / Sultan</h3>
-                                <p class="text-gray-500 mb-6">Dominasi pasar dengan 10 akun sekaligus.</p>
+                                <h3 class="text-3xl font-black text-gray-900 mb-2">Mode Sultan (Agency)</h3>
+                                <p class="text-gray-500 mb-6">Mau ngeborong semua pelanggan di kota lu? Pegang kendali penuh dengan multik-akun. Gak ada obat!</p>
 
                                 <div class="space-y-3 mb-8 text-left max-w-xs mx-auto md:mx-0">
                                     {% for f in agency_plan[0].features[:3] %}
-                                    <div class="flex items-center gap-3 text-gray-700 font-medium">
+                                    <div class="flex items-center gap-3 text-gray-700 font-medium text-sm">
                                         <i class="fa-solid fa-check-circle text-yellow-500"></i> {{ f }}
                                     </div>
                                     {% endfor %}
                                 </div>
 
                                 <a href="/register?ref=AGENCY" class="w-full md:w-auto inline-block px-8 py-3.5 bg-white border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:text-indigo-600 hover:border-indigo-200 transition text-center">
-                                    Mulai Jadi Agency
+                                    Aktifkan Mode Sultan
                                 </a>
                             </div>
                             <div class="w-full md:w-[55%] flex flex-col gap-3">
@@ -169,7 +169,7 @@
                                     <div class="flex items-center gap-4">
                                         <div class="w-5 h-5 rounded-full border-2 border-gray-300"></div>
                                         <div>
-                                            <span class="block font-bold text-gray-700">{{ variant.title }}</span>
+                                            <span class="block font-bold text-gray-700 text-lg">{{ variant.title }}</span>
                                             <span class="text-[10px] text-gray-400 line-through">{{ variant.coret }}</span>
                                         </div>
                                     </div>
@@ -188,17 +188,17 @@
 
                 {% else %}
                     <div class="text-center py-20">
-                        <i class="fa-solid fa-server text-4xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-500">Sedang memuat harga terbaru...</p>
+                        <i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-500 mb-4"></i>
+                        <p class="text-gray-500 font-bold">Lagi narik harga promo terbaru buat lo boss... Tunggu bentar yak!</p>
                     </div>
                 {% endif %}
                 
             </div>
 
             <div class="text-center mt-16" data-aos="fade-up" data-aos-delay="200">
-                 <div class="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm text-sm text-gray-500">
-                    <i class="fa-solid fa-lock text-green-500"></i>
-                    <span>Garansi uang kembali 7 hari jika tools tidak bekerja.</span>
+                 <div class="inline-flex items-center gap-3 bg-white px-6 py-3 rounded-full border border-green-200 shadow-md text-sm text-gray-600 font-bold">
+                    <i class="fa-solid fa-shield-halved text-green-500 text-lg"></i>
+                    <span>Takut zonk? Tenang, ada <span class="text-green-600">Garansi 7 Hari Uang Kembali</span> kalo tools ini ga ngefek ke jualan lu. Aman bosku! 🤝</span>
                 </div>
             </div>
 
