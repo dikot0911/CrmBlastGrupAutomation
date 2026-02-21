@@ -3692,6 +3692,34 @@ def super_admin_reset_session(user_id):
         
     return redirect(url_for('super_admin_user_detail', user_id=user_id))
 
+# --- [FITUR BARU] RESET PASSWORD MANUAL ---
+@app.route('/super-admin/reset-password/<int:user_id>', methods=['POST'])
+@admin_required
+def super_admin_reset_password(user_id):
+    """Admin bisa mengubah password user secara sepihak"""
+    new_password = request.form.get('new_password')
+    
+    # Validasi basic
+    if not new_password or len(new_password) < 6:
+        flash("❌ Password baru minimal 6 karakter!", "danger")
+        return redirect(url_for('super_admin_user_detail', user_id=user_id))
+        
+    try:
+        # Enkripsi password baru (Bypass strict rule buat Admin biar cepet)
+        hashed_password = generate_password_hash(new_password, method='pbkdf2:sha256:260000')
+        
+        # Hajar ke database
+        supabase.table('users').update({
+            'password': hashed_password
+        }).eq('id', user_id).execute()
+        
+        flash(f"✅ Password User #{user_id} berhasil diubah secara paksa!", 'success')
+    except Exception as e:
+        logger.error(f"Reset Password Error: {e}")
+        flash(f"❌ Gagal mereset password: {e}", 'danger')
+        
+    return redirect(url_for('super_admin_user_detail', user_id=user_id))
+
 # --- [FITUR LAMA] BAN USER ---
 @app.route('/super-admin/ban/<int:user_id>', methods=['POST'])
 @admin_required
