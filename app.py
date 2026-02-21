@@ -3777,6 +3777,43 @@ def super_admin_pricing():
         logger.error(f"Page Error Pricing: {e}")
         return f"System Error: {e}"
 
+@app.route('/super-admin/pricing', methods=['GET', 'POST'])
+@admin_required
+def super_admin_pricing():
+    try:
+        if request.method == 'POST':
+            var_id = request.form.get('id')
+            price_raw = request.form.get('price_raw')       # Harga Jual (Promo)
+            price_strike = request.form.get('price_strike') # Harga Normal (Coret)
+            price_disp = request.form.get('price_display')  # Teks Besar (ex: 99rb)
+            
+            # Pastikan hanya angka yang masuk ke database
+            import re
+            clean_raw = re.sub(r'[^\d]', '', str(price_raw)) if price_raw else '0'
+            clean_strike = re.sub(r'[^\d]', '', str(price_strike)) if price_strike else '0'
+            
+            supabase.table('pricing_variants').update({
+                'price_raw': int(clean_raw),
+                'price_strike': str(clean_strike), # Simpan sbg string angka murni
+                'price_display': price_disp
+            }).eq('id', var_id).execute()
+            
+            flash('Harga & Diskon berhasil diupdate!', 'success')
+            return redirect(url_for('super_admin_pricing'))
+
+        # Fetch Data
+        try:
+            plans = supabase.table('pricing_plans').select("*, pricing_variants(*)").order('id').execute().data
+        except Exception as db_e:
+            logger.error(f"DB Error Pricing: {db_e}")
+            flash("Gagal ambil data harga. Cek tabel database.", "danger")
+            plans = []
+
+        return render_template('admin/pricing.html', plans=plans, active_page='pricing')
+    except Exception as e:
+        logger.error(f"Page Error Pricing: {e}")
+        return f"System Error: {e}"
+
 @app.route('/super-admin/finance')
 @admin_required
 def super_admin_finance():
@@ -3816,30 +3853,55 @@ def approve_trx(trx_id):
 class FinanceManager:
     @staticmethod
     def get_plans_structure():
-        """Mengambil struktur lengkap Plan + Varian untuk Frontend"""
+        """Mengambil struktur lengkap Plan + Varian untuk Frontend + Kalkulasi Diskon Otomatis"""
         if not supabase: return {}
         
-        # Ambil Plans
         plans = supabase.table('pricing_plans').select("*").order('id').execute().data
-        
         structured_data = {}
+        
         for p in plans:
-            # Ambil Varian untuk plan ini
             variants = supabase.table('pricing_variants').select("*").eq('plan_id', p['id']).order('duration_days').execute().data
-            
             structured_data[p['code_name']] = []
+            
             for v in variants:
+                import re
+                # Ambil angka murni dari DB
+                sell_price = int(v.get('price_raw') or 0)
+                # Ambil harga coret, kalau string dibersihin dulu dari "Rp" dll
+                raw_strike = str(v.get('price_strike') or '0')
+                normal_price = int(re.sub(r'[^\d]', '', raw_strike)) if raw_strike.strip() else 0
+                
+                coret_text = ""
+                hemat_text = ""
+                
+                # LOGIC DISKON OTOMATIS 🔥
+                if normal_price > sell_price and sell_price > 0:
+                    # Bikin format Rupiah (Rp 1.500.000)
+                    coret_text = f"Rp {normal_price:,.0f}".replace(',', '.')
+                    
+                    # Hitung persentase diskon
+                    persen = int(round(((normal_price - sell_price) / normal_price) * 100))
+                    
+                    # Custom logic badge: Kalau potongan > 1 juta, tampilkan nominal. Kalau ngga, tampilkan %
+                    selisih = normal_price - sell_price
+                    if selisih >= 1000000:
+                        hemat_text = f"Hemat {selisih/1000000:g} Juta"
+                    elif selisih >= 1000:
+                        hemat_text = f"Hemat {int(selisih/1000)}Rb"
+                    else:
+                        hemat_text = f"Hemat {persen}%"
+
                 structured_data[p['code_name']].append({
                     'id': v['id'],
-                    'title': _get_duration_title(v['duration_days']), # Helper function
+                    'title': _get_duration_title(v['duration_days']),
                     'duration': f"{v['duration_days']} Hari",
                     'price': v['price_display'],
-                    'rawPrice': v['price_raw'],
-                    'coret': v['price_strike'] or "",
-                    'hemat': v['save_badge'] or "",
+                    'rawPrice': sell_price,
+                    'coret': coret_text,
+                    'hemat': hemat_text,
                     'features': p['features'],
                     'btnText': "Pilih Paket",
-                    'bestValue': v['is_best_value']
+                    'bestValue': v.get('is_best_value', False)
                 })
         return structured_data
 
