@@ -2,69 +2,105 @@
 {% block title %}Pricing Manager{% endblock %}
 
 {% block content %}
-<div class="mb-8 flex justify-between items-center">
+<div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
     <div>
-        <h1 class="text-2xl font-bold text-white">💰 Pricing & Discount Manager</h1>
-        <p class="text-slate-400 text-sm">Sistem akan otomatis menghitung persentase diskon (Harga Normal - Harga Promo).</p>
+        <h1 class="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+            <i class="fa-solid fa-tags text-indigo-500"></i> Pricing & Benefit Manager
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">Atur harga promo, coret, dan fitur paket yang tampil di Landing Page.</p>
+    </div>
+    <div class="bg-indigo-900/30 border border-indigo-500/30 px-4 py-2 rounded-lg flex items-center gap-3 shadow-lg shadow-indigo-500/10">
+        <i class="fa-solid fa-circle-info text-indigo-400"></i>
+        <span class="text-xs text-indigo-200 font-medium">Sistem otomatis menghitung persentase diskon.</span>
     </div>
 </div>
 
-<div class="grid grid-cols-1 gap-6">
+<div class="grid grid-cols-1 gap-8">
     {% for plan in plans %}
-    <div class="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden shadow-xl">
-        <div class="p-4 bg-slate-900/80 border-b border-slate-700 flex justify-between items-center">
-            <h3 class="font-bold text-lg text-white flex items-center gap-2">
-                <span class="w-2 h-6 bg-indigo-500 rounded-full shadow-[0_0_10px_#6366f1]"></span>
-                {{ plan.display_name }} <span class="text-xs text-slate-500 font-mono">({{ plan.code_name }})</span>
-            </h3>
+    <div class="bg-slate-900/60 rounded-2xl border border-slate-700/60 overflow-hidden shadow-2xl relative group">
+        
+        <div class="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition duration-500 pointer-events-none"></div>
+
+        <div class="p-5 border-b border-slate-700/80 bg-gradient-to-r from-slate-800/80 to-slate-900/80 flex flex-col md:flex-row justify-between items-center gap-4 relative z-10">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-xl shadow-inner">
+                    {% if plan.code_name == 'basic' %}<i class="fa-solid fa-seedling"></i>
+                    {% elif plan.code_name == 'optimal' %}<i class="fa-solid fa-rocket"></i>
+                    {% else %}<i class="fa-solid fa-crown"></i>{% endif %}
+                </div>
+                <div>
+                    <h3 class="font-black text-xl text-white tracking-wide">
+                        {{ plan.display_name }} 
+                        <span class="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded font-mono ml-2 font-normal">{{ plan.code_name }}</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-1 truncate max-w-md">
+                        Fitur: <span class="text-emerald-400">{{ plan.features | join(', ') if plan.features else 'Belum ada fitur' }}</span>
+                    </p>
+                </div>
+            </div>
+            
+            <button onclick="openFeatureModal('{{ plan.id }}', '{{ plan.display_name }}', '{{ plan.features | join(', ') if plan.features else '' }}')" 
+                class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-4 py-2.5 rounded-lg border border-slate-600 hover:border-indigo-400 transition shadow-lg flex items-center gap-2">
+                <i class="fa-solid fa-pen-to-square text-indigo-400"></i> Edit Benefit Paket
+            </button>
         </div>
         
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto relative z-10">
             <table class="w-full text-left text-sm text-slate-300">
-                <thead class="bg-slate-900/30 text-slate-400 uppercase text-[10px] tracking-wider font-bold">
+                <thead class="bg-black/20 text-slate-400 uppercase text-[10px] tracking-wider font-black border-b border-slate-700/50">
                     <tr>
                         <th class="px-6 py-4">Durasi Paket</th>
                         <th class="px-6 py-4">Harga Normal (Coret)</th>
                         <th class="px-6 py-4">Harga Jual (Promo)</th>
-                        <th class="px-6 py-4">Teks Display</th>
+                        <th class="px-6 py-4">Label Display</th>
                         <th class="px-6 py-4 text-right">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-700/50">
+                <tbody class="divide-y divide-slate-800/80">
                     {% for var in plan.pricing_variants %}
-                    <form action="/super-admin/pricing" method="POST">
+                    <form action="/super-admin/pricing" method="POST" onsubmit="return cleanCurrency(this)">
+                        <input type="hidden" name="action" value="update_variant">
                         <input type="hidden" name="id" value="{{ var.id }}">
-                        <tr class="hover:bg-slate-700/30 transition group">
-                            <td class="px-6 py-4 font-black text-white text-base">
-                                {{ var.duration_days }} <span class="text-xs text-slate-500 font-normal">Hari</span>
+                        
+                        <tr class="hover:bg-slate-800/40 transition group/row">
+                            <td class="px-6 py-5">
+                                <div class="font-black text-white text-base flex items-center gap-2">
+                                    <i class="fa-regular fa-clock text-slate-500"></i> {{ var.duration_days }} 
+                                    <span class="text-xs text-slate-500 font-normal uppercase tracking-widest">Hari</span>
+                                </div>
                             </td>
                             
-                            <td class="px-6 py-4">
-                                <div class="relative">
-                                    <span class="absolute left-3 top-2.5 text-xs text-slate-500">Rp</span>
-                                    <input type="number" name="price_strike" value="{{ var.price_strike|replace('Rp', '')|replace('.', '')|replace(' ', '') if var.price_strike else '0' }}" 
-                                        class="w-32 bg-black/40 border border-slate-600 rounded-lg pl-8 pr-3 py-2 text-xs focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none text-red-300 font-mono transition line-through decoration-red-500/50">
+                            <td class="px-6 py-5">
+                                <div class="relative group-hover/row:-translate-y-0.5 transition transform">
+                                    <span class="absolute left-3 top-3 text-xs font-bold text-slate-500">Rp</span>
+                                    <input type="text" name="price_strike" 
+                                        value="{{ (var.price_strike|replace('.0', '')|replace('Rp', '')|replace('.', '')|replace(' ', '')) if var.price_strike else '0' }}" 
+                                        class="rupiah-input w-36 bg-black/40 border border-slate-700 rounded-xl pl-8 pr-3 py-2.5 text-xs focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none text-red-400 font-mono font-bold transition line-through decoration-red-500/50"
+                                        placeholder="0">
                                 </div>
-                                <p class="text-[9px] text-slate-500 mt-1">Kosongkan jika tidak ada diskon</p>
+                                <p class="text-[9px] text-slate-500 mt-1.5 ml-1">Coret/Kosongkan</p>
                             </td>
 
-                            <td class="px-6 py-4">
-                                <div class="relative">
-                                    <span class="absolute left-3 top-2.5 text-xs text-emerald-500/50">Rp</span>
-                                    <input type="number" name="price_raw" value="{{ var.price_raw }}" 
-                                        class="w-32 bg-black/40 border border-slate-600 rounded-lg pl-8 pr-3 py-2 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-emerald-400 font-mono font-bold transition shadow-inner">
+                            <td class="px-6 py-5">
+                                <div class="relative group-hover/row:-translate-y-0.5 transition transform">
+                                    <span class="absolute left-3 top-3 text-xs font-bold text-emerald-500/70">Rp</span>
+                                    <input type="text" name="price_raw" 
+                                        value="{{ var.price_raw | int }}" 
+                                        class="rupiah-input w-36 bg-slate-900 border border-slate-600 rounded-xl pl-8 pr-3 py-2.5 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none text-emerald-400 font-mono font-black transition shadow-inner shadow-black/50"
+                                        placeholder="0">
                                 </div>
-                                <p class="text-[9px] text-emerald-500/50 mt-1">Harga yang dibayar user</p>
+                                <p class="text-[9px] text-emerald-500/50 mt-1.5 ml-1">Harga Fix Pembeli</p>
                             </td>
 
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-5">
                                 <input type="text" name="price_display" value="{{ var.price_display }}" 
-                                    class="w-24 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-xs font-bold text-indigo-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition text-center uppercase tracking-wide">
+                                    class="w-28 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-black text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition text-center group-hover/row:-translate-y-0.5 transform shadow-sm"
+                                    placeholder="ex: 99Rb">
                             </td>
 
-                            <td class="px-6 py-4 text-right">
-                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-lg transition shadow-[0_0_15px_rgba(79,70,229,0.3)] hover:shadow-[0_0_20px_rgba(79,70,229,0.5)] transform hover:-translate-y-0.5 active:scale-95">
-                                    <i class="fa-solid fa-floppy-disk mr-1"></i> Update
+                            <td class="px-6 py-5 text-right">
+                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-[0_0_15px_rgba(79,70,229,0.2)] hover:shadow-[0_0_20px_rgba(79,70,229,0.4)] transform hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-2 ml-auto">
+                                    <i class="fa-solid fa-floppy-disk"></i> Update
                                 </button>
                             </td>
                         </tr>
@@ -76,4 +112,145 @@
     </div>
     {% endfor %}
 </div>
+
+<div id="featureModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-all duration-300 opacity-0 pointer-events-none">
+    <div class="bg-slate-900 w-full max-w-lg rounded-[2rem] shadow-2xl border border-slate-700 overflow-hidden transform scale-90 transition-all duration-300" id="featureModalContent">
+        
+        <div class="p-6 border-b border-slate-800 bg-slate-800/30 flex justify-between items-center relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <h3 class="font-black text-xl text-white flex items-center gap-2 relative z-10">
+                <i class="fa-solid fa-list-check text-indigo-400"></i> Edit Benefit <span id="modalPlanTitle" class="text-indigo-400"></span>
+            </h3>
+            <button type="button" onclick="closeFeatureModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 flex items-center justify-center transition relative z-10">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        
+        <div class="p-6">
+            <form action="/super-admin/pricing" method="POST">
+                <input type="hidden" name="action" value="update_plan">
+                <input type="hidden" name="plan_id" id="modalPlanId">
+                
+                <div class="mb-6">
+                    <label class="text-xs text-slate-400 font-bold uppercase tracking-widest mb-3 block">
+                        List Fitur (Pisahkan dengan koma)
+                    </label>
+                    <textarea name="features" id="modalFeaturesText" rows="4" 
+                        placeholder="Contoh: 1 Akun Telegram, Support Group Premium, Limit 50 Pesan"
+                        class="w-full bg-black/50 border border-slate-700 rounded-xl p-4 text-sm text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition font-medium leading-relaxed custom-scrollbar"></textarea>
+                    
+                    <div class="mt-3 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex items-start gap-3">
+                        <i class="fa-solid fa-lightbulb text-indigo-400 mt-0.5"></i>
+                        <p class="text-[10px] text-indigo-200 leading-relaxed">
+                            Tips: Setiap tulisan yang dipisahkan oleh tanda koma <b>(,)</b> akan menjadi 1 baris ceklis hijau (<i class="fa-solid fa-check text-emerald-400"></i>) di halaman depan (Landing Page).
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeFeatureModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3.5 rounded-xl transition">Batal</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest py-3.5 rounded-xl transition shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-save"></i> Simpan Fitur
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Custom Scrollbar Textarea */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+</style>
+
+<script>
+    // ==========================================
+    // 1. LOGIC RUPIAH FORMATTER (AUTO TITIK)
+    // ==========================================
+    
+    // Fungsi ngasih format titik
+    function formatRupiah(angka) {
+        let number_string = angka.replace(/[^,\d]/g, '').toString(),
+            split   = number_string.split(','),
+            sisa    = split[0].length % 3,
+            rupiah  = split[0].substr(0, sisa),
+            ribuan  = split[0].substr(sisa).match(/\d{3}/gi);
+
+        if (ribuan) {
+            let separator = sisa ? '.' : '';
+            rupiah += separator + ribuan.join('.');
+        }
+        return rupiah;
+    }
+
+    // Terapkan ke semua input yang punya class 'rupiah-input'
+    const rupiahInputs = document.querySelectorAll('.rupiah-input');
+    
+    rupiahInputs.forEach(function(input) {
+        // Format angka pas pertama kali halaman diload
+        if(input.value) {
+            input.value = formatRupiah(input.value);
+        }
+        
+        // Format angka setiap kali admin ngetik
+        input.addEventListener('keyup', function(e) {
+            this.value = formatRupiah(this.value);
+        });
+    });
+
+    // ==========================================
+    // 2. CLEANSING SEBELUM SUBMIT (HAPUS TITIK)
+    // ==========================================
+    function cleanCurrency(form) {
+        // Ambil input di dalam form yang diklik
+        const strikeInput = form.querySelector('input[name="price_strike"]');
+        const rawInput = form.querySelector('input[name="price_raw"]');
+        
+        // Hapus semua titik biar jadi angka murni buat dikirim ke Database
+        if(strikeInput) strikeInput.value = strikeInput.value.replace(/\./g, '');
+        if(rawInput) rawInput.value = rawInput.value.replace(/\./g, '');
+        
+        // Animasi loading tombol update
+        const btn = form.querySelector('button[type="submit"]');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...';
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+        
+        return true;
+    }
+
+    // ==========================================
+    // 3. LOGIC MODAL FITUR
+    // ==========================================
+    const modal = document.getElementById('featureModal');
+    const modalContent = document.getElementById('featureModalContent');
+
+    function openFeatureModal(planId, planName, currentFeatures) {
+        document.getElementById('modalPlanId').value = planId;
+        document.getElementById('modalPlanTitle').innerText = planName;
+        document.getElementById('modalFeaturesText').value = currentFeatures;
+        
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modalContent.classList.remove('scale-90');
+            modalContent.classList.add('scale-100');
+        }, 10);
+    }
+
+    function closeFeatureModal() {
+        modalContent.classList.remove('scale-100');
+        modalContent.classList.add('scale-90');
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
+
+    // Tutup kalau klik area luar modal
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeFeatureModal();
+    });
+</script>
 {% endblock %}
