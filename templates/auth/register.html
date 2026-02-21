@@ -41,7 +41,9 @@
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition">
                         <i class="fa-solid fa-at"></i>
                     </div>
-                    <input type="text" name="username" id="regUsername" required placeholder="Hanya huruf & angka (min 4 char)" oninput="formatUsername(this)"
+                    <input type="text" name="username" id="regUsername" required 
+                        value="{{ username if username else '' }}"
+                        placeholder="Hanya huruf & angka (min 4 char)" oninput="formatUsername(this)"
                         class="form-input w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none text-sm font-bold text-gray-900 placeholder-gray-400 transition shadow-sm">
                 </div>
             </div>
@@ -49,13 +51,15 @@
             <div>
                 <label class="block text-xs font-black text-gray-700 uppercase tracking-widest mb-2 ml-1 flex justify-between">
                     <span>Email Aktif</span>
-                    <span id="emailWarning" class="text-red-500 text-[10px] hidden"><i class="fa-solid fa-triangle-exclamation"></i> Hindari Email Sekali Pakai</span>
+                    <span id="emailWarning" class="text-red-500 text-[10px] hidden"><i class="fa-solid fa-triangle-exclamation"></i> Domain Dilarang</span>
                 </label>
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition">
                         <i class="fa-regular fa-envelope"></i>
                     </div>
-                    <input type="email" name="email" id="regEmail" required placeholder="contoh: owner@bisnis.com" oninput="checkEmailDomain(this.value)"
+                    <input type="email" name="email" id="regEmail" required 
+                        value="{{ email if email else '' }}"
+                        placeholder="contoh: owner@bisnis.com" oninput="checkEmailDomain(this.value)"
                         class="form-input w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 outline-none text-sm font-bold text-gray-900 placeholder-gray-400 transition shadow-sm">
                 </div>
             </div>
@@ -319,3 +323,4 @@
     }
 </script>
 {% endblock %}
+
