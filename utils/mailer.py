@@ -1,6 +1,6 @@
 """
 =========================================================================================
-📧 BLASTPRO MAILER ENGINE v1.0 (ENTERPRISE GRADE) 📧
+📧 BLASTPRO MAILER ENGINE v1.1 (ENTERPRISE GRADE) 📧
 =========================================================================================
 Mesin pengirim email asinkron menggunakan Background Threading.
 Mencegah UI nge-freeze saat menunggu respon dari server SMTP (Gmail/SendGrid/dll).
@@ -20,6 +20,7 @@ logger = logging.getLogger("BlastPro_Mailer")
 logger.setLevel(logging.INFO)
 
 class BlastProMailer:
+    
     def __init__(self):
         # Mengambil kredensial dari Environment Variables (.env / Render Dashboard)
         # Disarankan pakai Gmail App Password untuk startup awal
@@ -27,7 +28,7 @@ class BlastProMailer:
         self.smtp_port = int(os.environ.get('SMTP_PORT', 587))
         self.sender_email = os.environ.get('SENDER_EMAIL')
         self.sender_password = os.environ.get('SENDER_PASSWORD') # Gunakan App Password, bukan pass email asli
-        self.app_name = "BlastPro SaaS"
+        self.app_name = "BlastPro"
 
         if not self.sender_email or not self.sender_password:
             logger.warning("⚠️ MAILER WARNING: SENDER_EMAIL atau SENDER_PASSWORD belum disetting di environment!")
@@ -79,6 +80,54 @@ class BlastProMailer:
         </html>
         """
 
+    def _get_reset_password_template(self, reset_url: str, user_name: str) -> str:
+        """Template HTML Email Kasta Dewa untuk Lupa Password."""
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; margin: 0; padding: 40px 20px; }}
+                .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }}
+                .header {{ background: linear-gradient(135deg, #111827, #374151); padding: 40px 20px; text-align: center; border-bottom: 4px solid #6366f1; }}
+                .header h1 {{ color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 1px; }}
+                .content {{ padding: 40px 30px; text-align: center; }}
+                .content h2 {{ color: #1f2937; margin-top: 0; font-size: 22px; }}
+                .content p {{ color: #4b5563; line-height: 1.6; font-size: 15px; margin-bottom: 30px; }}
+                .btn {{ display: inline-block; background: linear-gradient(to right, #4f46e5, #6366f1); color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.25); }}
+                .footer {{ background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb; }}
+                .footer p {{ color: #9ca3af; font-size: 12px; margin: 0; }}
+                .warning {{ color: #ef4444; font-size: 13px; margin-top: 20px; font-weight: 500; background: #fef2f2; padding: 10px; border-radius: 8px; border: 1px solid #fca5a5; display: inline-block; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🔒 Reset Password</h1>
+                </div>
+                <div class="content">
+                    <h2>Halo, {user_name}!</h2>
+                    <p>Kami menerima permintaan untuk mengatur ulang password akun <b>{self.app_name}</b> Anda. Jangan khawatir, kami siap membantu Anda kembali masuk.</p>
+                    
+                    <a href="{reset_url}" class="btn">Buat Password Baru</a>
+                    
+                    <br>
+                    <p class="warning">⚠️ Link ini sangat rahasia dan hanya berlaku selama 1 Jam.</p>
+                    
+                    <p style="font-size: 13px; color: #6b7280; margin-top: 30px; text-align: left;">
+                        Jika tombol di atas tidak berfungsi, copy-paste link berikut ke browser Anda:<br>
+                        <a href="{reset_url}" style="color: #4f46e5; word-break: break-all;">{reset_url}</a>
+                    </p>
+                </div>
+                <div class="footer">
+                    <p>&copy; {datetime.now().year} {self.app_name}. All rights reserved.</p>
+                    <p>Jika Anda tidak meminta reset password, abaikan email ini. Akun Anda tetap aman.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
     def _send_email_sync(self, to_email: str, subject: str, html_content: str):
         """Fungsi inti pengirim email (Berjalan di background)."""
         if not self.sender_email or not self.sender_password:
@@ -103,20 +152,27 @@ class BlastProMailer:
             # Eksekusi Kirim
             server.send_message(msg)
             server.quit()
-            logger.info(f"✅ MAILER: Email verifikasi berhasil dikirim ke {to_email}")
+            logger.info(f"✅ MAILER: Email '{subject}' berhasil dikirim ke {to_email}")
             
         except Exception as e:
             logger.error(f"❌ MAILER ERROR: Gagal mengirim email ke {to_email}. Error: {str(e)}")
 
     def send_verification_email(self, to_email: str, user_name: str, verify_url: str):
-        """
-        Fungsi yang dipanggil dari app.py.
-        Akan melemparkan tugas kirim email ke Background Thread.
-        """
+        """Melemparkan tugas kirim email VERIFIKASI ke Background Thread."""
         html_content = self._get_verification_template(verify_url, user_name)
         subject = f"Verifikasi Akun {self.app_name} Anda"
         
-        # Lempar ke "Kurir Bayangan" (Thread baru) biar server web gak nungguin
+        thread = threading.Thread(
+            target=self._send_email_sync, 
+            args=(to_email, subject, html_content)
+        )
+        thread.start()
+
+    def send_reset_password_email(self, to_email: str, user_name: str, reset_url: str):
+        """Melemparkan tugas kirim email RESET PASSWORD ke Background Thread."""
+        html_content = self._get_reset_password_template(reset_url, user_name)
+        subject = f"🔐 Atur Ulang Password {self.app_name} Anda"
+        
         thread = threading.Thread(
             target=self._send_email_sync, 
             args=(to_email, subject, html_content)
