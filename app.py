@@ -1294,22 +1294,24 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    # Jika user sudah login, tendang ke dashboard
     if 'user_id' in session:
         return redirect(url_for('dashboard_overview'))
 
+    # [FIX]: Siapkan variabel kosong buat nampung data lama
+    saved_username = ""
+    saved_email = ""
+
     if request.method == 'POST':
-        raw_username = request.form.get('username')
-        raw_email = request.form.get('email')
+        saved_username = request.form.get('username', '')
+        saved_email = request.form.get('email', '')
         raw_password = request.form.get('password')
 
-        if not raw_username or not raw_email or not raw_password:
+        if not saved_username or not saved_email or not raw_password:
             flash("Semua kolom wajib diisi!", "danger")
-            return redirect(url_for('register'))
+            return render_template('auth/register.html', username=saved_username, email=saved_email)
 
-        # 1. Sanitasi Input (Anti XSS)
-        username = InputSanitizer.sanitize_username(raw_username)
-        email = raw_email.strip().lower()
+        username = InputSanitizer.sanitize_username(saved_username)
+        email = saved_email.strip().lower()
 
         try:
             # 2. Pertahanan Lapis Pertama: Cek Spam Email
@@ -1361,13 +1363,15 @@ def register():
                 flash("Gagal mendaftar, terjadi gangguan pada server.", "danger")
 
         except (SpamEmailError, WeakPasswordError, SecurityViolation) as e:
-            # Nangkap error dari security.py lalu nampilin ke layar
             flash(str(e), "danger")
+            # [FIX]: JANGAN REDIRECT! Render ulang biar variabel saved-nya kebawa
+            return render_template('auth/register.html', username=saved_username, email=saved_email)
         except Exception as e:
             logger.error(f"Register Error: {e}")
             flash("Terjadi kesalahan sistem. Coba lagi nanti.", "danger")
+            return render_template('auth/register.html', username=saved_username, email=saved_email)
             
-    return render_template('auth/register.html')
+    return render_template('auth/register.html', username=saved_username, email=saved_email)
 
 @app.route('/verify/<token>')
 def verify_email(token):
