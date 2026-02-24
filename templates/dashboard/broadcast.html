@@ -2,9 +2,9 @@
 {% block title %}Broadcast Pesan{% endblock %}
 
 {% block content %}
-<div class="max-w-[90rem] mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-32 relative z-10">
+<div class="broadcast-page max-w-[90rem] mx-auto animate-enter px-3 sm:px-6 lg:px-8 py-6 sm:py-8 pb-28 relative z-10">
     
-    <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-6">
+    <div class="flex flex-col lg:flex-row justify-between lg:items-end mb-6 sm:mb-8 gap-4 sm:gap-6">
         <div>
             <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
                 <i class="fa-solid fa-paper-plane text-indigo-600"></i> Broadcast Pesan
@@ -26,9 +26,9 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 sm:gap-7 items-start">
         
-        <div class="xl:col-span-7 space-y-6">
+        <div class="xl:col-span-7 space-y-5 sm:space-y-6">
             
             <div class="bg-white rounded-[2rem] border border-gray-200 shadow-sm overflow-hidden relative">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-bl-full pointer-events-none"></div>
@@ -235,10 +235,10 @@
 
         </div>
 
-        <div class="xl:col-span-5 space-y-6 xl:sticky xl:top-6">
+        <div class="xl:col-span-5 space-y-5 sm:space-y-6 xl:sticky xl:top-6">
             
             <div class="flex justify-center animate-fade-in">
-                <div class="w-[320px] bg-white rounded-[3rem] border-[8px] border-gray-900 shadow-2xl overflow-hidden relative ring-4 ring-gray-100 h-[520px] flex flex-col transform origin-top">
+                <div class="w-full max-w-[340px] bg-white rounded-[2.4rem] sm:rounded-[3rem] border-[7px] border-gray-900 shadow-2xl overflow-hidden relative ring-4 ring-gray-100 h-[500px] sm:h-[520px] flex flex-col transform origin-top">
                     <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-3xl z-30"></div>
                     
                     <div class="bg-[#517DA2] p-4 pt-10 flex items-center gap-3 text-white shadow-md relative z-10 shrink-0">
@@ -405,25 +405,88 @@
 <div id="toastContainer" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
 
 <style>
-    /* Scrollbars */
-    .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    
+    .broadcast-page { color: var(--text-primary); }
+    .broadcast-page .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+    .broadcast-page .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .broadcast-page .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .broadcast-page .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     .custom-scrollbar-dark::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar-dark::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar-dark::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
     .custom-scrollbar-dark::-webkit-scrollbar-thumb:hover { background: #484f58; }
 
-    /* Tooltip */
-    .tooltip-trigger { position: relative; }
-    .tooltip-trigger:hover::before { content: attr(title); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 8px; background: #1f2937; color: white; font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; z-index: 50; opacity: 0; animation: fadeInTooltip 0.2s forwards; }
+    .broadcast-page .tooltip-trigger { position: relative; }
+    .broadcast-page .tooltip-trigger:hover::before { content: attr(title); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 8px; background: #1f2937; color: white; font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; z-index: 50; opacity: 0; animation: fadeInTooltip 0.2s forwards; }
     @keyframes fadeInTooltip { to { opacity: 1; transform: translateX(-50%) translateY(0); } }
-    
-    /* Animations */
+
     .animate-enter-bottom { animation: enterBottom 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     @keyframes enterBottom { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+    .broadcast-page .bg-white,
+    .broadcast-page .bg-gray-50,
+    .broadcast-page .bg-gray-50\/80,
+    .broadcast-page .bg-gray-50\/90,
+    .broadcast-page .bg-gray-100,
+    .broadcast-page .bg-gray-200\/80 { transition: background-color .2s ease, border-color .2s ease, color .2s ease; }
+
+    .broadcast-page input,
+    .broadcast-page textarea,
+    .broadcast-page select { font-size: 14px; }
+
+    @media (max-width: 640px) {
+        .broadcast-page h1 { font-size: 1.5rem !important; }
+        .broadcast-page .rounded-\[2rem\] { border-radius: 1.2rem; }
+    }
+
+    html[data-theme='dark'] .broadcast-page .text-gray-900,
+    html[data-theme='dark'] .broadcast-page .text-gray-800,
+    html[data-theme='dark'] .broadcast-page .text-gray-700 { color: var(--text-primary) !important; }
+    html[data-theme='dark'] .broadcast-page .text-gray-600,
+    html[data-theme='dark'] .broadcast-page .text-gray-500,
+    html[data-theme='dark'] .broadcast-page .text-gray-400,
+    html[data-theme='dark'] .broadcast-page .text-gray-300,
+    html[data-theme='dark'] .broadcast-page .text-gray-200 { color: var(--text-muted) !important; }
+
+    html[data-theme='dark'] .broadcast-page .bg-white,
+    html[data-theme='dark'] .broadcast-page .bg-gray-50,
+    html[data-theme='dark'] .broadcast-page .bg-gray-50\/80,
+    html[data-theme='dark'] .broadcast-page .bg-gray-50\/90,
+    html[data-theme='dark'] .broadcast-page .bg-gray-100,
+    html[data-theme='dark'] .broadcast-page .bg-gray-200\/80,
+    html[data-theme='dark'] #databaseModal #dbModalPanel,
+    html[data-theme='dark'] #databaseModal .bg-white\/80 { background: var(--panel-bg) !important; }
+
+    html[data-theme='dark'] .broadcast-page .border-gray-50,
+    html[data-theme='dark'] .broadcast-page .border-gray-100,
+    html[data-theme='dark'] .broadcast-page .border-gray-200,
+    html[data-theme='dark'] .broadcast-page .border-gray-300,
+    html[data-theme='dark'] .broadcast-page .border-indigo-100,
+    html[data-theme='dark'] .broadcast-page .border-blue-100,
+    html[data-theme='dark'] .broadcast-page .border-amber-200,
+    html[data-theme='dark'] #databaseModal .border-gray-200 { border-color: var(--border-color) !important; }
+
+    html[data-theme='dark'] .broadcast-page .from-amber-50,
+    html[data-theme='dark'] .broadcast-page .to-orange-50,
+    html[data-theme='dark'] .broadcast-page .from-blue-50,
+    html[data-theme='dark'] .broadcast-page .to-indigo-50,
+    html[data-theme='dark'] .broadcast-page .bg-blue-50\/50,
+    html[data-theme='dark'] .broadcast-page .bg-indigo-50\/30,
+    html[data-theme='dark'] .broadcast-page .bg-blue-50\/30,
+    html[data-theme='dark'] .broadcast-page .bg-purple-50\/50,
+    html[data-theme='dark'] .broadcast-page .bg-green-50\/50 { background: rgba(37, 99, 235, 0.12) !important; }
+
+    html[data-theme='dark'] .broadcast-page #messageInput,
+    html[data-theme='dark'] .broadcast-page #targetType,
+    html[data-theme='dark'] .broadcast-page #teleLinkInput,
+    html[data-theme='dark'] .broadcast-page #templateSelect,
+    html[data-theme='dark'] #databaseModal #apiSearchInput,
+    html[data-theme='dark'] #databaseModal #apiFolderSelect {
+        background-color: var(--panel-muted) !important;
+        border-color: var(--border-color) !important;
+        color: var(--text-primary) !important;
+    }
+
+    html[data-theme='dark'] .broadcast-page #btnStop { background: var(--panel-bg) !important; color: #fca5a5 !important; border-color: #7f1d1d !important; }
 </style>
 
 <script>
