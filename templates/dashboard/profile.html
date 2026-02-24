@@ -2,349 +2,281 @@
 {% block title %}Profil Saya{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto animate-fade-in pb-24">
-
-    <div class="relative rounded-3xl overflow-hidden shadow-2xl mb-8 bg-gray-900 group">
-        <div class="absolute inset-0 bg-gradient-to-r from-gray-900 via-indigo-950 to-gray-900 opacity-95"></div>
-        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay"></div>
-        
-        <div class="relative p-8 md:p-10 flex flex-col md:flex-row items-center md:items-end gap-8">
-            <div class="relative group/avatar">
-                <div class="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-indigo-400 to-purple-500 shadow-xl shadow-indigo-500/20">
-                    <div class="w-full h-full bg-gray-800 rounded-full flex items-center justify-center overflow-hidden border-4 border-gray-900 cursor-pointer relative" onclick="document.getElementById('avatarUpload').click()">
-                        {% if user.avatar_url %}
-                            <img id="avatarPreview" src="{{ user.avatar_url }}" class="w-full h-full object-cover">
+<div class="max-w-7xl mx-auto pb-24 animate-fade-in profile-shell">
+    <section class="profile-hero rounded-3xl p-6 md:p-8 mb-6 md:mb-8">
+        <div class="flex flex-col lg:flex-row gap-6 lg:items-end">
+            <div class="flex items-center gap-4 md:gap-6">
+                <div class="relative group/avatar shrink-0">
+                    <button type="button" aria-label="Ubah foto profil" onclick="document.getElementById('avatarUpload').click()" class="w-24 h-24 md:w-28 md:h-28 rounded-full p-[3px] bg-gradient-to-br from-indigo-400 to-purple-500 shadow-lg">
+                        <span class="w-full h-full rounded-full overflow-hidden flex items-center justify-center profile-avatar-ring relative">
+                            {% if user.avatar_url %}
+                                <img id="avatarPreview" src="{{ user.avatar_url }}" alt="Avatar pengguna" class="w-full h-full object-cover">
+                            {% else %}
+                                <span id="avatarText" class="text-3xl font-bold text-slate-300 select-none">{{ user.email[0]|upper }}</span>
+                                <img id="avatarPreview" alt="Avatar pengguna" class="hidden w-full h-full object-cover">
+                            {% endif %}
+                            <span class="absolute inset-0 opacity-0 group-hover/avatar:opacity-100 transition bg-slate-900/55 flex items-center justify-center text-white text-sm">
+                                <i class="fa-solid fa-camera mr-1"></i>Ubah
+                            </span>
+                        </span>
+                    </button>
+                    <input type="file" id="avatarUpload" class="hidden" accept="image/*" onchange="previewAvatar(event)">
+                    <span class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full grid place-items-center border profile-status-dot">
+                        {% if not user.is_banned %}
+                            <i class="fa-solid fa-circle-check text-emerald-400"></i>
                         {% else %}
-                            <span id="avatarText" class="text-4xl font-bold text-gray-400 select-none">{{ user.email[0]|upper }}</span>
-                            <img id="avatarPreview" class="hidden w-full h-full object-cover">
+                            <i class="fa-solid fa-ban text-rose-400"></i>
                         {% endif %}
-                        
-                        <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition backdrop-blur-[2px]">
-                            <i class="fa-solid fa-camera text-white"></i>
-                        </div>
+                    </span>
+                </div>
+
+                <div>
+                    <p class="text-xs uppercase tracking-[0.2em] profile-hero-muted mb-1">Akun aktif</p>
+                    <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">{{ user.email.split('@')[0]|title }}</h1>
+                    <div class="mt-2 flex flex-wrap gap-2 text-xs items-center">
+                        <span class="profile-pill">ID #{{ '%06d' % user.id }}</span>
+                        {% if user.plan_tier == 'UMKM PRO' %}
+                            <span class="profile-pill profile-pill-pro">UMKM PRO</span>
+                        {% elif user.plan_tier == 'Agency' %}
+                            <span class="profile-pill profile-pill-agency">AGENCY</span>
+                        {% else %}
+                            <span class="profile-pill">STARTER</span>
+                        {% endif %}
                     </div>
                 </div>
-                <input type="file" id="avatarUpload" class="hidden" accept="image/*" onchange="previewAvatar(event)">
-                
-                <div class="absolute bottom-2 right-2 w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center border border-gray-700">
-                    {% if not user.is_banned %}
-                        <i class="fa-solid fa-check-circle text-green-400 text-lg shadow-[0_0_10px_#4ade80]"></i>
-                    {% else %}
-                        <i class="fa-solid fa-ban text-red-500"></i>
-                    {% endif %}
-                </div>
             </div>
 
-            <div class="flex-1 text-center md:text-left space-y-2">
-                <h1 class="text-3xl font-bold text-white tracking-tight">{{ user.email.split('@')[0]|title }}</h1>
-                <div class="flex flex-wrap justify-center md:justify-start gap-3 items-center text-sm">
-                    <span class="text-gray-400 font-mono"><i class="fa-solid fa-fingerprint mr-1"></i> ID: #{{ '%06d' % user.id }}</span>
-                    <span class="text-gray-600">|</span>
-                    {% if user.plan_tier == 'UMKM PRO' %}
-                        <span class="px-2 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/50 text-indigo-300 text-xs font-bold uppercase tracking-wider">PRO MEMBER</span>
-                    {% elif user.plan_tier == 'Agency' %}
-                        <span class="px-2 py-0.5 rounded bg-purple-500/20 border border-purple-500/50 text-purple-300 text-xs font-bold uppercase tracking-wider">AGENCY</span>
-                    {% else %}
-                        <span class="px-2 py-0.5 rounded bg-gray-700 text-gray-400 text-xs font-bold uppercase">STARTER</span>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="text-center md:text-right bg-white/5 p-3 rounded-xl border border-white/10 backdrop-blur-sm">
-                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Saldo Affiliate</p>
-                <p class="text-2xl font-bold text-emerald-400 font-mono">Rp {{ "{:,.0f}".format(user.wallet_balance).replace(',', '.') }}</p>
+            <div class="grid sm:grid-cols-2 gap-3 w-full lg:w-auto lg:min-w-[24rem] lg:ml-auto">
+                <article class="profile-stat-card">
+                    <p class="profile-stat-label">Saldo affiliate</p>
+                    <p class="profile-stat-value">Rp {{ "{:,.0f}".format(user.wallet_balance).replace(',', '.') }}</p>
+                </article>
+                <article class="profile-stat-card">
+                    <p class="profile-stat-label">Status akun</p>
+                    <p class="profile-stat-value text-base md:text-lg">{{ 'Terverifikasi' if not user.is_banned else 'Dibatasi' }}</p>
+                </article>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        <div class="lg:col-span-4 space-y-6">
-            
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 relative overflow-hidden">
-                <div class="absolute -right-6 -top-6 bg-blue-50 w-32 h-32 rounded-full opacity-50"></div>
-                <h3 class="font-bold text-gray-800 flex items-center gap-2 mb-4 relative z-10">
-                    <i class="fa-brands fa-telegram text-blue-500 text-xl"></i> Notifikasi Bot
-                </h3>
-                
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <aside class="xl:col-span-4 space-y-4">
+            <section class="profile-card p-5">
+                <h2 class="text-sm font-bold mb-3 profile-title"><i class="fa-brands fa-telegram mr-2 text-sky-500"></i>Notifikasi Bot</h2>
                 {% if is_notif_connected %}
-                    <div class="bg-green-50 border border-green-100 rounded-xl p-3 mb-3 flex items-center gap-3">
-                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600"><i class="fa-solid fa-bell"></i></div>
+                    <div class="profile-alert-ok p-3 rounded-xl mb-3 flex items-start gap-3">
+                        <i class="fa-solid fa-bell text-emerald-400 mt-0.5"></i>
                         <div>
-                            <p class="text-xs font-bold text-green-800">Aktif & Terhubung</p>
-                            <p class="text-[10px] text-green-600">Bot siap melapor.</p>
+                            <p class="font-semibold text-sm">Terhubung dan aktif</p>
+                            <p class="text-xs opacity-80">Bot akan kirim pengingat sebelum jadwal broadcast dimulai.</p>
                         </div>
                     </div>
-                    <a href="https://t.me/{{ bot_username }}" target="_blank" class="block w-full py-2 text-center rounded-lg border border-gray-200 text-gray-600 text-xs font-bold hover:bg-gray-50 transition">Buka Bot <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i></a>
+                    <a href="https://t.me/{{ bot_username }}" target="_blank" class="profile-btn-secondary w-full text-center">Buka bot Telegram</a>
                 {% else %}
-                    <p class="text-xs text-gray-500 mb-4 relative z-10">Dapatkan notifikasi jadwal real-time (5 menit sebelum broadcast).</p>
-                    <a href="{{ bot_link }}" target="_blank" class="relative z-10 flex items-center justify-center w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition shadow-lg shadow-blue-200">
-                        <i class="fa-solid fa-plug mr-2"></i> Hubungkan Sekarang
-                    </a>
+                    <p class="text-sm profile-text-muted mb-3">Supaya tidak ketinggalan jadwal, hubungkan Telegram sekarang. Notifikasi dikirim otomatis 5 menit sebelum broadcast.</p>
+                    <a href="{{ bot_link }}" target="_blank" class="profile-btn-primary w-full text-center">Hubungkan Telegram</a>
                 {% endif %}
+            </section>
+
+            <section class="profile-card p-5">
+                <h2 class="text-sm font-bold mb-2 profile-title"><i class="fa-solid fa-lightbulb mr-2 text-amber-500"></i>Tips cepat</h2>
+                <ul class="text-sm profile-text-muted space-y-2 list-disc list-inside">
+                    <li>Lengkapi profil agar tim support lebih cepat bantu saat ada kendala.</li>
+                    <li>Periksa paket langganan secara berkala untuk hindari layanan berhenti.</li>
+                    <li>Gunakan referral untuk menambah komisi otomatis.</li>
+                </ul>
+            </section>
+        </aside>
+
+        <section class="xl:col-span-8 profile-card p-4 md:p-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
+                <button class="tab-btn tab-active" onclick="openTab(event, 'profile')">
+                    <span class="icon-box"><i class="fa-solid fa-user"></i></span>
+                    Profil
+                </button>
+                <button class="tab-btn" onclick="openTab(event, 'referral')">
+                    <span class="icon-box"><i class="fa-solid fa-link"></i></span>
+                    Referral
+                </button>
+                <button class="tab-btn" onclick="openTab(event, 'subscription')">
+                    <span class="icon-box"><i class="fa-solid fa-crown"></i></span>
+                    Langganan
+                </button>
+                <button class="tab-btn" onclick="openTab(event, 'security')">
+                    <span class="icon-box"><i class="fa-solid fa-shield-halved"></i></span>
+                    Keamanan
+                </button>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <nav class="flex flex-col p-2 space-y-1">
-                    <button onclick="openTab(event, 'profile')" class="tab-btn active w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition">
-                        <div class="icon-box w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100 text-indigo-600 transition"><i class="fa-regular fa-user"></i></div>
-                        Data Pribadi
-                    </button>
-                    
-                    <button onclick="openTab(event, 'affiliate')" class="tab-btn w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition text-gray-600 hover:bg-gray-50">
-                        <div class="icon-box w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-500 transition"><i class="fa-solid fa-money-bill-trend-up"></i></div>
-                        Program Affiliate <span class="ml-auto text-[10px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-bold">25%</span>
-                    </button>
-                    
-                    <button onclick="openTab(event, 'subscription')" class="tab-btn w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition text-gray-600 hover:bg-gray-50">
-                        <div class="icon-box w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-500 transition"><i class="fa-solid fa-receipt"></i></div>
-                        Langganan
-                    </button>
-                    
-                    <button onclick="openTab(event, 'security')" class="tab-btn w-full text-left px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-3 transition text-gray-600 hover:bg-gray-50">
-                        <div class="icon-box w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 text-gray-500 transition"><i class="fa-solid fa-lock"></i></div>
-                        Keamanan
-                    </button>
-                </nav>
-            </div>
-        </div>
-
-        <div class="lg:col-span-8">
-            
-            <div id="content-profile" class="tab-content block animate-fade-in">
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-bold text-gray-800">Edit Informasi</h3>
-                        <button onclick="toggleEdit()" id="btnEdit" class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-100 transition">Enable Edit</button>
+            <div id="content-profile" class="tab-content space-y-5">
+                <div class="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                        <h3 class="text-lg font-bold profile-title">Informasi dasar</h3>
+                        <p class="text-sm profile-text-muted">Data ini membantu kami menampilkan identitas akun Anda dengan rapi di dashboard.</p>
                     </div>
-                    <form class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Email (Login)</label>
-                            <input type="text" value="{{ user.email }}" disabled class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 text-sm font-bold cursor-not-allowed">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nama Lengkap</label>
-                            <input type="text" placeholder="Nama Anda" class="profile-input w-full p-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition disabled:bg-gray-50" disabled>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">WhatsApp</label>
-                            <input type="text" placeholder="+62..." class="profile-input w-full p-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition disabled:bg-gray-50" disabled>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Nama Bisnis</label>
-                            <input type="text" placeholder="Contoh: Baba Store" class="profile-input w-full p-3 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition disabled:bg-gray-50" disabled>
-                        </div>
-                        <div class="md:col-span-2 flex justify-end hidden" id="saveBtnContainer">
-                            <button type="button" class="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg" onclick="saveProfile()">Simpan Perubahan</button>
-                        </div>
-                    </form>
+                    <button type="button" onclick="toggleEdit()" class="profile-btn-secondary"><i class="fa-solid fa-pen mr-2"></i>Edit data</button>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <label class="space-y-1">
+                        <span class="profile-label">Nama tampilan</span>
+                        <input class="profile-input" type="text" value="{{ user.email.split('@')[0]|title }}" disabled>
+                    </label>
+                    <label class="space-y-1">
+                        <span class="profile-label">Email</span>
+                        <input class="profile-input" type="email" value="{{ user.email }}" disabled>
+                    </label>
+                    <label class="space-y-1 md:col-span-2">
+                        <span class="profile-label">Nomor WhatsApp</span>
+                        <input class="profile-input" type="text" value="{{ user.phone_number or '' }}" placeholder="Contoh: 628123456789" disabled>
+                    </label>
+                </div>
+
+                <div id="saveBtnContainer" class="hidden pt-2">
+                    <button class="profile-btn-primary" onclick="saveProfile(event)">Simpan perubahan</button>
                 </div>
             </div>
 
-            <div id="content-affiliate" class="tab-content hidden animate-fade-in">
-                <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden mb-6">
-                    <div class="absolute top-0 right-0 p-8 opacity-10"><i class="fa-solid fa-sack-dollar fa-8x"></i></div>
-                    <div class="relative z-10">
-                        <h3 class="text-xl font-bold mb-1">Affiliate Partner</h3>
-                        <p class="text-indigo-200 text-sm mb-6 max-w-md">Dapatkan komisi 25% setiap teman yang mendaftar dan berlangganan lewat link Anda.</p>
-                        
-                        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-                            <div class="flex-1 w-full">
-                                <p class="text-[10px] text-indigo-200 uppercase font-bold mb-1">Link Referral Anda</p>
-                                <div class="flex items-center gap-2 bg-black/20 rounded-lg px-3 py-2">
-                                    <code class="text-sm font-mono text-white truncate flex-1" id="refLink">https://{{ request.host }}/register?ref={{ user.referral_code }}</code>
-                                    <button onclick="copyRef()" class="text-indigo-300 hover:text-white transition"><i class="fa-regular fa-copy"></i></button>
-                                </div>
-                            </div>
-                            <div class="text-center md:text-right px-4 md:border-l border-white/10">
-                                <p class="text-[10px] text-indigo-200 uppercase font-bold">Kode Unik</p>
-                                <p class="text-2xl font-bold font-mono tracking-widest">{{ user.referral_code }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div id="content-referral" class="tab-content hidden space-y-4">
+                <h3 class="text-lg font-bold profile-title">Program referral</h3>
+                <p class="text-sm profile-text-muted">Bagikan link ini ke teman Anda. Setiap pendaftaran dari link referral akan tercatat otomatis.</p>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-gray-500 text-xs font-bold uppercase">Dompet Komisi</p>
-                                <h3 class="text-3xl font-extrabold text-gray-800">Rp {{ "{:,.0f}".format(user.wallet_balance).replace(',', '.') }}</h3>
-                            </div>
-                            <div class="p-3 bg-green-50 text-green-600 rounded-xl"><i class="fa-solid fa-wallet text-xl"></i></div>
-                        </div>
-                        <button class="w-full py-2.5 border border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-bold rounded-xl text-sm transition">Request Withdraw</button>
-                    </div>
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-gray-500 text-xs font-bold uppercase">Total Member</p>
-                                <h3 class="text-3xl font-extrabold text-gray-800">0 <span class="text-sm text-gray-400 font-normal">Orang</span></h3>
-                            </div>
-                            <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-users-line text-xl"></i></div>
-                        </div>
-                        <p class="text-xs text-gray-400">Total user yang menggunakan kode referral Anda.</p>
-                    </div>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <article class="profile-muted-box p-4">
+                        <p class="profile-label mb-1">Link referral Anda</p>
+                        <p id="refLink" class="text-sm break-all font-mono profile-title">{{ request.host_url }}register?ref={{ user.referral_code or user.id }}</p>
+                        <button class="profile-btn-secondary mt-3" onclick="copyRef()"><i class="fa-regular fa-copy mr-2"></i>Salin link</button>
+                    </article>
+                    <article class="profile-muted-box p-4">
+                        <p class="profile-label mb-1">Dompet komisi</p>
+                        <p class="text-2xl font-extrabold profile-title">Rp {{ "{:,.0f}".format(user.wallet_balance).replace(',', '.') }}</p>
+                        <button class="profile-btn-secondary mt-3">Request withdraw</button>
+                    </article>
                 </div>
             </div>
 
-            <div id="content-subscription" class="tab-content hidden animate-fade-in">
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-bold text-gray-800">Status Langganan</h3>
-                        <a href="/dashboard/payment" class="text-xs bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 transition">Upgrade Paket</a>
+            <div id="content-subscription" class="tab-content hidden space-y-4">
+                <div class="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                        <h3 class="text-lg font-bold profile-title">Status langganan</h3>
+                        <p class="text-sm profile-text-muted">Pantau masa aktif paket agar automasi bisnis tetap berjalan lancar.</p>
                     </div>
-                    
-                    <div class="bg-gray-50 rounded-xl p-6 border border-gray-200 mb-6">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Plan</span>
-                                <h2 class="text-3xl font-extrabold text-indigo-600 mt-1">{{ user.plan_tier|upper }}</h2>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs text-gray-500">Status</p>
-                                {% if user.plan_tier == 'Starter' %}
-                                    <span class="inline-block px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-xs font-bold">FREE TIER</span>
-                                {% else %}
-                                    <span class="inline-block px-3 py-1 bg-green-100 text-green-600 rounded-full text-xs font-bold animate-pulse">ACTIVE</span>
-                                {% endif %}
-                            </div>
+                    <a href="/dashboard/payment" class="profile-btn-primary">Upgrade paket</a>
+                </div>
+
+                <article class="profile-muted-box p-5">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="profile-label">Paket saat ini</p>
+                            <p class="text-2xl font-extrabold profile-title">{{ user.plan_tier|upper }}</p>
                         </div>
-                        
-                        {% if user.plan_tier != 'Starter' %}
-                        <div class="mt-4 pt-4 border-t border-gray-200">
-                            <div class="flex justify-between text-xs mb-1">
-                                <span class="font-bold text-gray-500">Sisa Masa Aktif</span>
-                                <span class="font-bold text-indigo-600">{{ user.days_remaining }} Hari</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="bg-indigo-500 h-2 rounded-full" style="width: 25%"></div>
-                            </div>
-                        </div>
+                        {% if user.plan_tier == 'Starter' %}
+                            <span class="profile-pill">FREE TIER</span>
+                        {% else %}
+                            <span class="profile-pill profile-pill-pro">ACTIVE</span>
                         {% endif %}
                     </div>
-
-                    <h4 class="font-bold text-gray-700 text-sm mb-4">Riwayat Invoice</h4>
-                    <div class="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                        <p class="text-gray-400 text-sm">Belum ada riwayat tagihan.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="content-security" class="tab-content hidden animate-fade-in">
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                    <h3 class="text-lg font-bold text-gray-800 mb-6">Keamanan Akun</h3>
-                    
-                    <div class="space-y-6">
-                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
-                            <div>
-                                <p class="font-bold text-gray-700 text-sm">Ganti Password</p>
-                                <p class="text-xs text-gray-500">Disarankan ganti password tiap 3 bulan.</p>
+                    {% if user.plan_tier != 'Starter' %}
+                        <div class="mt-4">
+                            <div class="flex justify-between text-xs mb-1 profile-text-muted">
+                                <span>Sisa masa aktif</span>
+                                <span class="font-bold">{{ user.days_remaining }} hari</span>
                             </div>
-                            <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition">Update</button>
+                            <div class="w-full h-2 rounded-full bg-slate-200/70 dark:bg-slate-700/70 overflow-hidden">
+                                <div class="h-full w-1/4 bg-indigo-500 rounded-full"></div>
+                            </div>
                         </div>
-
-                        <div class="bg-red-50 p-5 rounded-xl border border-red-100 mt-8">
-                            <h4 class="text-red-700 font-bold text-sm mb-2 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> Hapus Akun Permanen</h4>
-                            <p class="text-red-600/70 text-xs mb-4">Tindakan ini tidak dapat dibatalkan. Semua data akan hilang.</p>
-                            <button onclick="confirmDelete()" class="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-600 hover:text-white rounded-lg text-xs font-bold transition">
-                                Hapus Akun Saya
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                    {% endif %}
+                </article>
             </div>
 
-        </div>
+            <div id="content-security" class="tab-content hidden space-y-4">
+                <h3 class="text-lg font-bold profile-title">Keamanan akun</h3>
+                <div class="profile-muted-box p-4 flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-semibold profile-title">Ganti password</p>
+                        <p class="text-sm profile-text-muted">Demi keamanan, sebaiknya perbarui password secara berkala.</p>
+                    </div>
+                    <button class="profile-btn-secondary">Update</button>
+                </div>
+
+                <div class="rounded-xl border border-rose-200/70 bg-rose-50/70 p-4 dark:border-rose-400/30 dark:bg-rose-500/10">
+                    <p class="font-semibold text-rose-700 dark:text-rose-300 mb-1"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Zona bahaya</p>
+                    <p class="text-sm text-rose-600 dark:text-rose-200 mb-3">Hapus akun bersifat permanen. Semua data tidak bisa dikembalikan.</p>
+                    <button onclick="confirmDelete()" class="profile-btn-danger">Hapus akun saya</button>
+                </div>
+            </div>
+        </section>
     </div>
 </div>
 
-<div id="deleteModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center">
-    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 transform scale-100 transition-all">
-        <h3 class="text-lg font-bold text-gray-900 mb-2">Konfirmasi Hapus</h3>
-        <p class="text-sm text-gray-500 mb-4">Masukkan password untuk konfirmasi penghapusan.</p>
-        <input type="password" id="deletePass" placeholder="Password Anda" class="w-full p-3 border border-gray-300 rounded-lg text-sm mb-4 outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500">
-        <div class="flex gap-3">
-            <button onclick="document.getElementById('deleteModal').classList.add('hidden')" class="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl text-sm">Batal</button>
-            <button onclick="alert('Permintaan dikirim ke admin.')" class="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl text-sm hover:bg-red-700">Hapus</button>
+<div id="deleteModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden items-center justify-center px-4">
+    <div class="profile-card w-full max-w-sm p-5">
+        <h3 class="text-lg font-bold profile-title mb-1">Konfirmasi hapus akun</h3>
+        <p class="text-sm profile-text-muted mb-4">Masukkan password untuk melanjutkan penghapusan akun permanen.</p>
+        <input type="password" id="deletePass" placeholder="Password Anda" class="profile-input mb-4">
+        <div class="flex gap-2">
+            <button onclick="closeDeleteModal()" class="profile-btn-secondary flex-1">Batal</button>
+            <button onclick="alert('Permintaan dikirim ke admin.'); closeDeleteModal();" class="profile-btn-danger flex-1">Hapus</button>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // --- TAB SYSTEM (LOGIC UTAMA) ---
     function openTab(evt, tabName) {
-        // 1. Sembunyikan semua konten tab
-        const contents = document.querySelectorAll('.tab-content');
-        contents.forEach(content => {
-            content.classList.add('hidden');
+        document.querySelectorAll('.tab-content').forEach((content) => content.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach((tab) => {
+            tab.classList.remove('tab-active');
         });
 
-        // 2. Reset style semua tombol tab (biar jadi abu-abu/inactive)
-        const tabs = document.querySelectorAll('.tab-btn');
-        tabs.forEach(tab => {
-            tab.classList.remove('bg-indigo-50', 'text-indigo-700', 'active');
-            tab.classList.add('text-gray-600', 'hover:bg-gray-50');
-            
-            // Reset ikon warna
-            const iconBox = tab.querySelector('.icon-box');
-            iconBox.classList.remove('bg-indigo-100', 'text-indigo-600');
-            iconBox.classList.add('bg-gray-100', 'text-gray-500');
-        });
-
-        // 3. Tampilkan konten yang dipilih
         document.getElementById('content-' + tabName).classList.remove('hidden');
-
-        // 4. Highlight tombol yang diklik
-        const currentBtn = evt.currentTarget;
-        currentBtn.classList.remove('text-gray-600', 'hover:bg-gray-50');
-        currentBtn.classList.add('bg-indigo-50', 'text-indigo-700', 'active');
-        
-        // Highlight ikon
-        const currentIcon = currentBtn.querySelector('.icon-box');
-        currentIcon.classList.remove('bg-gray-100', 'text-gray-500');
-        currentIcon.classList.add('bg-indigo-100', 'text-indigo-600');
+        evt.currentTarget.classList.add('tab-active');
     }
 
-    // --- FITUR LAIN ---
     function copyRef() {
         const text = document.getElementById('refLink').innerText;
         navigator.clipboard.writeText(text).then(() => {
-            alert("Link Referral tersalin!");
+            alert('Link referral berhasil disalin.');
         });
     }
 
     function toggleEdit() {
         const inputs = document.querySelectorAll('.profile-input');
         const saveContainer = document.getElementById('saveBtnContainer');
-        
-        let isDisabled = inputs[0].disabled;
-        inputs.forEach(input => input.disabled = !isDisabled);
-        
-        if (isDisabled) {
-            saveContainer.classList.remove('hidden');
-        } else {
-            saveContainer.classList.add('hidden');
-        }
+        const isDisabled = inputs[0].disabled;
+
+        inputs.forEach((input) => {
+            if (input.id !== 'deletePass') {
+                input.disabled = !isDisabled;
+            }
+        });
+
+        saveContainer.classList.toggle('hidden', !isDisabled);
     }
 
-    function saveProfile() {
-        // Simulasi Save
-        const btn = event.target;
+    function saveProfile(event) {
+        const btn = event.currentTarget;
         const original = btn.innerText;
-        btn.innerText = "Menyimpan...";
+        btn.innerText = 'Menyimpan...';
         setTimeout(() => {
-            alert("Data berhasil disimpan!");
-            toggleEdit(); // Lock lagi
+            alert('Data profil berhasil disimpan.');
+            toggleEdit();
             btn.innerText = original;
         }, 1000);
     }
 
     function confirmDelete() {
-        document.getElementById('deleteModal').classList.remove('hidden');
+        const modal = document.getElementById('deleteModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
     }
 
     function previewAvatar(event) {
@@ -354,7 +286,8 @@
             reader.onload = function(e) {
                 document.getElementById('avatarPreview').src = e.target.result;
                 document.getElementById('avatarPreview').classList.remove('hidden');
-                if(document.getElementById('avatarText')) document.getElementById('avatarText').classList.add('hidden');
+                const avatarText = document.getElementById('avatarText');
+                if (avatarText) avatarText.classList.add('hidden');
             }
             reader.readAsDataURL(file);
         }
@@ -362,13 +295,121 @@
 </script>
 
 <style>
-    /* Animasi Halus */
-    .animate-fade-in {
-        animation: fadeIn 0.4s ease-out forwards;
+    .profile-shell { color: var(--text-primary); }
+    .profile-hero {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(120deg, #1e1b4b 0%, #312e81 45%, #0f172a 100%);
+        border: 1px solid rgba(148, 163, 184, 0.25);
     }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(5px); }
-        to { opacity: 1; transform: translateY(0); }
+    .profile-hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle at 90% 10%, rgba(99,102,241,0.3), transparent 30%);
+        pointer-events: none;
     }
+    .profile-avatar-ring { background: rgba(15, 23, 42, 0.88); border: 2px solid rgba(148, 163, 184, 0.45); }
+    .profile-status-dot { background: #0f172a; border-color: rgba(148, 163, 184, 0.4); }
+    .profile-hero-muted { color: #cbd5e1; }
+
+    .profile-card {
+        background: var(--panel-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        box-shadow: 0 8px 30px -20px rgba(37, 99, 235, 0.35);
+    }
+    .profile-muted-box {
+        background: var(--panel-muted);
+        border: 1px solid var(--border-color);
+        border-radius: .9rem;
+    }
+    .profile-title { color: var(--text-primary); }
+    .profile-text-muted { color: var(--text-muted); }
+    .profile-label { font-size: .78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+
+    .profile-input {
+        width: 100%;
+        border-radius: .75rem;
+        border: 1px solid var(--border-color);
+        background: var(--panel-muted);
+        color: var(--text-primary);
+        padding: .7rem .85rem;
+        font-size: .9rem;
+        outline: none;
+    }
+    .profile-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+    .profile-input:disabled { opacity: .8; cursor: not-allowed; }
+
+    .profile-btn-primary,
+    .profile-btn-secondary,
+    .profile-btn-danger {
+        border-radius: .75rem;
+        padding: .6rem .95rem;
+        font-size: .85rem;
+        font-weight: 700;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        transition: all .2s ease;
+    }
+    .profile-btn-primary { background: #4f46e5; color: #fff; }
+    .profile-btn-primary:hover { background: #4338ca; }
+    .profile-btn-secondary { background: var(--panel-muted); border: 1px solid var(--border-color); color: var(--text-primary); }
+    .profile-btn-secondary:hover { border-color: #6366f1; color: #4f46e5; }
+    .profile-btn-danger { background: #e11d48; color: #fff; }
+    .profile-btn-danger:hover { background: #be123c; }
+
+    .profile-pill {
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: rgba(15, 23, 42, 0.2);
+        color: #e2e8f0;
+        font-size: .7rem;
+        font-weight: 700;
+        padding: .25rem .55rem;
+        letter-spacing: .03em;
+    }
+    .profile-pill-pro { border-color: rgba(99, 102, 241, 0.7); background: rgba(99, 102, 241, 0.25); color: #c7d2fe; }
+    .profile-pill-agency { border-color: rgba(168, 85, 247, 0.7); background: rgba(168, 85, 247, 0.24); color: #e9d5ff; }
+
+    .profile-stat-card {
+        background: rgba(15, 23, 42, 0.35);
+        border: 1px solid rgba(203, 213, 225, 0.25);
+        border-radius: .8rem;
+        padding: .75rem;
+    }
+    .profile-stat-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: #cbd5e1; }
+    .profile-stat-value { font-size: 1.1rem; font-weight: 800; color: #fff; }
+
+    .tab-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .45rem;
+        border-radius: .8rem;
+        border: 1px solid var(--border-color);
+        background: var(--panel-muted);
+        color: var(--text-muted);
+        font-size: .8rem;
+        font-weight: 700;
+        min-height: 2.6rem;
+        transition: all .2s ease;
+    }
+    .icon-box {
+        width: 1.5rem;
+        height: 1.5rem;
+        display: inline-grid;
+        place-items: center;
+        border-radius: .5rem;
+        background: rgba(148, 163, 184, 0.18);
+        font-size: .75rem;
+    }
+    .tab-btn:hover { border-color: #818cf8; color: var(--text-primary); }
+    .tab-active { background: rgba(79, 70, 229, 0.14); border-color: rgba(79, 70, 229, 0.45); color: #4f46e5; }
+    html[data-theme='dark'] .tab-active { color: #a5b4fc; }
+    .tab-active .icon-box { background: rgba(79, 70, 229, 0.22); color: inherit; }
+
+    .profile-alert-ok { background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.28); color: var(--text-primary); }
 </style>
 {% endblock %}
