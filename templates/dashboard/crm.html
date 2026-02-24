@@ -2,24 +2,24 @@
 {% block title %}CRM Database{% endblock %}
 
 {% block content %}
-<div class="max-w-[95rem] mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-32 font-sans relative">
+<div class="crm-page max-w-[95rem] mx-auto animate-enter px-4 sm:px-6 lg:px-8 py-8 pb-32 font-sans relative">
     
     <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-6 relative z-10">
         <div class="flex-1">
             <div class="flex items-center gap-2 mb-2">
                 <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-extrabold uppercase tracking-widest border border-indigo-100 shadow-sm">
                     <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
-                    Live Database
+                    CRM Siap Pakai
                 </span>
                 <span class="px-2.5 py-0.5 rounded-full bg-white border border-gray-200 text-gray-500 text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                    v4.5 Enterprise (Smart Cache)
+                    Mode Kerja Cepat • Smart Cache
                 </span>
             </div>
             <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
                 Pelanggan <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">CRM</span>
             </h1>
             <p class="text-gray-500 mt-2 text-sm max-w-2xl leading-relaxed">
-                Pusat kendali data pelanggan. Kelola leads, filter berdasarkan sumber akun, dan eksekusi strategi marketing Anda dari satu tempat terpusat dengan mudah.
+                Kelola semua kontak pelanggan dari satu halaman yang rapi. Cari cepat, pilih lintas halaman, lalu lanjutkan follow-up tanpa kehilangan konteks.
             </p>
         </div>
         
@@ -28,7 +28,7 @@
                 <div class="absolute inset-0 bg-emerald-50 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                 <div class="relative flex items-center gap-2">
                     <i class="fa-solid fa-file-csv text-lg"></i>
-                    <span>Export CSV</span>
+                    <span>Unduh CSV</span>
                 </div>
             </a>
 
@@ -38,7 +38,7 @@
                     <div class="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center shadow-inner">
                         <i class="fa-solid fa-plus text-xs"></i>
                     </div>
-                    <span>Tambah Data</span>
+                    <span>Tambah / Sinkron Data</span>
                 </div>
             </button>
         </div>
@@ -59,8 +59,8 @@
                     <i class="fa-solid fa-layer-group"></i>
                 </div>
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-bold uppercase tracking-wider opacity-70">Global View</span>
-                    <span class="font-bold text-sm">Semua Database</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider opacity-70" >Semua Akun</span>
+                    <span class="font-bold text-sm">Semua Kontak</span>
                 </div>
                 {% if not current_source or current_source == 'all' %}
                 <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-indigo-500 rounded-t-full shadow-[0_-2px_10px_rgba(99,102,241,0.5)]"></div>
@@ -113,7 +113,7 @@
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <i class="fa-solid fa-search text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
                     </div>
-                    <input type="text" name="q" value="{{ search_query }}" placeholder="Cari berdasarkan Username, Nama, atau ID System..." 
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="Cari nama, username Telegram, atau ID sistem..." 
                            class="block w-full pl-11 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 focus:bg-white transition-all placeholder-gray-400 shadow-sm outline-none">
                     
                     {% if search_query %}
@@ -143,17 +143,17 @@
                         <span id="countSelected">0</span>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-sm font-black text-white tracking-wide">Data Tersimpan di Keranjang</span>
-                        <span class="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Lintas Halaman Aktif</span>
+                        <span class="text-sm font-black text-white tracking-wide">Kontak Terpilih Siap Diproses</span>
+                        <span class="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">Seleksi lintas halaman aktif</span>
                     </div>
                 </div>
                 
                 <div class="flex items-center gap-3">
                     <button onclick="blastSelected()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
-                        <i class="fa-solid fa-paper-plane"></i> Follow Up
+                        <i class="fa-solid fa-paper-plane"></i> Kirim Follow-up
                     </button>
                     <button onclick="copyAllIds()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
-                        <i class="fa-regular fa-copy"></i> Copy ID
+                        <i class="fa-regular fa-copy"></i> Salin ID
                     </button>
                     <div class="w-px h-8 bg-gray-600 mx-1"></div>
                     <button onclick="openDeleteMassalModal()" class="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-red-500/20 text-red-400 hover:bg-red-600 hover:text-white border border-red-500/30 hover:border-transparent transition-all shadow-sm">
@@ -176,13 +176,13 @@
                                 <input type="checkbox" id="selectAllPage" onchange="toggleSelectCurrentPage()" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition shadow-sm hover:border-indigo-400" title="Pilih semua di halaman ini">
                             </div>
                         </th>
-                        <th class="p-5 font-extrabold">Profil Pelanggan</th>
-                        <th class="p-5 font-extrabold">Username & Kontak</th>
+                        <th class="p-5 font-extrabold">Profil Kontak</th>
+                        <th class="p-5 font-extrabold">Username Telegram</th>
                         <th class="p-5 font-extrabold text-center">Status Lead</th>
                         {% if not current_source or current_source == 'all' %}
                         <th class="p-5 font-extrabold text-center">Sumber Database</th>
                         {% endif %}
-                        <th class="p-5 font-extrabold text-center">ID System</th>
+                        <th class="p-5 font-extrabold text-center">ID Sistem</th>
                         <th class="p-5 font-extrabold text-center">Tindakan</th>
                     </tr>
                 </thead>
@@ -224,7 +224,7 @@
                             </a>
                             {% else %}
                             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 text-gray-400 border border-gray-100 text-xs italic font-medium w-fit">
-                                <i class="fa-solid fa-ban text-[10px]"></i> No Username
+                                <i class="fa-solid fa-ban text-[10px]"></i> Belum ada username
                             </span>
                             {% endif %}
                         </td>
@@ -232,11 +232,11 @@
                         <td class="p-5 text-center">
                             {% if u.username %}
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                                    <i class="fa-solid fa-fire text-emerald-500"></i> Active Lead
+                                    <i class="fa-solid fa-fire text-emerald-500"></i> Lead Aktif
                                 </span>
                             {% else %}
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200">
-                                    <i class="fa-solid fa-snowflake text-amber-500"></i> Cold Lead
+                                    <i class="fa-solid fa-snowflake text-amber-500"></i> Perlu Dipanaskan
                                 </span>
                             {% endif %}
                         </td>
@@ -259,7 +259,7 @@
                         
                         <td class="p-5 text-center">
                             <div class="flex items-center justify-center gap-2 relative">
-                                <a href="/dashboard/broadcast?ids={{ u.user_id }}" class="inline-flex items-center justify-center w-8 h-8 bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg shadow-sm transition tooltip-trigger" title="Kirim Pesan (Follow Up)">
+                                <a href="/dashboard/broadcast?ids={{ u.user_id }}" class="inline-flex items-center justify-center w-8 h-8 bg-indigo-50 border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg shadow-sm transition tooltip-trigger" title="Kirim Pesan (Kirim Follow-up)">
                                     <i class="fa-regular fa-paper-plane text-xs"></i>
                                 </a>
                                 
@@ -300,12 +300,12 @@
                                         <i class="fa-solid fa-search text-lg text-purple-400"></i>
                                     </div>
                                 </div>
-                                <h3 class="text-2xl font-black text-gray-800 tracking-tight">Database Masih Kosong</h3>
+                                <h3 class="text-2xl font-black text-gray-800 tracking-tight">Belum Ada Data Kontak</h3>
                                 <p class="text-gray-500 text-sm mt-3 max-w-sm mx-auto leading-relaxed">
                                     {% if search_query %}
-                                    Sistem tidak menemukan data untuk kata kunci pencarian tersebut.
+                                    Belum ada data yang cocok dengan kata kunci pencarian Anda.
                                     {% else %}
-                                    Folder ini belum memiliki daftar pelanggan. Silakan Sinkronisasi Telegram atau Import CSV.
+                                    Folder ini belum memiliki daftar kontak. Anda bisa mulai dari sinkronisasi Telegram atau impor CSV.
                                     {% endif %}
                                 </p>
                             </div>
@@ -323,14 +323,14 @@
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
-                <span class="text-xs text-gray-500 font-medium">Sumber Koneksi: <b class="text-gray-800 bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm ml-1 font-mono">{{ current_source if current_source and current_source != 'all' else 'Global View' }}</b></span>
+                <span class="text-xs text-gray-500 font-medium">Sumber data aktif: <b class="text-gray-800 bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm ml-1 font-mono">{{ current_source if current_source and current_source != 'all' else 'Semua Akun' }}</b></span>
             </div>
 
             {% if total_pages > 0 %}
             <div class="flex flex-col sm:flex-row items-center gap-4 w-full xl:w-auto justify-center order-first xl:order-none mb-4 xl:mb-0">
                 <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
                     <i class="fa-solid fa-list-ol text-gray-400 text-xs"></i>
-                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider border-r border-gray-200 pr-2">Show</span>
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider border-r border-gray-200 pr-2">Tampil</span>
                     <select onchange="changePerPage(this.value)" class="bg-transparent border-none text-gray-700 text-xs font-bold p-0 pl-1 cursor-pointer focus:ring-0 outline-none w-20">
                         <option value="10" {% if per_page == 10 %}selected{% endif %}>10 Baris</option>
                         <option value="25" {% if per_page == 25 %}selected{% endif %}>25 Baris</option>
@@ -346,7 +346,7 @@
                     </a>
                     
                     <div class="h-10 px-5 flex items-center justify-center bg-indigo-50/50 rounded-lg text-xs font-bold text-gray-700 border border-indigo-100 min-w-[120px]">
-                        Page <span class="text-indigo-600 mx-1.5 text-sm">{{ current_page }}</span> of {{ total_pages }}
+                        Halaman <span class="text-indigo-600 mx-1.5 text-sm">{{ current_page }}</span> dari {{ total_pages }}
                     </div>
 
                     <a href="{{ url_for('dashboard_crm', page=current_page+1, per_page=per_page, q=search_query, source=current_source) }}" 
@@ -358,7 +358,7 @@
             {% endif %}
 
             <div class="bg-white px-4 py-2.5 rounded-xl border border-gray-200 shadow-sm text-xs text-gray-500 font-medium w-full xl:w-auto text-center xl:text-right">
-                Menampilkan <b class="text-indigo-600 text-sm mx-1">{{ crm_users|length }}</b> baris dari total <b class="text-gray-900 text-sm mx-1">{{ total_users }}</b> data
+                Menampilkan <b class="text-indigo-600 text-sm mx-1">{{ crm_users|length }}</b> kontak dari total <b class="text-gray-900 text-sm mx-1">{{ total_users }}</b> data
             </div>
         </div>
     </div>
@@ -376,8 +376,8 @@
                             <i class="fa-solid fa-cloud-arrow-up text-xl text-indigo-400"></i>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white tracking-tight">Data Management</h3>
-                            <p class="text-gray-400 text-xs mt-1 font-medium">Pilih metode input data pelanggan Anda.</p>
+                            <h3 class="text-xl font-bold text-white tracking-tight">Pusat Import & Sinkronisasi</h3>
+                            <p class="text-gray-400 text-xs mt-1 font-medium">Pilih cara paling nyaman untuk menambahkan data kontak.</p>
                         </div>
                     </div>
                     <button onclick="closeImportModal()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:bg-red-500 hover:text-white transition">
@@ -395,7 +395,7 @@
                             <i class="fa-solid fa-folder-open text-gray-400 group-focus-within:text-indigo-600 transition-colors"></i>
                         </div>
                         <select id="importTargetAccount" class="block w-full pl-11 pr-10 py-3.5 bg-gray-50 border border-gray-200 text-gray-800 font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white hover:border-gray-300 transition text-sm appearance-none cursor-pointer">
-                            <option value="" disabled selected>-- Tentukan Folder Penyimpanan --</option>
+                            <option value="" disabled selected>-- Pilih folder tujuan data --</option>
                             {% for acc in accounts %}
                             <option value="{{ acc.phone_number }}">{{ acc.first_name }} ({{ acc.phone_number }})</option>
                             {% endfor %}
@@ -408,15 +408,15 @@
 
                 <div class="relative ml-2 border-l-2 border-dashed border-gray-200 pl-6 pb-2">
                     <div class="absolute -left-[13px] top-0 w-6 h-6 bg-gray-800 text-white rounded-full flex items-center justify-center text-xs font-bold border-4 border-white shadow-sm">2</div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Pilih Metode Eksekusi</label>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Pilih Metode Input</label>
                     <div class="grid grid-cols-1 gap-4">
                         <button onclick="runTelegramSync()" class="group flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-200 hover:border-indigo-500 hover:ring-4 hover:ring-indigo-50 transition text-left relative overflow-hidden shadow-sm hover:shadow-md">
                             <div class="bg-indigo-50 text-indigo-600 w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-xl group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white transition duration-300">
                                 <i class="fa-brands fa-telegram"></i>
                             </div>
                             <div class="flex-1">
-                                <h4 class="font-bold text-gray-800 text-sm">Sinkronisasi Telegram (Otomatis)</h4>
-                                <p class="text-xs text-gray-500 mt-1 leading-relaxed">Bot akan membaca riwayat chat dari akun dan menyimpannya sebagai Leads.</p>
+                                <h4 class="font-bold text-gray-800 text-sm">Sinkronisasi Telegram Otomatis</h4>
+                                <p class="text-xs text-gray-500 mt-1 leading-relaxed">Sistem akan membaca riwayat chat dari akun terpilih lalu menyimpannya sebagai kontak CRM.</p>
                             </div>
                             <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition">
                                 <i class="fa-solid fa-bolt text-xs"></i>
@@ -449,15 +449,15 @@
                                         <div class="w-12 h-12 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition">
                                             <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
                                         </div>
-                                        <p class="text-sm font-bold text-gray-700">Klik atau Drag file CSV ke sini</p>
-                                        <p class="text-xs text-gray-400 mt-1">Maksimal 5MB (Hanya .csv)</p>
+                                        <p class="text-sm font-bold text-gray-700">Klik atau tarik file CSV ke area ini</p>
+                                        <p class="text-xs text-gray-400 mt-1">Maksimal 5MB • format .csv</p>
                                     </div>
                                     <div id="uploadSuccess" class="hidden">
                                         <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
                                             <i class="fa-solid fa-file-check text-xl"></i>
                                         </div>
                                         <p class="text-sm font-bold text-emerald-700" id="selectedFileName">file_database.csv</p>
-                                        <p class="text-xs text-gray-500 mt-1">Siap diproses</p>
+                                        <p class="text-xs text-gray-500 mt-1">File siap diproses</p>
                                     </div>
                                 </div>
                                 <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-3 text-xs text-gray-600 leading-relaxed mb-5 shadow-sm">
@@ -465,7 +465,7 @@
                                     Pastikan file memiliki header kolom <b>user_id</b> (Wajib). Tambahkan kolom <b>username</b> atau <b>first_name</b> jika ada.
                                 </div>
                                 <button onclick="uploadCsv()" id="btnUploadCsv" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-sm shadow-lg shadow-emerald-200 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-rocket"></i> Proses Database
+                                    <i class="fa-solid fa-rocket"></i> Mulai Proses Import
                                 </button>
                             </div>
                         </div>
@@ -485,9 +485,9 @@
                     <div class="absolute inset-0 bg-red-100 rounded-full animate-ping opacity-75"></div>
                     <i class="fa-solid fa-triangle-exclamation text-4xl text-red-500 relative z-10"></i>
                 </div>
-                <h3 class="text-2xl font-black text-gray-900 mb-2">Hapus Data Permanen?</h3>
+                <h3 class="text-2xl font-black text-gray-900 mb-2">Hapus Data Secara Permanen?</h3>
                 <p class="text-sm text-gray-500 leading-relaxed mb-8" id="deleteModalText">
-                    Anda yakin ingin menghapus data ini? Aksi ini tidak dapat dibatalkan.
+                    Yakin ingin menghapus data ini? Tindakan ini tidak bisa dikembalikan.
                 </p>
                 <div class="flex gap-3 w-full">
                     <button onclick="closeDeleteModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3.5 rounded-xl transition">Batal</button>
@@ -510,8 +510,8 @@
             <i class="fa-solid fa-robot text-3xl animate-pulse"></i>
         </div>
     </div>
-    <h4 class="text-2xl font-black text-gray-900 tracking-tight">Memproses Data</h4>
-    <p class="text-sm text-gray-500 mt-2 font-medium bg-gray-100 px-4 py-1.5 rounded-full" id="loadingText">Mohon tunggu, jangan tutup halaman...</p>
+    <h4 class="text-2xl font-black text-gray-900 tracking-tight">Sedang Memproses Data</h4>
+    <p class="text-sm text-gray-500 mt-2 font-medium bg-gray-100 px-4 py-1.5 rounded-full" id="loadingText">Mohon tunggu sebentar, jangan tutup halaman ini...</p>
 </div>
 
 <div id="toastContainer" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
@@ -868,5 +868,39 @@
     .tooltip-trigger { position: relative; }
     .tooltip-trigger:hover::before { content: attr(title); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 8px; background: #1f2937; color: white; font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; z-index: 50; opacity: 0; animation: fadeInTooltip 0.2s forwards; }
     @keyframes fadeInTooltip { to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+    .crm-page .glass-surface { background: var(--panel-bg); border-color: var(--border-color); }
+    html[data-theme='dark'] .crm-page .bg-white,
+    html[data-theme='dark'] .crm-page .bg-gray-50,
+    html[data-theme='dark'] .crm-page .bg-gray-50\/30,
+    html[data-theme='dark'] .crm-page .bg-gray-50\/50,
+    html[data-theme='dark'] .crm-page .bg-gray-50\/90,
+    html[data-theme='dark'] .crm-page .bg-white\/90,
+    html[data-theme='dark'] #modalPanel,
+    html[data-theme='dark'] #deletePanel,
+    html[data-theme='dark'] #loadingOverlay {
+        background-color: var(--panel-bg) !important;
+    }
+    html[data-theme='dark'] .crm-page .text-gray-900,
+    html[data-theme='dark'] .crm-page .text-gray-800,
+    html[data-theme='dark'] .crm-page .text-gray-700 { color: var(--text-primary) !important; }
+    html[data-theme='dark'] .crm-page .text-gray-600,
+    html[data-theme='dark'] .crm-page .text-gray-500,
+    html[data-theme='dark'] .crm-page .text-gray-400 { color: var(--text-muted) !important; }
+    html[data-theme='dark'] .crm-page .border-gray-100,
+    html[data-theme='dark'] .crm-page .border-gray-200,
+    html[data-theme='dark'] .crm-page .border-gray-300,
+    html[data-theme='dark'] .crm-page .divide-gray-100 { border-color: var(--border-color) !important; }
+    html[data-theme='dark'] .crm-page .hover\:bg-gray-50:hover,
+    html[data-theme='dark'] .crm-page .hover\:bg-indigo-50\/30:hover { background-color: rgba(37, 99, 235, 0.15) !important; }
+    html[data-theme='dark'] .crm-page input,
+    html[data-theme='dark'] .crm-page select { color: var(--text-primary); }
+    html[data-theme='dark'] #loadingOverlay { background-color: rgba(11, 17, 32, 0.86) !important; }
+
+    @media (max-width: 768px) {
+        #bulkActionContainer { position: fixed; inset: auto 0 1rem 0; margin: 0 .75rem; border-radius: 1rem; padding: .9rem; flex-direction: column; align-items: stretch; gap: .75rem; }
+        #bulkActionContainer > div { width: 100%; justify-content: center; }
+        #bulkActionContainer .w-px { display: none; }
+    }
 </style>
 {% endblock %}
