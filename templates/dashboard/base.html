@@ -47,12 +47,58 @@
         }
     </script>
 
+    <script>
+        (() => {
+            const savedTheme = localStorage.getItem('dashboard-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+
     <style>
         /* Base Reset */
+        :root {
+            --bg-primary: #f8fbff;
+            --bg-soft: #eff6ff;
+            --panel-bg: #ffffff;
+            --panel-muted: #f8fafc;
+            --border-color: #dbeafe;
+            --text-primary: #1e3a8a;
+            --text-muted: #475569;
+            --accent: #2563eb;
+            --accent-soft: #dbeafe;
+        }
+
+        html[data-theme='dark'] {
+            --bg-primary: #0b1120;
+            --bg-soft: #0f172a;
+            --panel-bg: #111c34;
+            --panel-muted: #1c2942;
+            --border-color: #243b5e;
+            --text-primary: #dbeafe;
+            --text-muted: #94a3b8;
+            --accent: #60a5fa;
+            --accent-soft: #1d4ed8;
+        }
+
         body { 
             font-family: 'Inter', sans-serif; 
-            background-color: #F8FAFC; /* Slate-50 */
-            color: #1E293B; /* Slate-800 */
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .theme-panel { background-color: var(--panel-bg) !important; border-color: var(--border-color) !important; }
+        .theme-panel-muted { background-color: var(--panel-muted) !important; border-color: var(--border-color) !important; }
+        .theme-text-primary { color: var(--text-primary) !important; }
+        .theme-text-muted { color: var(--text-muted) !important; }
+
+        .theme-toggle {
+            border: 1px solid var(--border-color);
+            background: var(--panel-bg);
+            color: var(--text-primary);
+        }
+        .theme-toggle:hover {
+            border-color: var(--accent);
+            color: var(--accent);
         }
 
         /* Scrollbar Customization */
@@ -68,18 +114,18 @@
             border-left: 3px solid transparent;
         }
         .nav-item:hover {
-            background-color: #F1F5F9;
-            color: #4F46E5;
+            background-color: var(--bg-soft);
+            color: var(--accent);
             padding-left: 1.8rem; /* Efek geser dikit pas hover */
         }
         .nav-item.active {
-            background: linear-gradient(to right, #EEF2FF, #FFFFFF);
-            color: #4F46E5;
-            border-left-color: #4F46E5;
+            background: linear-gradient(to right, var(--accent-soft), var(--panel-bg));
+            color: var(--accent);
+            border-left-color: var(--accent);
             font-weight: 600;
         }
         .nav-item.active i {
-            color: #4F46E5;
+            color: var(--accent);
             filter: drop-shadow(0 0 2px rgba(79, 70, 229, 0.4));
         }
 
@@ -104,6 +150,40 @@
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        html[data-theme='dark'] .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            border-color: rgba(71, 85, 105, 0.6);
+        }
+
+        html[data-theme='dark'] .text-slate-800,
+        html[data-theme='dark'] .text-slate-700,
+        html[data-theme='dark'] .text-slate-600,
+        html[data-theme='dark'] .text-slate-500,
+        html[data-theme='dark'] .text-slate-400,
+        html[data-theme='dark'] .text-slate-300 {
+            color: var(--text-muted) !important;
+        }
+
+        html[data-theme='dark'] .text-slate-800,
+        html[data-theme='dark'] .text-slate-700 {
+            color: var(--text-primary) !important;
+        }
+
+        html[data-theme='dark'] .bg-white,
+        html[data-theme='dark'] .bg-slate-50,
+        html[data-theme='dark'] .bg-slate-100,
+        html[data-theme='dark'] .bg-\[\#F8FAFC\],
+        html[data-theme='dark'] .bg-white\/80 {
+            background-color: var(--panel-bg) !important;
+        }
+
+        html[data-theme='dark'] .border-slate-50,
+        html[data-theme='dark'] .border-slate-100,
+        html[data-theme='dark'] .border-slate-200,
+        html[data-theme='dark'] .border-white {
+            border-color: var(--border-color) !important;
         }
     </style>
 </head>
@@ -134,9 +214,9 @@
     </div>
 
     <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-           class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 shadow-xl transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:shadow-none flex flex-col">
+           class="fixed inset-y-0 left-0 z-50 w-64 theme-panel border-r shadow-xl transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:shadow-none flex flex-col">
         
-        <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-100 bg-white sticky top-0 z-10">
+        <div class="h-16 flex items-center gap-3 px-6 border-b theme-panel sticky top-0 z-10">
             <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-indigo-200 shadow-lg">
                 <i class="fa-solid fa-bolt text-sm"></i>
             </div>
@@ -179,7 +259,7 @@
                     <a href="{{ url_for('dashboard_schedule') }}" 
                        class="nav-item flex items-center gap-3 px-6 py-2.5 text-sm font-medium text-slate-600 mx-2 rounded-lg {{ 'active' if active_page == 'schedule' else '' }}">
                         <i class="fa-solid fa-calendar-check w-5 text-center text-slate-400 transition-colors"></i>
-                        <span>Jadwal Share</span>
+                        <span>Jadwal Share Grup</span>
                     </a>
                 </div>
             </div>
@@ -242,7 +322,7 @@
 
         </nav>
 
-        <div class="p-4 border-t border-slate-100 bg-slate-50">
+        <div class="p-4 border-t theme-panel-muted">
             <a href="{{ url_for('dashboard_profile') }}" class="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group cursor-pointer block w-full">
                 <div class="w-9 h-9 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white flex items-center justify-center font-bold text-sm shadow-md">
                     {{ user.email[0]|upper }}
@@ -257,9 +337,9 @@
             </a>
         </div>
     </aside>
-    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-[#F8FAFC] relative">
+    <main class="flex-1 flex flex-col h-screen overflow-hidden relative" style="background-color: var(--bg-primary);">
         
-        <header class="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-8 z-30 sticky top-0">
+        <header class="h-16 backdrop-blur-md border-b flex items-center justify-between px-4 md:px-8 z-30 sticky top-0 theme-panel">
             
             <div class="flex items-center gap-4">
                 <button @click="toggleSidebar()" class="md:hidden p-2 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">
@@ -279,6 +359,11 @@
                     <i class="fa-regular fa-clock text-slate-400 text-xs"></i>
                     <span id="clock-widget" class="text-xs font-mono font-medium text-slate-600">--:--</span>
                 </div>
+
+                <button id="theme-toggle" type="button" class="theme-toggle inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors">
+                    <i id="theme-toggle-icon" class="fa-solid fa-moon"></i>
+                    <span id="theme-toggle-label">Dark</span>
+                </button>
 
                 <div class="relative cursor-pointer group">
                     <i class="fa-regular fa-bell text-slate-500 text-lg group-hover:text-indigo-600 transition-colors"></i>
@@ -385,7 +470,34 @@
             }
         }, 1000);
 
-        // 3. Helper API Fetcher
+        // 3. Theme Toggle
+        function applyDashboardTheme(theme) {
+            const root = document.documentElement;
+            const icon = document.getElementById('theme-toggle-icon');
+            const label = document.getElementById('theme-toggle-label');
+            root.setAttribute('data-theme', theme);
+            localStorage.setItem('dashboard-theme', theme);
+
+            if (icon && label) {
+                icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+                label.textContent = theme === 'dark' ? 'Light' : 'Dark';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleButton = document.getElementById('theme-toggle');
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            applyDashboardTheme(currentTheme);
+
+            if (toggleButton) {
+                toggleButton.addEventListener('click', () => {
+                    const activeTheme = document.documentElement.getAttribute('data-theme') || 'light';
+                    applyDashboardTheme(activeTheme === 'dark' ? 'light' : 'dark');
+                });
+            }
+        });
+
+        // 4. Helper API Fetcher
         async function apiRequest(url, method = 'POST', body = null) {
             try {
                 const opts = { 
