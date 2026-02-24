@@ -3,95 +3,96 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto animate-fade-in pb-24 px-4 sm:px-6 lg:px-8">
-    
-    <div class="text-center max-w-3xl mx-auto mb-12">
-        <span class="text-indigo-500 font-black text-[10px] uppercase tracking-[0.3em] bg-indigo-500/10 px-5 py-2 rounded-full border border-indigo-500/20 shadow-sm">
-            Billing & Subscription
+    <section class="text-center max-w-4xl mx-auto mb-10 sm:mb-12">
+        <span class="inline-flex items-center gap-2 text-indigo-600 font-bold text-[10px] uppercase tracking-[0.25em] bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100">
+            <i class="fa-solid fa-credit-card text-[11px]"></i>
+            Billing & Paket
         </span>
-        <h1 class="text-4xl md:text-5xl font-black text-gray-900 mt-6 tracking-tight leading-tight">
-            Investasi Receh, <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Dampak Habis-habisan.</span>
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-slate-800 mt-6 tracking-tight leading-tight">
+            Pilih Paket yang Paling Cocok
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">untuk pertumbuhan bisnismu.</span>
         </h1>
-        <p class="text-gray-500 mt-5 text-lg font-medium">Beralih ke mode otomatis. Biarkan robot yang kerja, lu tinggal ngitung cuan.</p>
-        
-        <div class="mt-10 inline-flex bg-white p-2 rounded-2xl border border-gray-200 shadow-xl shadow-gray-200/50 relative z-0">
-            <button onclick="switchPackage('basic')" id="tab-basic" class="pkg-tab relative w-36 py-3.5 text-sm font-bold text-gray-600 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
+        <p class="text-slate-500 mt-4 text-sm sm:text-lg font-medium">
+            Semua paket tetap membawa fitur inti yang sama. Tinggal sesuaikan kapasitas, lalu lanjutkan checkout dengan cepat dari desktop maupun mobile.
+        </p>
+
+        <div class="mt-8 sm:mt-10 inline-grid grid-cols-1 sm:grid-cols-3 w-full max-w-2xl bg-white p-2 rounded-2xl border border-slate-200 shadow-soft gap-2">
+            <button onclick="switchPackage('basic')" id="tab-basic" class="pkg-tab relative py-3 text-sm font-bold text-slate-600 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 flex flex-col items-center gap-1 group">
                 <span class="text-base">Starter</span>
-                <span class="text-[10px] font-bold text-gray-400 group-hover:text-indigo-400 uppercase tracking-widest">Pemula</span>
+                <span class="text-[10px] font-semibold text-slate-400 group-hover:text-indigo-400 uppercase tracking-widest">Mulai cepat</span>
             </button>
-            <button onclick="switchPackage('optimal')" id="tab-optimal" class="pkg-tab relative w-36 py-3.5 text-sm font-bold text-gray-600 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
+            <button onclick="switchPackage('optimal')" id="tab-optimal" class="pkg-tab relative py-3 text-sm font-bold text-slate-600 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 flex flex-col items-center gap-1 group">
                 <span class="text-base">UMKM Pro</span>
-                <span class="text-[10px] font-bold text-gray-400 group-hover:text-indigo-400 uppercase tracking-widest">Scale Up</span>
-                <span class="absolute -top-3 right-0 bg-gradient-to-r from-orange-400 to-red-500 text-white text-[9px] font-black px-3 py-1 rounded-full shadow-lg shadow-orange-500/40 animate-bounce">🔥 BEST</span>
+                <span class="text-[10px] font-semibold text-slate-400 group-hover:text-indigo-400 uppercase tracking-widest">Paling seimbang</span>
+                <span class="absolute -top-3 right-2 bg-gradient-to-r from-orange-400 to-red-500 text-white text-[9px] font-black px-3 py-1 rounded-full shadow-lg shadow-orange-500/40">BEST VALUE</span>
             </button>
-            <button onclick="switchPackage('agency')" id="tab-agency" class="pkg-tab relative w-36 py-3.5 text-sm font-bold text-gray-600 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none flex flex-col items-center gap-1 group">
+            <button onclick="switchPackage('agency')" id="tab-agency" class="pkg-tab relative py-3 text-sm font-bold text-slate-600 rounded-xl transition-all duration-300 hover:text-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 flex flex-col items-center gap-1 group">
                 <span class="text-base">Agency</span>
-                <span class="text-[10px] font-bold text-gray-400 group-hover:text-indigo-400 uppercase tracking-widest">Sultan</span>
+                <span class="text-[10px] font-semibold text-slate-400 group-hover:text-indigo-400 uppercase tracking-widest">Skala tim</span>
             </button>
         </div>
-    </div>
+    </section>
 
-    <div id="cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20 items-stretch max-w-6xl mx-auto transition-all duration-500">
-        </div>
+    <div id="cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-14 sm:mb-20 items-stretch max-w-6xl mx-auto transition-all duration-500"></div>
 
-    <div class="bg-white rounded-3xl shadow-lg shadow-gray-200/50 border border-gray-100 overflow-hidden mt-12 max-w-5xl mx-auto">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+    <section class="bg-white rounded-3xl shadow-soft border border-slate-200 overflow-hidden mt-8 max-w-5xl mx-auto">
+        <div class="p-5 sm:p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-slate-50/80">
             <div class="flex items-center gap-3">
                 <div class="bg-indigo-100 p-2.5 rounded-xl text-indigo-600 shadow-inner"><i class="fa-solid fa-file-invoice text-lg"></i></div>
                 <div>
-                    <h3 class="font-black text-gray-800 text-lg">Riwayat Pembayaran</h3>
-                    <p class="text-xs text-gray-500 font-medium">Lacak status tagihan dan invoice Anda.</p>
+                    <h3 class="font-black text-slate-800 text-lg">Riwayat Pembayaran</h3>
+                    <p class="text-xs text-slate-500 font-medium">Pantau status tagihan dan simpan referensi invoice Anda.</p>
                 </div>
             </div>
-            <a href="https://wa.me/6281234567890" target="_blank" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-lg transition">Butuh Bantuan?</a>
+            <a href="https://wa.me/6281234567890" target="_blank" class="inline-flex items-center justify-center text-xs font-bold text-indigo-700 hover:text-indigo-800 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-lg transition">Hubungi Tim Billing</a>
         </div>
-        <div class="p-12 text-center text-gray-400 flex flex-col items-center justify-center">
+        <div class="p-10 text-center text-slate-400 flex flex-col items-center justify-center">
             <i class="fa-solid fa-receipt text-4xl mb-3 opacity-20"></i>
-            <p class="font-medium text-sm">Belum ada riwayat transaksi ditemukan.</p>
+            <p class="font-medium text-sm">Belum ada riwayat transaksi. Setelah checkout berhasil, data pembayaran akan muncul di sini.</p>
         </div>
-    </div>
-
+    </section>
 </div>
 
-<div id="paymentModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-all duration-300 opacity-0 pointer-events-none">
+<div id="paymentModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] hidden flex items-center justify-center transition-all duration-300 opacity-0 pointer-events-none p-4">
     <div class="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden transform scale-90 transition-all duration-300" id="modalContent">
-        
-        <div class="p-8 bg-gradient-to-br from-indigo-600 to-purple-800 relative overflow-hidden">
+        <div class="p-7 bg-gradient-to-br from-indigo-600 to-purple-800 relative overflow-hidden">
             <div class="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
             <div class="absolute bottom-0 left-0 -ml-8 -mb-8 w-24 h-24 bg-black/10 rounded-full blur-xl"></div>
-            
-            <div class="relative z-10 flex justify-between items-start">
+
+            <div class="relative z-10 flex justify-between items-start gap-3">
                 <div>
-                    <span class="bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full backdrop-blur-md border border-white/20">Secure Checkout</span>
-                    <h3 class="font-black text-2xl text-white mt-4" id="modalPlanName">Upgrade Paket</h3>
+                    <span class="bg-white/20 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full backdrop-blur-md border border-white/20">Checkout Aman</span>
+                    <h3 class="font-black text-xl sm:text-2xl text-white mt-4" id="modalPlanName">Upgrade Paket</h3>
+                    <p class="text-white/80 text-xs mt-1">Lakukan transfer lalu unggah bukti pembayaran.</p>
                 </div>
                 <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 text-white flex items-center justify-center transition backdrop-blur-md">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
         </div>
-        
-        <div class="p-8 bg-gray-50">
+
+        <div class="p-6 sm:p-8 bg-slate-50">
             <form action="/api/payment/checkout" method="POST" enctype="multipart/form-data" id="checkoutForm">
                 <input type="hidden" name="variant_id" id="inputVariantId">
-                
-                <div class="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm mb-8 text-center relative overflow-hidden group">
+
+                <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-7 text-center relative overflow-hidden">
                     <div class="absolute left-0 top-0 w-1.5 h-full bg-indigo-500 rounded-l-2xl"></div>
-                    <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Total yang harus dibayar</p>
-                    <h2 class="text-4xl font-black text-gray-900 tracking-tight" id="modalPrice">Rp 0</h2>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Total Pembayaran</p>
+                    <h2 class="text-4xl font-black text-slate-900 tracking-tight" id="modalPrice">Rp 0</h2>
                 </div>
 
                 <div class="mb-6">
-                    <p class="text-xs font-black text-gray-900 uppercase mb-3 tracking-wider flex items-center gap-2">
-                        <i class="fa-solid fa-building-columns text-indigo-500"></i> Pilih Rekening Tujuan:
+                    <p class="text-xs font-black text-slate-900 uppercase mb-3 tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-building-columns text-indigo-500"></i> Pilih Rekening Tujuan
                     </p>
                     <div class="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {% for bank in banks %}
-                        <label class="flex items-center p-4 bg-white border-2 border-gray-100 rounded-xl cursor-pointer hover:border-indigo-400 hover:shadow-md transition group relative">
-                            <input type="radio" name="payment_method" value="{{ bank.bank_name }}" class="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-gray-300" required>
+                        <label class="flex items-center p-4 bg-white border-2 border-slate-100 rounded-xl cursor-pointer hover:border-indigo-400 hover:shadow-md transition">
+                            <input type="radio" name="payment_method" value="{{ bank.bank_name }}" class="w-5 h-5 text-indigo-600 focus:ring-indigo-500 border-slate-300" required>
                             <div class="ml-4 flex-1">
-                                <span class="block font-black text-gray-900 text-sm">{{ bank.bank_name }}</span>
-                                <span class="text-sm text-gray-600 font-mono tracking-widest mt-0.5 block">{{ bank.account_number }}</span>
-                                <span class="text-[11px] text-gray-400 font-bold mt-1 block uppercase">A.N {{ bank.account_holder }}</span>
+                                <span class="block font-black text-slate-900 text-sm">{{ bank.bank_name }}</span>
+                                <span class="text-sm text-slate-600 font-mono tracking-widest mt-0.5 block">{{ bank.account_number }}</span>
+                                <span class="text-[11px] text-slate-400 font-bold mt-1 block uppercase">A.N {{ bank.account_holder }}</span>
                             </div>
                         </label>
                         {% else %}
@@ -101,18 +102,18 @@
                 </div>
 
                 <div class="mb-8">
-                    <label class="block text-xs font-black text-gray-900 uppercase mb-3 tracking-wider flex items-center gap-2">
-                        <i class="fa-solid fa-cloud-arrow-up text-indigo-500"></i> Upload Bukti Transfer:
+                    <label class="block text-xs font-black text-slate-900 uppercase mb-3 tracking-wider flex items-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-indigo-500"></i> Upload Bukti Transfer
                     </label>
-                    <div class="relative bg-white border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-indigo-400 hover:bg-indigo-50/50 transition text-center">
+                    <div class="relative bg-white border-2 border-dashed border-slate-300 rounded-xl p-4 hover:border-indigo-400 hover:bg-indigo-50/50 transition text-center">
                         <input type="file" name="proof_file" accept="image/*" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
-                        <i class="fa-solid fa-image text-3xl text-gray-300 mb-2"></i>
-                        <p class="text-xs font-bold text-indigo-600">Klik / Tap untuk Upload</p>
-                        <p class="text-[10px] text-gray-400 mt-1 font-medium">Format: JPG, PNG. Max 2MB.</p>
+                        <i class="fa-solid fa-image text-3xl text-slate-300 mb-2"></i>
+                        <p class="text-xs font-bold text-indigo-600">Klik / Tap untuk upload file</p>
+                        <p class="text-[10px] text-slate-400 mt-1 font-medium">Format: JPG, PNG. Maksimum 2MB.</p>
                     </div>
                 </div>
-                
-                <button type="submit" id="payBtn" onclick="showLoadingBtn()" class="w-full bg-gradient-to-r from-gray-900 to-black hover:from-black hover:to-gray-900 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-gray-400/50 transition transform hover:-translate-y-1 flex items-center justify-center gap-3 text-sm">
+
+                <button type="submit" id="payBtn" onclick="showLoadingBtn()" class="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg shadow-indigo-400/40 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-3 text-sm">
                     <i class="fa-solid fa-paper-plane"></i> Konfirmasi Pembayaran
                 </button>
             </form>
@@ -121,113 +122,97 @@
 </div>
 
 <script>
-    // --- CORE LOGIC: DATA DARI DATABASE ---
     const packages = JSON.parse('{{ plans_json | safe }}');
 
     document.addEventListener('DOMContentLoaded', () => {
-        switchPackage('optimal'); // Default Tab saat pertama buka
+        switchPackage('optimal');
     });
 
     function switchPackage(pkgType) {
-        // 1. Reset Style Tab
         document.querySelectorAll('.pkg-tab').forEach(tab => {
             tab.classList.remove('bg-indigo-600', 'text-white', 'shadow-xl', 'shadow-indigo-200/50');
-            tab.classList.add('text-gray-600', 'bg-transparent');
+            tab.classList.add('text-slate-600', 'bg-transparent');
             const sub = tab.querySelector('span:nth-child(2)');
-            if(sub) { sub.classList.remove('text-indigo-200'); sub.classList.add('text-gray-400'); }
+            if (sub) {
+                sub.classList.remove('text-indigo-100');
+                sub.classList.add('text-slate-400');
+            }
         });
 
-        // 2. Set Active Tab
         const activeTab = document.getElementById(`tab-${pkgType}`);
-        if(activeTab){
-            activeTab.classList.remove('text-gray-600', 'bg-transparent');
+        if (activeTab) {
+            activeTab.classList.remove('text-slate-600', 'bg-transparent');
             activeTab.classList.add('bg-indigo-600', 'text-white', 'shadow-xl', 'shadow-indigo-200/50');
             const sub = activeTab.querySelector('span:nth-child(2)');
-            if(sub) { sub.classList.remove('text-gray-400', 'group-hover:text-indigo-400'); sub.classList.add('text-indigo-200'); }
+            if (sub) {
+                sub.classList.remove('text-slate-400');
+                sub.classList.add('text-indigo-100');
+            }
         }
 
-        // 3. Render Cards Dinamis
         const container = document.getElementById('cards-container');
-        container.style.opacity = '0'; // Animasi fade out
+        container.style.opacity = '0';
         container.style.transform = 'translateY(10px)';
-        
+
         setTimeout(() => {
-            container.innerHTML = ''; 
+            container.innerHTML = '';
             const data = packages[pkgType] || [];
-            
-            if(data.length === 0) {
-                container.innerHTML = '<div class="col-span-3 text-center py-20 bg-white rounded-3xl border border-gray-200"><i class="fa-solid fa-ghost text-4xl text-gray-300 mb-4"></i><p class="text-gray-500 font-bold">Paket belum diatur oleh admin.</p></div>';
+
+            if (data.length === 0) {
+                container.innerHTML = '<div class="md:col-span-3 text-center py-16 bg-white rounded-3xl border border-slate-200"><i class="fa-solid fa-ghost text-4xl text-slate-300 mb-4"></i><p class="text-slate-500 font-bold">Paket untuk kategori ini belum diatur oleh admin.</p></div>';
             }
 
             data.forEach(item => {
-                const isBest = item.bestValue;
-                
-                // Render List Fitur
                 const safeFeatures = Array.isArray(item.features) ? item.features : [];
                 const featuresHtml = safeFeatures.map(f => `
-                    <li class="flex items-start gap-3 py-1">
-                        <i class="fa-solid fa-circle-check text-emerald-500 mt-0.5 text-sm drop-shadow-sm"></i> 
-                        <span class="text-sm text-gray-600 font-bold">${f}</span>
+                    <li class="flex items-start gap-3 py-1.5">
+                        <i class="fa-solid fa-circle-check text-emerald-500 mt-0.5 text-sm"></i>
+                        <span class="text-sm text-slate-600 font-semibold">${f}</span>
                     </li>
                 `).join('');
 
-                // Render Kartu (KASTA DEWA - POSISI HARGA DIBALIK)
+                const isBest = item.bestValue;
                 const cardHtml = `
-                    <div class="relative flex flex-col bg-white rounded-[2.5rem] p-8 md:p-10 ${isBest ? 'border-2 border-indigo-500 shadow-2xl shadow-indigo-500/20 scale-105 z-10' : 'border border-gray-200 shadow-lg shadow-gray-100/50 hover:border-indigo-300'} transition-all duration-300 group">
-                        
-                        ${isBest ? `
-                            <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[10px] font-black px-6 py-1.5 rounded-full uppercase tracking-widest shadow-lg">
-                                PALING HEMAT
-                            </div>
-                        ` : ''}
-                        
-                        <div class="mb-8 text-center">
-                            <h3 class="text-xl font-black ${isBest ? 'text-indigo-600' : 'text-gray-800'} mb-2">${item.title}</h3>
-                            
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-100 inline-block px-3 py-1 rounded-md mb-4">
+                    <div class="relative flex flex-col bg-white rounded-3xl p-6 md:p-8 ${isBest ? 'border-2 border-indigo-500 shadow-2xl shadow-indigo-500/20 md:scale-105 z-10' : 'border border-slate-200 shadow-soft hover:border-indigo-300'} transition-all duration-300">
+                        ${isBest ? '<div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[10px] font-black px-5 py-1.5 rounded-full uppercase tracking-widest shadow-lg">Paling Hemat</div>' : ''}
+
+                        <div class="mb-6 text-center">
+                            <h3 class="text-xl font-black ${isBest ? 'text-indigo-600' : 'text-slate-800'} mb-2">${item.title}</h3>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 inline-block px-3 py-1 rounded-md mb-4">
                                 <i class="fa-regular fa-clock"></i> Aktif ${item.duration}
                             </p>
-                            
-                            <div class="min-h-[90px] flex flex-col items-center justify-center">
-                                <span class="text-5xl font-black text-gray-900 tracking-tighter">${item.price}</span>
-                                
-                                ${item.coret ? `
-                                    <div class="flex items-center gap-2 mt-2.5">
-                                        <span class="text-xs text-gray-400 line-through font-mono font-bold">${item.coret}</span>
-                                        ${item.hemat ? `<span class="text-[9px] font-black text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full shadow-sm">${item.hemat}</span>` : ''}
-                                    </div>
-                                ` : '<div class="h-7 mt-2.5"></div>'} </div>
+                            <div class="min-h-[92px] flex flex-col items-center justify-center">
+                                <span class="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">${item.price}</span>
+                                ${item.coret ? `<div class="flex items-center gap-2 mt-2.5"><span class="text-xs text-slate-400 line-through font-mono font-bold">${item.coret}</span>${item.hemat ? `<span class="text-[9px] font-black text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full">${item.hemat}</span>` : ''}</div>` : '<div class="h-7 mt-2.5"></div>'}
+                            </div>
                         </div>
 
-                        <div class="flex-1 mb-8">
-                            <ul class="space-y-3">
-                                ${featuresHtml}
-                            </ul>
+                        <div class="flex-1 mb-7">
+                            <ul class="space-y-2">${featuresHtml}</ul>
                         </div>
 
-                        <button onclick="openPaymentModal('${item.title} (${pkgType.toUpperCase()})', '${item.price}', ${item.id})" 
-                            class="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition transform hover:-translate-y-1 active:scale-95 ${isBest ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-500/30' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'}">
+                        <button onclick="openPaymentModal('${item.title} (${pkgType.toUpperCase()})', '${item.price}', ${item.id})"
+                            class="w-full py-3.5 rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition transform hover:-translate-y-0.5 active:scale-95 ${isBest ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/30' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'}">
                             ${item.btnText}
                         </button>
                     </div>
                 `;
                 container.innerHTML += cardHtml;
             });
-            
+
             container.style.opacity = '1';
             container.style.transform = 'translateY(0)';
-        }, 250);
+        }, 220);
     }
 
-    // --- MODAL FUNCTIONS ---
     const modal = document.getElementById('paymentModal');
     const content = document.getElementById('modalContent');
 
     function openPaymentModal(planName, priceDisplay, variantId) {
         document.getElementById('modalPlanName').innerText = planName;
         document.getElementById('modalPrice').innerText = priceDisplay;
-        document.getElementById('inputVariantId').value = variantId; 
-        
+        document.getElementById('inputVariantId').value = variantId;
+
         modal.classList.remove('hidden');
         setTimeout(() => {
             modal.classList.remove('opacity-0', 'pointer-events-none');
@@ -244,7 +229,7 @@
             modal.classList.add('hidden');
         }, 300);
     }
-    
+
     function showLoadingBtn() {
         const btn = document.getElementById('payBtn');
         btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Memproses...';
@@ -260,8 +245,35 @@
     .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    html[data-theme='dark'] #cards-container .bg-white,
+    html[data-theme='dark'] #paymentModal .bg-white,
+    html[data-theme='dark'] .bg-slate-50,
+    html[data-theme='dark'] .bg-slate-100 {
+        background-color: var(--panel-bg) !important;
+    }
+
+    html[data-theme='dark'] .text-slate-900,
+    html[data-theme='dark'] .text-slate-800 {
+        color: var(--text-primary) !important;
+    }
+
+    html[data-theme='dark'] .text-slate-600,
+    html[data-theme='dark'] .text-slate-500,
+    html[data-theme='dark'] .text-slate-400 {
+        color: var(--text-muted) !important;
+    }
+
+    html[data-theme='dark'] .border-slate-100,
+    html[data-theme='dark'] .border-slate-200,
+    html[data-theme='dark'] .border-slate-300 {
+        border-color: var(--border-color) !important;
+    }
+
+    html[data-theme='dark'] .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+    html[data-theme='dark'] .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
 </style>
 {% endblock %}
