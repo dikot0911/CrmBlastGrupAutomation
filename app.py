@@ -1174,14 +1174,14 @@ async def get_active_client(user_id):
             supabase.table('telegram_accounts').update({'is_active': False}).eq('user_id', user_id).execute()
             return None
 
-        # --- [INI YANG BIKIN ERROR TADI - SEKARANG UDAH RAPI] ---
-        try:
+        # --- [INI YANG BIKIN ERROR TADI - SEKARANG UDAH RAPI] 
+       # try:
             # Pasang kuping Auto Reply di sini
-            if 'ReplyEngine' in globals() and ReplyEngine:
-                ReplyEngine.start_listener(user_id, client)
-        except Exception as e:
+            # if 'ReplyEngine' in globals() and ReplyEngine:
+               # ReplyEngine.start_listener(user_id, client)
+      # except Exception as e:
             # Kalau listener gagal, jangan bikin aplikasi crash. Log aja warning.
-            logger.warning(f"AutoReply Listener Error: {e}")
+           # logger.warning(f"AutoReply Listener Error: {e}")
             
         return client
 
@@ -2597,9 +2597,7 @@ def save_bulk_targets():
         logger.error(f"Error saving targets: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
-# ==============================================================================
 # SECTION: API UNTUK MINI CRM (BROADCAST MODAL)
-# ==============================================================================
 
 @app.route('/api/get_crm_users', methods=['GET'])
 def get_crm_users_api():
@@ -2853,6 +2851,45 @@ def import_targets_csv():
             return jsonify({"status": "error", "message": "File CSV kosong atau format salah."})
     except Exception as e:
         return jsonify({"status": "error", "message": f"Error: {str(e)}"})
+
+# ⚡ THE MAGIC PARSER (PENYELAMAT EMOJI)
+def parse_telegram_link(link):
+    """
+    Mesin bedah link Telegram kasta dewa.
+    Support link public (t.me/username/123) dan private/forum (t.me/c/12345/1/123).
+    """
+    import re
+    # Bersihin link dari awalan web
+    link = link.replace('https://t.me/', '').replace('http://t.me/', '').replace('t.me/', '')
+    parts = [p for p in link.split('/') if p.strip()]
+
+    if not parts: return None, None
+
+    # KASUS 1: Private Group / Channel / Forum (contoh: c/3415300701/1/82)
+    if parts[0] == 'c' and len(parts) >= 3:
+        chat_id_str = parts[1]
+        msg_id_str = parts[-1] # Ambil angka paling belakang sebagai ID Pesan
+        
+        try:
+            # Telethon butuh format -100 di depan untuk baca ID grup private/channel
+            chat_id = int(f"-100{chat_id_str}")
+            msg_id = int(msg_id_str)
+            return chat_id, msg_id
+        except:
+            return None, None
+
+    # KASUS 2: Public Username (contoh: username/123)
+    elif len(parts) >= 2:
+        username = parts[0]
+        msg_id_str = parts[-1]
+        
+        try:
+            msg_id = int(msg_id_str)
+            return username, msg_id
+        except:
+            return None, None
+
+    return None, None
 
 @app.route('/api/fetch_message', methods=['POST'])
 @login_required
