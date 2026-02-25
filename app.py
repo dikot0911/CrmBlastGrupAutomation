@@ -745,17 +745,15 @@ class SchedulerWorker:
                 # --- B. PERSIAPAN DATA ---
                 send_telegram_alert(user_id, f"🚀 **Jadwal Dimulai!**\nPengirim: {sender_phone if is_specific_sender else 'Auto'}")
 
-                # Load Media
-                media_obj = None
+                # [UPGRADE] Load Original Message Kasta Dewa (Biar Emoji Premium Gak Rusak)
+                src_msg = None
                 if source_media:
                     try:
                         src_msg = await client.get_messages(source_media['chat'], ids=source_media['id'])
-                        if src_msg and src_msg.media: media_obj = src_msg.media
                     except: pass
 
                 # Ambil Target
                 targets_query = supabase.table('blast_targets').select("*").eq('user_id', user_id)
-                # [UPGRADE] Tambah logic pencarian target berdasarkan nama Folder
                 if target_template_name:
                     targets_query = targets_query.eq('template_name', target_template_name)
                 elif target_group_id: 
@@ -793,9 +791,6 @@ class SchedulerWorker:
                     for idx, item in enumerate(queue_list):
                         if processed_since_break >= break_after:
                             rest_seconds = random.randint(120, 300)
-                            logger.info(
-                                f"☕ Human break (phase {attempt_phase}) user={user_id} rest={rest_seconds}s"
-                            )
                             await asyncio.sleep(rest_seconds)
                             processed_since_break = 0
                             break_after = random.randint(20, 25)
@@ -804,21 +799,22 @@ class SchedulerWorker:
                             entity = await client.get_entity(item['group_id'])
                             await client.send_read_acknowledge(entity)
                             
-                            # [UPGRADE ANTI-BANNED] Tameng Error Typing
                             try:
                                 async with client.action(entity, 'typing'): 
                                     await asyncio.sleep(random.uniform(2, 5))
-                            except Exception as typing_err:
-                                logger.warning(f"Skip typing action untuk {item['group_name']}: {typing_err}")
-                                pass # Biarin aja error pura-pura ngetiknya, yang penting pesan tetep dikirim
+                            except: pass
 
-                            final_msg = message_content.replace("{name}", item['group_name'])
-                            
-                            if media_obj: await client.send_file(entity, media_obj, caption=final_msg, reply_to=item['topic_id'])
-                            else: await client.send_message(entity, final_msg, reply_to=item['topic_id'])
+                            # [INI KUNCINYA] Eksekusi Kirim (Pilih Mode Clone atau Mode Manual)
+                            if src_msg:
+                                # MODE CLONE: Kirim objek pesan asli, Emoji Premium bayi lu bakal muncul!
+                                await client.send_message(entity, src_msg, reply_to=item['topic_id'])
+                            else:
+                                # MODE MANUAL: Kalau gak ada link, pake text + {name}
+                                final_msg = message_content.replace("{name}", item['group_name'])
+                                await client.send_message(entity, final_msg, reply_to=item['topic_id'])
                             
                             supabase.table('blast_logs').insert({
-                                "user_id": user_id, "group_name": item['group_name'], "group_id": item['group_id'], 
+                                "user_id": user_id, "group_name": item['group_name'], "group_id": str(item['group_id']), 
                                 "status": "SUCCESS", "created_at": datetime.utcnow().isoformat()
                             }).execute()
                             success_count += 1
@@ -2941,6 +2937,7 @@ def start_broadcast():
     """
     Broadcast Engine v4.5 (Enterprise Ultimate).
     Fitur: Smart Resolving (Anti "Gagal Mengenali ID"), Anti-Duplicate, Heartbeat.
+    [UPGRADE KASTA DEWA]: Premium Emoji Support (Clone Mode) & Anti-Crash.
     """
     user_id = session['user_id']
     broadcast_states[user_id] = 'running'
@@ -2964,10 +2961,10 @@ def start_broadcast():
             if tmpl.get('source_chat_id') and tmpl.get('source_message_id'):
                 source_media = {'chat': int(tmpl['source_chat_id']), 'id': int(tmpl['source_message_id'])}
 
-    if not final_message_template:
+    if not final_message_template and not source_media:
         return jsonify({"error": "Konten pesan tidak boleh kosong."})
 
-    # Handle Image Upload
+    # Handle Image Upload (Masih jalan 100%)
     manual_image_path = None
     if image_file and allowed_file(image_file.filename):
         filename = secure_filename(f"blast_{user_id}_{int(time.time())}_{image_file.filename}")
@@ -2988,7 +2985,7 @@ def start_broadcast():
     if not targets_raw:
         return jsonify({"error": "Target audiens kosong."})
 
-    # PENYARING DUPLIKAT
+    # PENYARING DUPLIKAT (Fitur utuh!)
     unique_targets = {}
     for t in targets_raw:
         unique_targets[t['user_id']] = t
@@ -3001,12 +2998,12 @@ def start_broadcast():
         async def _engine():
             client = None
             try:
-                # Koneksi Telegram
+                # Koneksi Telegram [UPGRADE ANTI CRASH: sequential_updates=True]
                 if sender_phone_req and sender_phone_req != 'auto':
                     acc_res = supabase.table('telegram_accounts').select("session_string")\
                         .eq('user_id', user_id).eq('phone_number', sender_phone_req).eq('is_active', True).execute()
                     if acc_res.data:
-                        client = TelegramClient(StringSession(acc_res.data[0]['session_string']), API_ID, API_HASH)
+                        client = TelegramClient(StringSession(acc_res.data[0]['session_string']), API_ID, API_HASH, sequential_updates=True)
                         await client.connect()
                     else:
                         yield json.dumps({"type": "error", "msg": f"Akun {sender_phone_req} mati."}) + "\n"
@@ -3018,13 +3015,14 @@ def start_broadcast():
                     yield json.dumps({"type": "error", "msg": "Gagal koneksi ke Telegram."}) + "\n"
                     return
 
-                # Media Load
-                cloud_media_obj = None
+                # --- [UPGRADE MEDIA LOAD: TARIK PESAN UTUH] ---
+                cloud_msg_obj = None
                 if source_media:
                     try:
-                        src_msg = await client.get_messages(source_media['chat'], ids=source_media['id'])
-                        if src_msg and src_msg.media: cloud_media_obj = src_msg.media
-                    except: pass
+                        # Sedot pesan asli langsung dari server Telegram
+                        cloud_msg_obj = await client.get_messages(source_media['chat'], ids=source_media['id'])
+                    except Exception as e: 
+                        logger.warning(f"Gagal load cloud message: {e}")
 
                 # --- LOOPING PENGIRIMAN HUMANIS ---
                 success_count = 0
@@ -3054,7 +3052,8 @@ def start_broadcast():
                     t_id = int(user['user_id'])
                     t_username = user.get('username')
                     
-                    personalized_msg = final_message_template.replace("{name}", u_name)
+                    # Spintax & Sapaan {name} tetep jalan buat mode Tulis Manual!
+                    personalized_msg = final_message_template.replace("{name}", u_name) if final_message_template else ""
                     personalized_msg = process_spintax(personalized_msg) 
 
                     # 3. PROSES KIRIM
@@ -3065,12 +3064,10 @@ def start_broadcast():
                     entity = None
                     
                     try:
-                        # --- [UPGRADE KASTA DEWA]: SMART RESOLVING ---
-                        # Cobain cara normal dulu (pake ID Angka)
+                        # --- [SMART RESOLVING KASTA DEWA TETEP JALAN] ---
                         try:
                             entity = await client.get_input_entity(t_id)
                         except ValueError:
-                            # Kalau ditolak karena "Gak Kenal", kita paksa pake Username (kalau ada)
                             if t_username:
                                 try:
                                     entity = await client.get_input_entity(t_username)
@@ -3086,12 +3083,15 @@ def start_broadcast():
                         async with client.action(entity, 'typing'):
                             await asyncio.sleep(random.uniform(1.5, 4.5))
 
-                        # Kirim Pesan
-                        if cloud_media_obj:
-                            await client.send_file(entity, cloud_media_obj, caption=personalized_msg)
+                        # --- [INI KUNCINYA: EKSEKUSI PINTAR] ---
+                        if cloud_msg_obj:
+                            # MODE CLONE: Kirim objek pesan asli! (Emoji premium & format nempel sempurna)
+                            await client.send_message(entity, cloud_msg_obj)
                         elif manual_image_path:
+                            # MODE MANUAL GAMBAR + TEKS
                             await client.send_file(entity, manual_image_path, caption=personalized_msg)
                         else:
+                            # MODE TEKS POLOS
                             await client.send_message(entity, personalized_msg)
                         
                         success_count += 1
@@ -3103,7 +3103,6 @@ def start_broadcast():
                         fail_count += 1
                         error_msg = str(e)
                         
-                        # Terjemahkan pesan error bahasa dewa jadi bahasa manusia
                         if "Could not find the input entity" in error_msg or "Cannot find any entity" in error_msg or "Bukan mutual contact" in error_msg:
                             ui_log = f"Gagal: Butuh chat manual/Username untuk {u_name[:10]}"
                             error_msg = "Telegram memblokir pengiriman ke ID baru tanpa username."
@@ -3143,7 +3142,7 @@ def start_broadcast():
                     }) + "\n"
 
                     # 5. JEDA ANTAR PESAN (Anti-Timeout Heartbeat)
-                    delay = random.uniform(4.0, 12.0)
+                    delay = random.uniform(5.0, 12.0)
                     for _ in range(int(delay)):
                         if broadcast_states.get(user_id) == 'stopped': break
                         await asyncio.sleep(1)
