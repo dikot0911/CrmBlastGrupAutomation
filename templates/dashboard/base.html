@@ -8,6 +8,7 @@
     
     <title>{% block title %}Dashboard{% endblock %} | BlastPro SaaS</title>
     
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -217,8 +218,9 @@
            class="fixed inset-y-0 left-0 z-50 w-64 theme-panel border-r shadow-xl transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:shadow-none flex flex-col">
         
         <div class="h-16 flex items-center gap-3 px-6 border-b theme-panel sticky top-0 z-10">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-indigo-200 shadow-lg">
-                <i class="fa-solid fa-bolt text-sm"></i>
+            
+            <div class="w-8 h-8 flex items-center justify-center">
+                <img src="{{ url_for('static', filename='img/logo-blastpro.png') }}" alt="BlastPro Logo" class="max-w-full max-h-full object-contain">
             </div>
             <div>
                 <h1 class="text-lg font-bold text-slate-800 tracking-tight leading-none">BlastPro</h1>
