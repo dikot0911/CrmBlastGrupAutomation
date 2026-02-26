@@ -3285,7 +3285,10 @@ def add_schedule():
     hour = request.form.get('hour')
     minute = request.form.get('minute')
     template_id = request.form.get('template_id')
-    target_input = request.form.get('target_group_id') # Bisa ID Angka atau "TEMPLATE:Nama"
+    
+    # [UPGRADE]: Ambil dari 'target_audience' (format baru) atau 'target_group_id' (format lama)
+    target_input = request.form.get('target_audience') or request.form.get('target_group_id')
+    
     sender_phone = request.form.get('sender_phone') 
     
     if not sender_phone or sender_phone == 'auto':
@@ -3301,36 +3304,53 @@ def add_schedule():
             'sender_phone': sender_phone,
             'status': 'active',
             'created_at': datetime.now().isoformat(),
-            'target_group_id': None,        # Default Kosong
+            'target_group_id': None,        # Default Kosong (Berarti Semua Grup)
             'target_template_name': None    # Default Kosong
         }
 
-        # Logic Penentuan Target
-        if target_input and target_input.startswith("TEMPLATE:"):
-            # KASUS A: User milih TEMPLATE (Koleksi)
-            # Kita simpan NAMA TEMPLATE-nya aja, jadi cuma 1 Baris di Database
-            tmpl_name = target_input.replace("TEMPLATE:", "")
-            data['target_template_name'] = tmpl_name
-            
-            # Validasi tipis: Cek template ada isinya gak?
-            check = supabase.table('blast_targets').select("id").eq('template_name', tmpl_name).limit(1).execute()
-            if not check.data:
-                flash('Template target kosong/tidak ditemukan.', 'warning')
-                return redirect(url_for('dashboard_schedule'))
+        # --- LOGIC PENENTUAN TARGET (ANTI-BOCOR) ---
+        if target_input:
+            # KASUS A: Target Folder (Format Baru dari HTML)
+            if target_input.startswith("folder_"):
+                tmpl_name = target_input.replace("folder_", "")
+                data['target_template_name'] = tmpl_name
+                
+                # Validasi tipis: Cek folder ada isinya gak? (Ditambah filter user_id biar aman)
+                check = supabase.table('blast_targets').select("id").eq('template_name', tmpl_name).eq('user_id', user.id).limit(1).execute()
+                if not check.data:
+                    flash(f'⚠️ Folder "{tmpl_name}" kosong atau tidak ditemukan.', 'warning')
+                    return redirect(url_for('dashboard_schedule'))
 
-        else:
-            # KASUS B: User milih Grup Satuan (Single)
-            if target_input:
-                # Disini kita simpan ID Database (Primary Key), bukan ID Telegram
-                data['target_group_id'] = int(target_input)
+            # KASUS B: Target Folder (Format Lama - Jaga-jaga)
+            elif target_input.startswith("TEMPLATE:"):
+                tmpl_name = target_input.replace("TEMPLATE:", "")
+                data['target_template_name'] = tmpl_name
+                
+                check = supabase.table('blast_targets').select("id").eq('template_name', tmpl_name).eq('user_id', user.id).limit(1).execute()
+                if not check.data:
+                    flash(f'⚠️ Folder "{tmpl_name}" kosong atau tidak ditemukan.', 'warning')
+                    return redirect(url_for('dashboard_schedule'))
+
+            # KASUS C: Target 1 Grup Spesifik (Format Baru)
+            elif target_input.startswith("group_"):
+                data['target_group_id'] = int(target_input.replace("group_", ""))
+
+            # KASUS D: Sengaja Pilih "Semua Grup"
+            elif target_input == 'all':
+                pass # Biarkan target_group_id dan target_template_name tetap None
+                
+            # KASUS E: Target 1 Grup (Format Lama - Cuma angka ID)
+            else:
+                if target_input.strip().isdigit():
+                    data['target_group_id'] = int(target_input)
 
         # Simpan ke DB (Cuma 1 baris, gak bakal double!)
         supabase.table('blast_schedules').insert(data).execute()
-        flash('Jadwal berhasil disimpan!', 'success')
+        flash('✅ Jadwal berhasil disimpan dan target terkunci!', 'success')
         
     except Exception as e:
         logger.error(f"Error add schedule: {e}")
-        flash(f'Gagal membuat jadwal: {str(e)}', 'danger')
+        flash(f'❌ Gagal membuat jadwal: {str(e)}', 'danger')
 
     return redirect(url_for('dashboard_schedule'))
 
