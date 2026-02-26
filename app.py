@@ -746,11 +746,12 @@ class SchedulerWorker:
                 send_telegram_alert(user_id, f"🚀 **Jadwal Dimulai!**\nPengirim: {sender_phone if is_specific_sender else 'Auto'}")
 
                 # [UPGRADE] Load Original Message Kasta Dewa (Biar Emoji Premium Gak Rusak)
-                src_msg = None
+                src_msg_obj = None
                 if source_media:
                     try:
-                        src_msg = await client.get_messages(source_media['chat'], ids=source_media['id'])
-                    except: pass
+                        src_msg_obj = await client.get_messages(source_media['chat'], ids=source_media['id'])
+                    except Exception as e: 
+                        logger.warning(f"Gagal narik pesan asli: {e}")
 
                 # Ambil Target
                 targets_query = supabase.table('blast_targets').select("*").eq('user_id', user_id)
@@ -805,11 +806,11 @@ class SchedulerWorker:
                             except: pass
 
                             # [INI KUNCINYA] Eksekusi Kirim (Pilih Mode Clone atau Mode Manual)
-                            if src_msg:
-                                # MODE CLONE: Kirim objek pesan asli, Emoji Premium bayi lu bakal muncul!
-                                await client.send_message(entity, src_msg, reply_to=item['topic_id'])
+                            if src_msg_obj:
+                                # Kirim pesan UTUH (Format, Link, Emoji Premium aman 100%)
+                                await client.send_message(entity, src_msg_obj, reply_to=item['topic_id'])
                             else:
-                                # MODE MANUAL: Kalau gak ada link, pake text + {name}
+                                # Mode Manual
                                 final_msg = message_content.replace("{name}", item['group_name'])
                                 await client.send_message(entity, final_msg, reply_to=item['topic_id'])
                             
