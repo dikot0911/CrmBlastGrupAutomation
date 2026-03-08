@@ -4157,7 +4157,7 @@ class FinanceManager:
         res = supabase.table('transactions').insert(data).execute()
         return True, "Invoice berhasil dibuat"
 
-@staticmethod
+    @staticmethod
     def approve_transaction(trx_id, admin_id):
         """Admin Acc Pembayaran -> Perpanjang user & UPDATE SALDO BANK"""
         try:
