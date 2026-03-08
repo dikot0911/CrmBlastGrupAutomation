@@ -1,0 +1,236 @@
+{% extends "admin/base.html" %}
+{% block title %}Manajemen Rekening & Mutasi{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-building-columns text-emerald-400"></i> Finance Center (Banks)
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">Kelola rekening tujuan transfer user dan mutasi internal.</p>
+        </div>
+        
+        <div class="flex gap-3">
+            <button onclick="openTransferModal()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition border border-slate-600 flex items-center gap-2">
+                <i class="fa-solid fa-money-bill-transfer text-amber-400"></i> Pindah Dana
+            </button>
+            <button onclick="openBankModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> Tambah Rekening
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 mb-8 flex items-center justify-between">
+        <div>
+            <p class="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-1">Total Aset (Semua Rekening)</p>
+            <h2 class="text-3xl font-extrabold text-emerald-400">Rp {{ "{:,.0f}".format(total_balance).replace(',', '.') }}</h2>
+        </div>
+        <div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 text-2xl">
+            <i class="fa-solid fa-vault"></i>
+        </div>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-900/50 border-b border-slate-700 text-xs uppercase tracking-wider text-slate-400 font-bold">
+                        <th class="p-4 pl-6">ID</th>
+                        <th class="p-4">Info Rekening</th>
+                        <th class="p-4">Atas Nama</th>
+                        <th class="p-4 text-right">Saldo (Balance)</th>
+                        <th class="p-4 text-center">Status</th>
+                        <th class="p-4 text-center pr-6">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm divide-y divide-slate-700/50 text-slate-300">
+                    {% for b in banks %}
+                    <tr class="hover:bg-slate-700/30 transition">
+                        <td class="p-4 pl-6 font-mono text-slate-500">#{{ b.id }}</td>
+                        <td class="p-4">
+                            <div class="font-bold text-white">{{ b.bank_name }}</div>
+                            <div class="text-xs font-mono text-indigo-400 mt-1">{{ b.account_number }}</div>
+                        </td>
+                        <td class="p-4 font-semibold text-slate-300">{{ b.account_holder }}</td>
+                        <td class="p-4 text-right">
+                            <span class="font-bold text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-lg">
+                                Rp {{ "{:,.0f}".format(b.balance or 0).replace(',', '.') }}
+                            </span>
+                        </td>
+                        <td class="p-4 text-center">
+                            {% if b.is_active %}
+                                <span class="bg-green-500/20 text-green-400 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">Aktif</span>
+                            {% else %}
+                                <span class="bg-red-500/20 text-red-400 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">Mati</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4 text-center pr-6">
+                            <div class="flex justify-center gap-2">
+                                <button onclick='openBankModal({{ b | tojson | safe }})' class="w-8 h-8 rounded bg-slate-700 hover:bg-indigo-600 text-white transition flex items-center justify-center" title="Edit">
+                                    <i class="fa-solid fa-pen text-xs"></i>
+                                </button>
+                                <form action="/super-admin/banks/toggle/{{ b.id }}" method="POST" class="inline">
+                                    <button type="submit" class="w-8 h-8 rounded bg-slate-700 hover:bg-amber-600 text-white transition flex items-center justify-center" title="On/Off">
+                                        <i class="fa-solid fa-power-off text-xs"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-slate-500 italic">Belum ada data rekening bank.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="bankModal" class="fixed inset-0 z-50 hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform scale-95 opacity-0 transition-all" id="bankModalPanel">
+        <div class="p-5 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
+            <h3 class="text-lg font-bold text-white" id="bankModalTitle">Tambah Rekening Baru</h3>
+            <button onclick="closeBankModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form action="/super-admin/banks/save" method="POST" class="p-5 space-y-4">
+            <input type="hidden" name="bank_id" id="bankId">
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nama Bank / E-Wallet</label>
+                <input type="text" name="bank_name" id="bankName" required placeholder="Contoh: BCA / QRIS / DANA" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nomor Rekening / HP</label>
+                <input type="text" name="account_number" id="accNumber" required placeholder="Contoh: 872019283" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none font-mono">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Atas Nama (Pemilik)</label>
+                <input type="text" name="account_holder" id="accHolder" required placeholder="Contoh: ANDIKA RAHMADANA" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
+            </div>
+            
+            <div class="pt-4 flex gap-3">
+                <button type="button" onclick="closeBankModal()" class="flex-1 bg-slate-700 text-white py-3 rounded-xl font-bold hover:bg-slate-600 transition">Batal</button>
+                <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition">Simpan Data</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="transferModal" class="fixed inset-0 z-50 hidden bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform scale-95 opacity-0 transition-all" id="transferModalPanel">
+        <div class="p-5 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-money-bill-transfer text-amber-400"></i> Pindah Dana
+            </h3>
+            <button onclick="closeTransferModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form action="/super-admin/banks/transfer" method="POST" class="p-5 space-y-4">
+            
+            <div class="bg-red-500/10 border border-red-500/20 p-4 rounded-xl">
+                <label class="block text-xs font-bold text-red-400 uppercase mb-2">Dari Rekening (Sumber)</label>
+                <select name="source_bank_id" required class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-4 py-3 text-sm outline-none">
+                    <option value="">-- Pilih Sumber Dana --</option>
+                    {% for b in banks %}
+                        <option value="{{ b.id }}">{{ b.bank_name }} - Rp {{ "{:,.0f}".format(b.balance or 0).replace(',', '.') }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex justify-center -my-2 relative z-10">
+                <div class="w-8 h-8 bg-slate-700 rounded-full border-4 border-slate-800 flex items-center justify-center text-slate-400">
+                    <i class="fa-solid fa-arrow-down"></i>
+                </div>
+            </div>
+
+            <div class="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl">
+                <label class="block text-xs font-bold text-emerald-400 uppercase mb-2">Ke Rekening (Tujuan)</label>
+                <select name="dest_bank_id" required class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-4 py-3 text-sm outline-none">
+                    <option value="">-- Pilih Tujuan Dana --</option>
+                    {% for b in banks %}
+                        <option value="{{ b.id }}">{{ b.bank_name }} - Rp {{ "{:,.0f}".format(b.balance or 0).replace(',', '.') }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="pt-2">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Nominal Pindah Dana (Rp)</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">Rp</span>
+                    <input type="text" name="amount" required placeholder="1.500.000" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl pl-12 pr-4 py-3 text-lg font-bold focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none" oninput="formatRupiah(this)">
+                </div>
+            </div>
+            
+            <div class="pt-4 flex gap-3">
+                <button type="button" onclick="closeTransferModal()" class="flex-1 bg-slate-700 text-white py-3 rounded-xl font-bold hover:bg-slate-600 transition">Batal</button>
+                <button type="submit" onclick="return confirm('Yakin ingin memindahkan dana ini?')" class="flex-1 bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition">Eksekusi Pindah</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Logic Modal Tambah/Edit Bank
+    function openBankModal(data = null) {
+        document.getElementById('bankModal').classList.remove('hidden');
+        setTimeout(() => {
+            document.getElementById('bankModalPanel').classList.remove('scale-95', 'opacity-0');
+        }, 10);
+
+        if (data) {
+            document.getElementById('bankModalTitle').innerText = "Edit Rekening";
+            document.getElementById('bankId').value = data.id;
+            document.getElementById('bankName').value = data.bank_name;
+            document.getElementById('accNumber').value = data.account_number;
+            document.getElementById('accHolder').value = data.account_holder;
+        } else {
+            document.getElementById('bankModalTitle').innerText = "Tambah Rekening Baru";
+            document.getElementById('bankId').value = "";
+            document.getElementById('bankName').value = "";
+            document.getElementById('accNumber').value = "";
+            document.getElementById('accHolder').value = "";
+        }
+    }
+
+    function closeBankModal() {
+        document.getElementById('bankModalPanel').classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            document.getElementById('bankModal').classList.add('hidden');
+        }, 200);
+    }
+
+    // Logic Modal Transfer
+    function openTransferModal() {
+        document.getElementById('transferModal').classList.remove('hidden');
+        setTimeout(() => {
+            document.getElementById('transferModalPanel').classList.remove('scale-95', 'opacity-0');
+        }, 10);
+    }
+
+    function closeTransferModal() {
+        document.getElementById('transferModalPanel').classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            document.getElementById('transferModal').classList.add('hidden');
+        }, 200);
+    }
+
+    // Format Rupiah Otomatis saat ngetik
+    function formatRupiah(angka) {
+        let number_string = angka.value.replace(/[^,\d]/g, '').toString(),
+        split   = number_string.split(','),
+        sisa    = split[0].length % 3,
+        rupiah  = split[0].substr(0, sisa),
+        ribuan  = split[0].substr(sisa).match(/\d{3}/gi);
+
+        if(ribuan){
+            separator = sisa ? '.' : '';
+            rupiah += separator + ribuan.join('.');
+        }
+
+        rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
+        angka.value = rupiah;
+    }
+</script>
+{% endblock %}
