@@ -4008,8 +4008,6 @@ def save_admin_bank():
 
 @app.route('/super-admin/banks/transfer', methods=['POST'])
 @admin_required
-@app.route('/super-admin/banks/transfer', methods=['POST'])
-@admin_required
 def transfer_bank_balance():
     """Logic Pindah Dana Antar Bank + Catat Mutasi"""
     try:
