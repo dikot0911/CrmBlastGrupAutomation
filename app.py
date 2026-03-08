@@ -3951,6 +3951,126 @@ def approve_trx(trx_id):
     else: flash(msg, 'danger')
     return redirect(url_for('super_admin_finance'))
 
+# --- [FITUR KASTA DEWA: MANAJEMEN BANK & MUTASI] ---
+
+@app.route('/super-admin/banks')
+@admin_required
+def super_admin_banks():
+    """Halaman Manajemen Rekening Bank & Saldo (God Mode)"""
+    try:
+        # Ambil semua data bank
+        res = supabase.table('admin_banks').select("*").order('id').execute()
+        banks = res.data if res.data else []
+        
+        # Hitung total semua duit di semua bank
+        total_balance = sum(float(b.get('balance') or 0) for b in banks)
+        
+        return render_template('admin/banks.html', 
+                               banks=banks, 
+                               total_balance=total_balance,
+                               active_page='banks') # Tandai menu aktif
+    except Exception as e:
+        logger.error(f"Error load banks: {e}")
+        flash(f"Gagal memuat data bank: {e}", "danger")
+        return redirect(url_for('super_admin_dashboard'))
+
+@app.route('/super-admin/banks/save', methods=['POST'])
+@admin_required
+def save_admin_bank():
+    """Tambah atau Update Rekening Bank"""
+    try:
+        bank_id = request.form.get('bank_id')
+        bank_name = request.form.get('bank_name').upper()
+        acc_number = request.form.get('account_number')
+        acc_holder = request.form.get('account_holder').upper()
+        
+        data = {
+            'bank_name': bank_name,
+            'account_number': acc_number,
+            'account_holder': acc_holder,
+            'is_active': True
+        }
+        
+        if bank_id: # Kalau edit
+            supabase.table('admin_banks').update(data).eq('id', bank_id).execute()
+            flash('✅ Rekening berhasil diupdate.', 'success')
+        else: # Kalau tambah baru
+            # Default balance 0 buat bank baru
+            data['balance'] = 0
+            supabase.table('admin_banks').insert(data).execute()
+            flash('✅ Rekening baru berhasil ditambahkan.', 'success')
+            
+    except Exception as e:
+        logger.error(f"Save Bank Error: {e}")
+        flash('❌ Gagal menyimpan rekening.', 'danger')
+        
+    return redirect(url_for('super_admin_banks'))
+
+@app.route('/super-admin/banks/transfer', methods=['POST'])
+@admin_required
+def transfer_bank_balance():
+    """Logic Pindah Dana Antar Bank (Mutasi Internal)"""
+    try:
+        source_id = request.form.get('source_bank_id')
+        dest_id = request.form.get('dest_bank_id')
+        amount_str = request.form.get('amount')
+        
+        # Bersihkan format angka (hapus titik/koma)
+        import re
+        amount = float(re.sub(r'[^\d]', '', amount_str))
+        
+        if source_id == dest_id:
+            flash('⚠️ Rekening asal dan tujuan tidak boleh sama!', 'warning')
+            return redirect(url_for('super_admin_banks'))
+            
+        if amount <= 0:
+            flash('⚠️ Nominal transfer harus lebih dari 0!', 'warning')
+            return redirect(url_for('super_admin_banks'))
+
+        # 1. Cek saldo rekening asal
+        src_res = supabase.table('admin_banks').select("bank_name, balance").eq('id', source_id).execute()
+        dest_res = supabase.table('admin_banks').select("bank_name, balance").eq('id', dest_id).execute()
+        
+        if not src_res.data or not dest_res.data:
+            flash('❌ Rekening tidak ditemukan.', 'danger')
+            return redirect(url_for('super_admin_banks'))
+            
+        src_balance = float(src_res.data[0].get('balance') or 0)
+        dest_balance = float(dest_res.data[0].get('balance') or 0)
+        
+        if src_balance < amount:
+            flash(f"❌ Saldo {src_res.data[0]['bank_name']} tidak mencukupi!", 'danger')
+            return redirect(url_for('super_admin_banks'))
+            
+        # 2. Eksekusi Pindah Dana (Kurangi Asal, Tambah Tujuan)
+        new_src_balance = src_balance - amount
+        new_dest_balance = dest_balance + amount
+        
+        supabase.table('admin_banks').update({'balance': new_src_balance}).eq('id', source_id).execute()
+        supabase.table('admin_banks').update({'balance': new_dest_balance}).eq('id', dest_id).execute()
+        
+        flash(f"💸 Mutasi Sukses! Rp {amount:,.0f} pindah dari {src_res.data[0]['bank_name']} ke {dest_res.data[0]['bank_name']}.", 'success')
+        
+    except Exception as e:
+        logger.error(f"Transfer Error: {e}")
+        flash(f'❌ Gagal memindahkan dana: {e}', 'danger')
+        
+    return redirect(url_for('super_admin_banks'))
+
+@app.route('/super-admin/banks/toggle/<int:bank_id>', methods=['POST'])
+@admin_required
+def toggle_admin_bank(bank_id):
+    """Aktif / Nonaktifkan Rekening (Biar gak muncul di pilihan user)"""
+    try:
+        b_data = supabase.table('admin_banks').select("is_active").eq('id', bank_id).execute().data
+        if b_data:
+            new_val = not b_data[0].get('is_active', False)
+            supabase.table('admin_banks').update({'is_active': new_val}).eq('id', bank_id).execute()
+            flash('✅ Status rekening diubah.', 'success')
+    except:
+        flash('❌ Gagal merubah status.', 'danger')
+    return redirect(url_for('super_admin_banks'))
+
 # ==============================================================================
 # SECTION 13.5: FINANCE & PRICING MANAGER
 # ==============================================================================
@@ -4037,36 +4157,37 @@ class FinanceManager:
         res = supabase.table('transactions').insert(data).execute()
         return True, "Invoice berhasil dibuat"
 
-    @staticmethod
+@staticmethod
     def approve_transaction(trx_id, admin_id):
-        """Admin Acc Pembayaran -> Otomatis perpanjang masa aktif user"""
+        """Admin Acc Pembayaran -> Perpanjang user & UPDATE SALDO BANK"""
         try:
             # 1. Ambil Data Transaksi & Varian Paket
             trx = supabase.table('transactions').select("*, pricing_variants(*, pricing_plans(display_name))")\
                 .eq('id', trx_id).single().execute().data
             
             if not trx: return False, "Transaksi tidak ditemukan"
+            if trx.get('status') == 'paid': return False, "Transaksi ini sudah pernah di-approve sebelumnya!"
             
             user_id = trx['user_id']
             duration = trx['pricing_variants']['duration_days']
             plan_name = trx['pricing_variants']['pricing_plans']['display_name']
+            amount = float(trx['amount'])
+            payment_method = trx.get('payment_method', '')
             
             # 2. Hitung Expired Baru
-            # Cek dulu user sekarang expired kapan
             u_res = supabase.table('users').select("subscription_end").eq('id', user_id).single().execute()
             current_end = u_res.data.get('subscription_end')
             
             now = datetime.utcnow()
             if current_end:
                 current_date = datetime.fromisoformat(current_end.replace('Z', ''))
-                # Kalau masih aktif, tambah hari dari tanggal expired lama
                 start_date = current_date if current_date > now else now
             else:
                 start_date = now
                 
             new_expiry = (start_date + timedelta(days=duration)).isoformat()
             
-            # 3. Update User
+            # 3. Update Status User
             supabase.table('users').update({
                 'plan_tier': plan_name,
                 'subscription_end': new_expiry
@@ -4078,10 +4199,25 @@ class FinanceManager:
                 'admin_note': f"Approved by Admin #{admin_id} at {now}"
             }).eq('id', trx_id).execute()
             
-            # 5. Kirim Notif ke User
+            # 5. [FITUR BARU]: UPDATE SALDO BANK OTOMATIS 💰
+            if payment_method:
+                # Cari bank di tabel admin_banks yang namanya cocok sama payment_method
+                # (Misal: user milih "BCA", kita cari bank yang namanya ada unsur "BCA")
+                bank_res = supabase.table('admin_banks').select("id, balance").ilike('bank_name', f"%{payment_method}%").limit(1).execute()
+                
+                if bank_res.data:
+                    bank_id = bank_res.data[0]['id']
+                    current_balance = float(bank_res.data[0].get('balance') or 0)
+                    new_balance = current_balance + amount
+                    
+                    # Tembak saldo baru ke database
+                    supabase.table('admin_banks').update({'balance': new_balance}).eq('id', bank_id).execute()
+                    logger.info(f"💰 Saldo Bank {payment_method} bertambah {amount}. Saldo baru: {new_balance}")
+            
+            # 6. Kirim Notif ke User
             send_telegram_alert(user_id, f"✅ **Pembayaran Diterima!**\nPaket {plan_name} aktif sampai {new_expiry[:10]}.")
             
-            return True, "Sukses Approve"
+            return True, "Sukses Approve & Saldo Bank Terupdate"
         except Exception as e:
             logger.error(f"Approval Error: {e}")
             return False, str(e)
