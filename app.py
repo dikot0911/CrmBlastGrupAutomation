@@ -4008,33 +4008,26 @@ def save_admin_bank():
 
 @app.route('/super-admin/banks/transfer', methods=['POST'])
 @admin_required
+@app.route('/super-admin/banks/transfer', methods=['POST'])
+@admin_required
 def transfer_bank_balance():
-    """Logic Pindah Dana Antar Bank (Mutasi Internal)"""
+    """Logic Pindah Dana Antar Bank + Catat Mutasi"""
     try:
         source_id = request.form.get('source_bank_id')
         dest_id = request.form.get('dest_bank_id')
         amount_str = request.form.get('amount')
+        desc = request.form.get('description', 'Pindah Dana Internal') # Tambahan desc
         
-        # Bersihkan format angka (hapus titik/koma)
         import re
         amount = float(re.sub(r'[^\d]', '', amount_str))
         
         if source_id == dest_id:
             flash('⚠️ Rekening asal dan tujuan tidak boleh sama!', 'warning')
             return redirect(url_for('super_admin_banks'))
-            
-        if amount <= 0:
-            flash('⚠️ Nominal transfer harus lebih dari 0!', 'warning')
-            return redirect(url_for('super_admin_banks'))
 
-        # 1. Cek saldo rekening asal
         src_res = supabase.table('admin_banks').select("bank_name, balance").eq('id', source_id).execute()
         dest_res = supabase.table('admin_banks').select("bank_name, balance").eq('id', dest_id).execute()
         
-        if not src_res.data or not dest_res.data:
-            flash('❌ Rekening tidak ditemukan.', 'danger')
-            return redirect(url_for('super_admin_banks'))
-            
         src_balance = float(src_res.data[0].get('balance') or 0)
         dest_balance = float(dest_res.data[0].get('balance') or 0)
         
@@ -4042,19 +4035,20 @@ def transfer_bank_balance():
             flash(f"❌ Saldo {src_res.data[0]['bank_name']} tidak mencukupi!", 'danger')
             return redirect(url_for('super_admin_banks'))
             
-        # 2. Eksekusi Pindah Dana (Kurangi Asal, Tambah Tujuan)
+        # Eksekusi Pindah Dana
         new_src_balance = src_balance - amount
         new_dest_balance = dest_balance + amount
         
         supabase.table('admin_banks').update({'balance': new_src_balance}).eq('id', source_id).execute()
         supabase.table('admin_banks').update({'balance': new_dest_balance}).eq('id', dest_id).execute()
         
-        flash(f"💸 Mutasi Sukses! Rp {amount:,.0f} pindah dari {src_res.data[0]['bank_name']} ke {dest_res.data[0]['bank_name']}.", 'success')
+        # CATAT MUTASI (2 Arah)
+        log_bank_mutation(source_id, 'TRANSFER_OUT', amount, src_balance, new_src_balance, f"Ke: {dest_res.data[0]['bank_name']} | {desc}")
+        log_bank_mutation(dest_id, 'TRANSFER_IN', amount, dest_balance, new_dest_balance, f"Dari: {src_res.data[0]['bank_name']} | {desc}")
         
+        flash(f"💸 Mutasi Sukses! Rp {amount:,.0f} dipindah.", 'success')
     except Exception as e:
-        logger.error(f"Transfer Error: {e}")
         flash(f'❌ Gagal memindahkan dana: {e}', 'danger')
-        
     return redirect(url_for('super_admin_banks'))
 
 @app.route('/super-admin/banks/toggle/<int:bank_id>', methods=['POST'])
@@ -4070,6 +4064,84 @@ def toggle_admin_bank(bank_id):
     except:
         flash('❌ Gagal merubah status.', 'danger')
     return redirect(url_for('super_admin_banks'))
+
+# --- [FITUR KASTA DEWA: KAS MANUAL & ADJUSTMENT] ---
+
+def log_bank_mutation(bank_id, m_type, amount, bal_before, bal_after, desc):
+    """Fungsi Intel untuk mencatat semua jejak uang"""
+    try:
+        supabase.table('bank_mutations').insert({
+            'bank_id': bank_id,
+            'mutation_type': m_type,
+            'amount': amount,
+            'balance_before': bal_before,
+            'balance_after': bal_after,
+            'description': desc,
+            'created_at': datetime.utcnow().isoformat()
+        }).execute()
+    except Exception as e:
+        logger.error(f"Gagal catat mutasi: {e}")
+
+@app.route('/super-admin/banks/manual_entry', methods=['POST'])
+@admin_required
+def manual_bank_entry():
+    """Handle Kas Masuk, Kas Keluar, dan Adjustment"""
+    try:
+        bank_id = request.form.get('bank_id')
+        entry_type = request.form.get('entry_type') # 'INCOME', 'EXPENSE', 'ADJUSTMENT'
+        amount_str = request.form.get('amount')
+        desc = request.form.get('description', 'Manual Entry')
+        
+        import re
+        amount = float(re.sub(r'[^\d]', '', amount_str)) if amount_str else 0
+        
+        if amount < 0 and entry_type != 'ADJUSTMENT':
+            flash('⚠️ Nominal tidak boleh negatif!', 'warning')
+            return redirect(url_for('super_admin_banks'))
+
+        # Ambil saldo saat ini
+        bank = supabase.table('admin_banks').select("bank_name, balance").eq('id', bank_id).execute().data[0]
+        current_balance = float(bank.get('balance') or 0)
+        new_balance = current_balance
+        
+        # Hitung kalkulasi berdasarkan tipe
+        if entry_type == 'INCOME':
+            new_balance = current_balance + amount
+            flash(f'✅ Kas Masuk Rp {amount:,.0f} ke {bank["bank_name"]} berhasil.', 'success')
+        elif entry_type == 'EXPENSE':
+            new_balance = current_balance - amount
+            flash(f'✅ Kas Keluar Rp {amount:,.0f} dari {bank["bank_name"]} berhasil.', 'success')
+        elif entry_type == 'ADJUSTMENT':
+            # Kalo adjustment, amount yg diinput adalah SALDO AKHIR yg dimau
+            new_balance = amount 
+            amount = abs(new_balance - current_balance) # Cuma buat log selisihnya
+            flash(f'✅ Saldo {bank["bank_name"]} disesuaikan menjadi Rp {new_balance:,.0f}.', 'success')
+            
+        # Update Saldo Bank
+        supabase.table('admin_banks').update({'balance': new_balance}).eq('id', bank_id).execute()
+        
+        # Catat ke Buku Mutasi
+        log_bank_mutation(bank_id, entry_type, amount, current_balance, new_balance, desc)
+        
+    except Exception as e:
+        logger.error(f"Manual Entry Error: {e}")
+        flash(f'❌ Gagal memproses data: {e}', 'danger')
+        
+    return redirect(url_for('super_admin_banks'))
+
+@app.route('/super-admin/mutations')
+@admin_required
+def super_admin_mutations():
+    """Halaman Sejarah Mutasi (Alur Uang)"""
+    try:
+        # Tarik data mutasi beserta nama banknya
+        res = supabase.table('bank_mutations').select("*, admin_banks(bank_name, account_number)").order('created_at', desc=True).limit(100).execute()
+        mutations = res.data if res.data else []
+        
+        return render_template('admin/mutations.html', mutations=mutations, active_page='mutations')
+    except Exception as e:
+        logger.error(f"Error load mutations: {e}")
+        return redirect(url_for('super_admin_dashboard'))
 
 # ==============================================================================
 # SECTION 13.5: FINANCE & PRICING MANAGER
@@ -4201,8 +4273,6 @@ class FinanceManager:
             
             # 5. [FITUR BARU]: UPDATE SALDO BANK OTOMATIS 💰
             if payment_method:
-                # Cari bank di tabel admin_banks yang namanya cocok sama payment_method
-                # (Misal: user milih "BCA", kita cari bank yang namanya ada unsur "BCA")
                 bank_res = supabase.table('admin_banks').select("id, balance").ilike('bank_name', f"%{payment_method}%").limit(1).execute()
                 
                 if bank_res.data:
@@ -4210,9 +4280,11 @@ class FinanceManager:
                     current_balance = float(bank_res.data[0].get('balance') or 0)
                     new_balance = current_balance + amount
                     
-                    # Tembak saldo baru ke database
                     supabase.table('admin_banks').update({'balance': new_balance}).eq('id', bank_id).execute()
-                    logger.info(f"💰 Saldo Bank {payment_method} bertambah {amount}. Saldo baru: {new_balance}")
+                    
+                    # INI KUNCINYA: Catat masuknya uang langganan ke Buku Besar!
+                    from app import log_bank_mutation # Import lokal biar aman
+                    log_bank_mutation(bank_id, 'INCOME', amount, current_balance, new_balance, f"Auto: Pembayaran {plan_name} User #{user_id}")
             
             # 6. Kirim Notif ke User
             send_telegram_alert(user_id, f"✅ **Pembayaran Diterima!**\nPaket {plan_name} aktif sampai {new_expiry[:10]}.")
