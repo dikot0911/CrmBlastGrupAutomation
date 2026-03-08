@@ -1,0 +1,103 @@
+{% extends "admin/base.html" %}
+{% block title %}Buku Besar (Mutasi){% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto animate-enter">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-book-journal-whills text-indigo-400"></i> Buku Besar (Mutasi)
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">Laporan arus kas, pendapatan, dan penyesuaian saldo sistem.</p>
+        </div>
+        <a href="/super-admin/banks" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2">
+            <i class="fa-solid fa-building-columns text-emerald-400"></i> Kelola Rekening
+        </a>
+    </div>
+
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse whitespace-nowrap">
+                <thead>
+                    <tr class="bg-slate-900/80 border-b border-slate-700 text-xs uppercase tracking-wider text-slate-400 font-bold">
+                        <th class="p-4 pl-6">Waktu (UTC)</th>
+                        <th class="p-4">Rekening Bank</th>
+                        <th class="p-4">Tipe Transaksi</th>
+                        <th class="p-4 text-right">Nominal</th>
+                        <th class="p-4 text-right">Saldo Akhir</th>
+                        <th class="p-4">Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm divide-y divide-slate-700/50 text-slate-300">
+                    {% for m in mutations %}
+                    <tr class="hover:bg-slate-700/30 transition">
+                        <td class="p-4 pl-6">
+                            <div class="font-mono text-slate-300">{{ m.created_at[:10] }}</div>
+                            <div class="text-[10px] text-slate-500 font-mono">{{ m.created_at[11:16] }}</div>
+                        </td>
+                        
+                        <td class="p-4">
+                            <span class="font-bold text-white">{{ m.admin_banks.bank_name if m.admin_banks else 'Bank Dihapus' }}</span>
+                            {% if m.admin_banks %}
+                            <div class="text-xs text-slate-500 font-mono mt-0.5">{{ m.admin_banks.account_number }}</div>
+                            {% endif %}
+                        </td>
+
+                        <td class="p-4">
+                            {% if m.mutation_type == 'INCOME' %}
+                                <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 w-max">
+                                    <i class="fa-solid fa-arrow-trend-up"></i> Pemasukan
+                                </span>
+                            {% elif m.mutation_type == 'EXPENSE' %}
+                                <span class="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 w-max">
+                                    <i class="fa-solid fa-arrow-trend-down"></i> Pengeluaran
+                                </span>
+                            {% elif m.mutation_type == 'TRANSFER_IN' %}
+                                <span class="bg-teal-500/20 text-teal-400 border border-teal-500/30 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 w-max">
+                                    <i class="fa-solid fa-right-to-bracket"></i> Transfer Masuk
+                                </span>
+                            {% elif m.mutation_type == 'TRANSFER_OUT' %}
+                                <span class="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 w-max">
+                                    <i class="fa-solid fa-right-from-bracket"></i> Transfer Keluar
+                                </span>
+                            {% elif m.mutation_type == 'ADJUSTMENT' %}
+                                <span class="bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 w-max">
+                                    <i class="fa-solid fa-sliders"></i> Penyesuaian
+                                </span>
+                            {% else %}
+                                <span class="bg-slate-700 text-slate-300 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide w-max">
+                                    {{ m.mutation_type }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td class="p-4 text-right font-bold font-mono 
+                            {% if m.mutation_type in ['INCOME', 'TRANSFER_IN'] %} text-emerald-400 
+                            {% elif m.mutation_type in ['EXPENSE', 'TRANSFER_OUT'] %} text-rose-400 
+                            {% else %} text-indigo-400 {% endif %}">
+                            {% if m.mutation_type in ['INCOME', 'TRANSFER_IN'] %}+{% elif m.mutation_type in ['EXPENSE', 'TRANSFER_OUT'] %}-{% else %}~{% endif %}
+                            Rp {{ "{:,.0f}".format(m.amount).replace(',', '.') }}
+                        </td>
+
+                        <td class="p-4 text-right font-mono text-slate-300 font-semibold">
+                            Rp {{ "{:,.0f}".format(m.balance_after).replace(',', '.') }}
+                        </td>
+
+                        <td class="p-4 text-xs text-slate-400 max-w-[200px] truncate" title="{{ m.description }}">
+                            {{ m.description }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="p-10 text-center text-slate-500 italic">
+                            <i class="fa-solid fa-folder-open text-4xl mb-3 opacity-50 block"></i>
+                            Belum ada riwayat mutasi uang.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
