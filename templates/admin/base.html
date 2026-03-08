@@ -44,6 +44,10 @@
                 {% endif %}
             </a>
 
+            <a href="/super-admin/banks" class="nav-link {% if active_page == 'banks' %}active{% endif %} ml-4 text-sm opacity-80 hover:opacity-100">
+                <i class="fa-solid fa-building-columns w-6"></i> Banks
+            </a>
+
             <a href="/super-admin/pricing" class="nav-link flex items-center px-6 py-3 text-sm font-medium {% if active_page == 'pricing' %}active{% endif %}">
                 <i class="fa-solid fa-tags"></i> Pricing
             </a>
@@ -114,3 +118,4 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
+
