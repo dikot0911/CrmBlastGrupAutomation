@@ -1,92 +1,128 @@
 {% extends "admin/base.html" %}
-{% block title %}Finance Center{% endblock %}
+{% block title %}User Requests & Approval{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h1 class="text-2xl font-bold text-white">💳 Finance Center</h1>
-    <p class="text-slate-400 text-sm">Validasi pembayaran masuk dan aktivasi paket user.</p>
-</div>
+<div class="max-w-7xl mx-auto animate-enter">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-inbox text-blue-400"></i> Request & Approval
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">Validasi pengajuan pembayaran dan aktivasi paket dari user.</p>
+        </div>
+        
+        <div class="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 shadow-inner">
+            <a href="?status=all" class="px-5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 {{ 'bg-blue-600 text-white shadow-md' if current_filter == 'all' else 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
+                <i class="fa-solid fa-list-ul"></i> Semua
+            </a>
+            <a href="?status=pending" class="px-5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 {{ 'bg-amber-600 text-white shadow-md' if current_filter == 'pending' else 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
+                <i class="fa-regular fa-clock"></i> Menunggu
+            </a>
+            <a href="?status=paid" class="px-5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 {{ 'bg-emerald-600 text-white shadow-md' if current_filter == 'paid' else 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
+                <i class="fa-solid fa-check-double"></i> Disetujui
+            </a>
+        </div>
+    </div>
 
-<div class="flex gap-2 mb-6">
-    <a href="?status=all" class="px-4 py-2 rounded-lg text-xs font-bold border transition {{ 'bg-indigo-600 text-white border-indigo-600' if current_filter == 'all' else 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500' }}">Semua</a>
-    <a href="?status=pending" class="px-4 py-2 rounded-lg text-xs font-bold border transition {{ 'bg-orange-600 text-white border-orange-600' if current_filter == 'pending' else 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500' }}">Pending</a>
-    <a href="?status=paid" class="px-4 py-2 rounded-lg text-xs font-bold border transition {{ 'bg-emerald-600 text-white border-emerald-600' if current_filter == 'paid' else 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500' }}">Lunas</a>
-</div>
-
-<div class="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
-    <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-slate-300">
-            <thead class="bg-slate-900/50 text-slate-500 uppercase text-xs font-bold">
-                <tr>
-                    <th class="px-6 py-4">Tanggal</th>
-                    <th class="px-6 py-4">User</th>
-                    <th class="px-6 py-4">Paket</th>
-                    <th class="px-6 py-4">Nominal</th>
-                    <th class="px-6 py-4">Bukti</th>
-                    <th class="px-6 py-4">Status</th>
-                    <th class="px-6 py-4 text-right">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-700/50">
-                {% for trx in transactions %}
-                <tr class="hover:bg-slate-700/20 transition">
-                    <td class="px-6 py-4 text-xs whitespace-nowrap text-slate-500">
-                        {{ trx.created_at[:16].replace('T', ' ') }}
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="font-bold text-white">{{ trx.users.email.split('@')[0] }}</div>
-                        <div class="text-xs text-slate-500">{{ trx.users.email }}</div>
-                    </td>
-                    <td class="px-6 py-4">
-                        {% if trx.pricing_variants and trx.pricing_variants.pricing_plans %}
-                            <span class="inline-flex items-center px-2 py-1 rounded bg-slate-700 border border-slate-600 text-xs font-bold text-indigo-300">
-                                {{ trx.pricing_variants.pricing_plans.display_name }} ({{ trx.pricing_variants.duration_days }}hr)
-                            </span>
-                        {% else %}
-                            <span class="text-xs text-red-400">Unknown Plan</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-4 font-mono font-bold text-emerald-400">
-                        Rp {{ "{:,.0f}".format(trx.amount) }}
-                    </td>
-                    <td class="px-6 py-4">
-                        {% if trx.proof_url %}
-                            <a href="{{ trx.proof_url }}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs font-bold flex items-center gap-1">
-                                <i class="fa-solid fa-paperclip"></i> Cek
-                            </a>
-                        {% else %}
-                            <span class="text-slate-600 text-xs">-</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-4">
-                        {% if trx.status == 'pending' %}
-                            <span class="bg-orange-500/10 text-orange-400 px-2 py-1 rounded text-[10px] font-bold border border-orange-500/20 animate-pulse">PENDING</span>
-                        {% elif trx.status == 'paid' %}
-                            <span class="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded text-[10px] font-bold border border-emerald-500/20">LUNAS</span>
-                        {% else %}
-                            <span class="bg-red-500/10 text-red-400 px-2 py-1 rounded text-[10px] font-bold border border-red-500/20">{{ trx.status }}</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-4 text-right">
-                        {% if trx.status == 'pending' %}
-                        <div class="flex justify-end gap-2">
-                            <a href="/super-admin/finance/approve/{{ trx.id }}" onclick="return confirm('Approve pembayaran ini?')" class="bg-emerald-600 hover:bg-emerald-500 text-white p-1.5 rounded transition shadow-lg shadow-emerald-500/20" title="Approve">
-                                <i class="fa-solid fa-check"></i>
-                            </a>
-                            <button class="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded transition shadow-lg shadow-red-500/20" title="Reject">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="7" class="py-12 text-center text-slate-500">Belum ada transaksi masuk.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300 whitespace-nowrap">
+                <thead class="bg-slate-900/80 border-b border-slate-700 text-xs uppercase tracking-wider text-slate-400 font-bold">
+                    <tr>
+                        <th class="px-6 py-4">Waktu Request</th>
+                        <th class="px-6 py-4">Data User</th>
+                        <th class="px-6 py-4">Paket Tujuan</th>
+                        <th class="px-6 py-4">Nominal Tagihan</th>
+                        <th class="px-6 py-4 text-center">Bukti Trf</th>
+                        <th class="px-6 py-4 text-center">Status</th>
+                        <th class="px-6 py-4 text-right pr-6">Eksekusi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700/50">
+                    {% for trx in transactions %}
+                    <tr class="hover:bg-slate-700/30 transition">
+                        <td class="px-6 py-4">
+                            <div class="font-mono text-slate-300">{{ trx.created_at[:10] }}</div>
+                            <div class="text-[10px] text-slate-500 font-mono">{{ trx.created_at[11:16] }} UTC</div>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-user-circle text-slate-500"></i> {{ trx.users.email.split('@')[0] }}
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">{{ trx.users.email }}</div>
+                        </td>
+                        
+                        <td class="px-6 py-4">
+                            {% if trx.pricing_variants and trx.pricing_variants.pricing_plans %}
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400">
+                                    {{ trx.pricing_variants.pricing_plans.display_name }} <span class="text-indigo-600/50 mx-1">•</span> {{ trx.pricing_variants.duration_days }} Hari
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2 py-1 rounded bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-400 uppercase">
+                                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> Data Invalid
+                                </span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="px-6 py-4 font-mono font-bold text-emerald-400">
+                            Rp {{ "{:,.0f}".format(trx.amount).replace(',', '.') }}
+                        </td>
+                        
+                        <td class="px-6 py-4 text-center">
+                            {% if trx.proof_url %}
+                                <a href="{{ trx.proof_url }}" target="_blank" class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition" title="Lihat Bukti Transfer">
+                                    <i class="fa-solid fa-image"></i>
+                                </a>
+                            {% else %}
+                                <span class="text-slate-600 text-xs">-</span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="px-6 py-4 text-center">
+                            {% if trx.status == 'pending' %}
+                                <span class="bg-amber-500/10 text-amber-400 px-3 py-1 rounded-full text-[10px] font-bold border border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-circle text-[8px]"></i> MENUNGGU
+                                </span>
+                            {% elif trx.status == 'paid' %}
+                                <span class="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-[10px] font-bold border border-emerald-500/20 inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-check"></i> AKTIF
+                                </span>
+                            {% else %}
+                                <span class="bg-rose-500/10 text-rose-400 px-3 py-1 rounded-full text-[10px] font-bold border border-rose-500/20">
+                                    {{ trx.status }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        
+                        <td class="px-6 py-4 text-right pr-6">
+                            {% if trx.status == 'pending' %}
+                            <div class="flex justify-end gap-2">
+                                <a href="/super-admin/finance/approve/{{ trx.id }}" onclick="return confirm('Yakin ingin menyetujui request ini? Saldo bank akan bertambah dan paket user akan aktif.')" class="bg-emerald-600 hover:bg-emerald-500 text-white w-9 h-9 flex items-center justify-center rounded-lg transition shadow-lg shadow-emerald-500/20" title="Setujui (Approve)">
+                                    <i class="fa-solid fa-check"></i>
+                                </a>
+                                <button onclick="alert('Fitur tolak sedang disiapkan!')" class="bg-rose-600 hover:bg-rose-500 text-white w-9 h-9 flex items-center justify-center rounded-lg transition shadow-lg shadow-rose-500/20" title="Tolak (Reject)">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            {% else %}
+                            <span class="text-[10px] text-slate-500 italic"><i class="fa-solid fa-lock text-slate-600 mr-1"></i> Tereksekusi</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="py-16 text-center">
+                            <div class="flex flex-col items-center justify-center text-slate-500">
+                                <i class="fa-solid fa-box-open text-4xl mb-3 opacity-50"></i>
+                                <p class="font-medium">Belum ada request yang masuk.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
